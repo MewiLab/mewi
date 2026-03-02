@@ -475,5 +475,7 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,windows,python,reactnative,linux
 
-# Output of evaluations
-evals/backend/out/
+# eval outputs
+backend/evals/backend/out/
+backend/evals/**/out/
+*.jsonl
