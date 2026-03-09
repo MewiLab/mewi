@@ -1,0 +1,2002 @@
+[
+  {
+    "id": 1,
+    "text": "漫步在榕園樹影間，耳邊是蟲鳴的樂章，我的心情卻如同燒焦的咖啡渣，苦澀難咽；環顧四周，同學們的笑聲彷彿成了對我寫不完的期末報告的諷刺，真是令人窒息的美好。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "坐在成功湖畔，看水波蕩漾，湖面像是倒映出我的疲憊，期中考的壓力如湖水般沉重；我覺得自己像被丟入深湖的落葉，拼命漂浮卻找不到出口，真是諷刺的平和景象。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "走過自強校區的長廊，石板路上的陰影像在嘲笑我的困惑。內心深處的疲憊像未完成的程式碼，一直在空白處徘徊，卻又不得不繼續；這學期的壓力如影隨形，怎麼也甩不開。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "坐在敬業校區圖書館的長椅上，書本的重量壓在膝蓋，卻壓不住心中騷動的焦慮；窗外的飛鳥自在翱翔，卻讓我感到自己像被困在枯燥公式中的囚徒，真是矛盾的景象。",
+    "lbs_context": "敬業校區",
+    "ground_truth": {
+      "Valence": -0.85,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "從三舍走到光復校區的路上，涼風吹過臉頰，卻無法吹散期末考的焦慮；感覺自己像計算中途卡住的演算法，進退兩難，每一步都像自我否定的開始，真是諷刺的清新空氣。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.75,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "在成功湖看著鯉魚游動，它們的自由讓我想到自己沉浸在課業壓力的泥沼中，像是被束縛的水草；此刻的平靜如空白筆記本，卻無法讓我找到答案，真是矛盾的一刻。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "走在敬業校區的小徑，樹葉在陽光下閃爍，彷彿在提醒我學分壓力的重量；內心的疲憊像無止境的樹影延伸，步伐每踏一步都像承載更多的無力感，是一種令人窒息的美。",
+    "lbs_context": "敬業校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "坐在榕園的長椅，陽光灑落的瞬間，我突然覺得自己像被成績單上的紅字撞擊的樹葉，外表看似平靜，內心卻翻湧如潮；此刻的寧靜是一種負擔，感覺格外沉重。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "站在光復湖畔，看著水面上的光影斑駁，我的思緒如複雜的梯度下降，找不到最佳解；這種焦躁感像被卡住的程式，一直在等待未知的出口，彷彿世界在嘲笑我的無能。",
+    "lbs_context": "光復湖",
+    "ground_truth": {
+      "Valence": -0.85,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "踏進成大自強校區，熟悉的地磚彷彿在訴說著無數學弟妹的困惑；我的壓抑像擁擠的程式碼，找不到清晰的邏輯，這種矛盾的感覺讓我在陽光下格外低沈，真是諷刺。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "在學校的圖書館翻著習題集，我的內心猶如未解的微積分公式，錯綜複雜；窗外的陽光明媚，卻無法照亮心中的迷霧，真是諷刺的溫暖，連空氣都感覺一片凝重。",
+    "lbs_context": "圖書館",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "走在光復校區的樹蔭下，陽光穿透葉縫，像在強調我內心的混亂；每一片樹葉都像未完成的專題，難以捉摸，這種不安與眼前的寧靜交織，讓人覺得甚是諷刺。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.75,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "在榕園看著落葉飛舞，心情卻如枯葉一樣凋落；這種成績的壓力好像埋藏在深深的樹根裡，挖也挖不出來，不禁覺得這美好的自然景象自帶反諷的意味。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "坐在成功湖畔，大風捲起水波，彷彿吹亂了心中的方向；我的焦慮像無法解答的期中考題，逐漸沉入水底，卻又無法掙脫，這湖水的平靜讓我感到格外刺耳。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.85,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "光復校區的長廊在夕陽下拉長影子，我的心情像影子一樣模糊不清；這種生活的壓迫感像背後隨時跟隨的陰影，每一步都像提醒我期末的逼近，是令人窒息的美。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "在敬業校區的草地上躺著，天空的藍色映入眼底，我的煩躁卻像被困在深色的油漆裡，無法釋放；這種矛盾的寧靜像在提醒我努力的重要性，卻令人感到無力。",
+    "lbs_context": "敬業校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "夜晚的自強校區，燈光閃爍，我的思緒卻像熄滅的燈泡，漆黑一片；這種期末的壓力好像身邊沉重的空氣，無法逃脫，真是諷刺的夜色，令人窒息。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "Valence": -0.85,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "成大榕園的晨光灑落，映出樹葉的光影斑駁，我的心情卻如陰影般沉重；這種期中考的焦慮好像在樹根深處糾纏不清，讓我覺得這片平靜的美景格外諷刺。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "站在光復校區的草坪上，看著遠處的落日，我的內心如同被劃成碎片的沉重課表，無法拼湊完整；這種夕陽的美讓我想起未完成的專題，是一種無解的反諷。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "從宿舍走到成功湖旁，看著湖邊的鴿子啄食，我突然覺得自己的目標如同湖中的倒影，觸不到更抓不住；這種焦躁感像無止境的演算法，讓人深感無力，真是諷刺。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 1,
+    "text": "坐在光復校區的咖啡廳，耳邊充斥著微風與學生們低語的討論聲，仿佛生活的進度條正以肉眼看不見的速度前進，而我卻像是一個卡住的程式無法動彈，內心的無力感此刻比期末報告的壓力還要沉重。",
+    "lbs_context": "光復校區咖啡廳",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "剛經過成大榕園，陽光透過枝葉斑駁地灑在身上，像是世界在對我微笑，可我心中的憂愁卻像無法被晴天治癒的霧霾一般籠罩，恍惚間感到自己的渺小與無能為力。",
+    "lbs_context": "成大榕園",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "剛離開玉山書坊，書架上排列整齊的書籍像是在展示人生的可能性，而我卻像一本封面泛黃的日記，裡面的章節都零散而缺乏方向，內心的空洞感油然而生。",
+    "lbs_context": "玉山書坊",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "夜晚的成功湖邊，湖水平靜得像是一個沉默寡言的朋友，低頭看著倒影中的自己，我不禁感慨生活就像這湖水一樣，看似波瀾不驚，卻暗藏未知的深流。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.4,
+      "Arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "在敬業校區的自助餐廳用餐，桌上的菜色豐富到令人眼花撩亂，但我心裡卻像是空空的盤子，即便填滿食物，內心深處的空虛感依然揮之不去，真諷刺美食也無法治癒一切。",
+    "lbs_context": "敬業校區自助餐廳",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "走在自強校區的操場，看著跑道上的人們來來回回，突然覺得人生如同這一圈圈的跑道，不管跑了多少圈，終究還是回到原點，內心的不安像是一直追趕著我的步伐不肯離去。",
+    "lbs_context": "自強校區操場",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "剛結束課程從活動中心走出來，陽光刺眼得讓人想逃避，空氣中瀰漫著學業的壓力，彷彿生活是一場無止盡的期末考，而我卻始終找不到逃生的出口。",
+    "lbs_context": "活動中心",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.8
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "成功湖畔的風倒是輕柔得像是母親的手，但內心的焦慮卻像一隻不安的鳥不停地拍打翅膀，仿佛什麼也無法讓我平靜下來，甚至比這湖水還要凌亂。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "自強校區裡的實驗室，白色燈光將我的注意力牢牢鎖住，彷彿是困在一個無人能解的方程式中，只好任由焦慮在心頭流竄，像病毒一樣侵蝕我脆弱的心靈。",
+    "lbs_context": "自強校區實驗室",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.9
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "剛與朋友在光復校區散步，彼此聊著近況時內心卻浮起一種奇怪的距離感，彷彿我們的交集只是短暫的數據交換，而我對未來的憂慮像是永遠無法解密的加密文檔。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "坐在宿舍的床邊，看著窗外的繁星，彷彿它們在嘲笑我人生的迷茫，那種無法融入群星之間的孤獨感像是一種永不散去的陰影，壓得我喘不過氣來。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "剛通過大學路旁的操場，聽著遠處傳來的笑聲與音樂，那種青春的氣息卻讓我感到格外的疏離，彷彿我只是穿越而過的背景人物，渴望融入卻無法找到自己的角色。",
+    "lbs_context": "大學路旁操場",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "在光復校區的綠意中漫步，陽光打在樹葉上像是勾畫著希望的輪廓，但我的內心深處卻像是失去了導航的船隻，盲目前行而不知自己是否接近終點。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "剛結束一場圖書館裡的通宵自習，那寂靜的氛圍像是將時間壓縮成了單一的點，使我感到自己彷彿是被迫陷入這種無止境的孤獨與疲憊循環。",
+    "lbs_context": "圖書館",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "走在校園的林蔭小道，秋天的微風吹過臉頰，讓人感到片刻的輕鬆，但內心的沉重卻像落葉般堆積在角落，不管如何掃去都無法讓自己完全釋懷。",
+    "lbs_context": "林蔭小道",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "自強校區的夜晚好安靜，天空的顏色像是一片深不見底的墨，而我的心情在這片黑暗中像是被拉扯著走向一個未知的深淵，靜得讓人害怕。",
+    "lbs_context": "自強校區夜晚",
+    "ground_truth": {
+      "Valence": -1.0,
+      "Arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "剛結束成大榕園的音樂會，演奏的旋律雖動人，但它像是在提醒我生活的短暫，內心那種莫名的失落逐漸擴散，彷彿每一個音符都是一種無法挽回的遺憾。",
+    "lbs_context": "成大榕園音樂會",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "剛離開成大博物館，那些歷史遺跡似乎在講述過去，但我卻像是無法成為未來的一部分，內心被一種無法與時間和解的悲傷所充斥，彷彿自己只是歷史的旁觀者。",
+    "lbs_context": "成大博物館",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "穿越敬業校區的紅磚地面，腳步聲回蕩著，像是生命的一種孤單節奏，每一步都似乎在提醒我人生的單薄，而前方的路依然是不確定的迷霧。",
+    "lbs_context": "敬業校區",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "在宿舍的陽台上望著遠處的燈光，那些點點星光像是在嘲笑我內心的黑暗，每一盞燈都代表著一種希望，而我卻只能站在陰影裡，與光保持著距離。",
+    "lbs_context": "宿舍陽台",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 1,
+    "text": "在光復校區的圖書館裡漫步，窗外陽光斜照進來，讓人感到一絲暖意，好像生活的壓力也被稀釋，但腦海深處卻不斷浮現未完成的期末報告，一如被打翻的墨水，染滿思緒。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.2,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "在自強校區週末的清晨，鳥鳴聲渾然不知我的心情，像一種無言的嘲諷，昨晚熬夜寫作的疲憊仍侵蝕著我的精神，成功湖的水波倒映著我的倦容，似乎在提醒我疲於奔命的日常。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "騎著腳踏車穿梭在成大大門的林蔭大道，風拂過臉頰，彷彿想安撫我卻又帶來一種不安，就像那未來的迷霧，幾份投出的履歷如石沉大海，內心思緒反覆像未完成的期中考。",
+    "lbs_context": "成大大門",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "從榕園的長椅上起身，眼前的夕陽劃出一道橙紅的光，讓我想起那封被拒絕的研究提案，心中如被划了一道傷痕，升起的夜色卻像嘲弄一般提醒記憶深處的失敗。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "在電機系館地下室的座位上翻閱教科書，周圍的燈光昏黃如心中的希望，眼前的公式像是一道無法跨越的鴻溝，讓我感到孤單，有如被拘禁在時間的深海之中。",
+    "lbs_context": "電機系館地下室",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "走在成功湖旁的木棧道，湖面波光粼粼如破碎的記憶片段，這些片段拼湊著我的過去，幻想著未來的我會怎麼看待今天的挫折，但內心卻如空氣般沉悶無力。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.4,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "自學中心的冷氣嗡嗡作響，彷彿訴說著時間未休止的流逝，手中的咖啡卻早已冷卻，這種矛盾的感覺就像生活中的虛無，隱隱約約提醒我無法逃避的焦慮。",
+    "lbs_context": "自學中心",
+    "ground_truth": {
+      "Valence": -0.3,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "在老榕樹下的樹蔭中小憩，周圍的蟲鳴如同這世界的喧鬧，試圖將我的焦慮遮掩，但腦袋裡卻像卡住的演算法，無法停止運轉，內心爭吵著再也無法平靜。",
+    "lbs_context": "老榕樹",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "走過成大後門的紅磚小徑，耳邊的喧鬧逐漸遠去，我卻越來越感到孤寂，像一片離群的落葉，心底暗自思索人際關係的微妙，期待卻害怕擁有屬於自己的歸屬。",
+    "lbs_context": "成大後門",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "在成大夜市的一角排隊買甜品，周圍的人潮讓人覺得格外擁擠又充滿活力，但這份熱鬧像一層霧般隔絕了我，讓我感到內心的空洞，像甜品化作苦味般的諷刺。",
+    "lbs_context": "成大夜市",
+    "ground_truth": {
+      "Valence": -0.4,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "在鴻森館樓梯間低頭思索，光線穿過窗戶形成細碎的影子，內心的思緒如這些影子般支離破碎，人生的目標像遙不可及的天文現象，令人感到深深的疲憊。",
+    "lbs_context": "鴻森館",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "實驗室裡的電腦屏幕閃爍著數據，周圍的寂靜如一張無聲的網，壓得人喘不過氣，這些未完成的研究項目彷彿化身成一頭猛獸，吞噬著我僅存的希望與時間。",
+    "lbs_context": "實驗室",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "在自強校區綠茵草地上坐著，秋風吹過，帶來一絲涼意，草地的茂密與廣闊讓人感到渺小，思索著自己是否也像這草地上的一片微不足道的葉子，無法被注意。",
+    "lbs_context": "自強校區綠茵草地",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "在榕園的涼亭中翻閱課本，周圍的寂靜似乎想安撫我的心，但心底卻湧動著焦慮，宛如枯葉間的微風，提醒著我，那些未完成的作業正如一場即將爆發的風暴。",
+    "lbs_context": "榕園涼亭",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "走在成大醫學院的走廊上，周圍的白色牆壁反射著冰冷的光線，讓人感到莫名的壓迫，這種壓迫好像是生活的隱喻，逐步侵蝕著我的夢想與內心的渴望。",
+    "lbs_context": "醫學院走廊",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "走進成大的大草原，周圍的學生嬉笑著，但我卻感到被隔離在一個俯瞰的世界裡，像是一隻孤獨的鳥飛越無人的荒地，心裡對未來充滿了恐懼與不確定。",
+    "lbs_context": "成大大草原",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "站在成大建築系館的天台上俯瞰校園，每個角落都充滿著時間的痕跡，但這些痕跡像無法拼湊的拼圖，讓我感到自己的存在只是短暫且無法留下的印記。",
+    "lbs_context": "建築系館天台",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "在成功湖畔散步，周圍的景色看似祥和，但每一步都像踩在空洞的地面上，仿佛提醒著我，生活的挫折如無底的深淵，而我卻嘗試徒勞地在其邊緣徘徊。",
+    "lbs_context": "成功湖畔",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "在校園的運動場繞著跑道奔跑，汗水順著我的臉頰滑落，彷彿與身上的疲憊競賽，但那股疲憊卻像是我始終無法擺脫的陰影，追逐著我，無處可逃。",
+    "lbs_context": "運動場",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "在光復校區的花園中靜坐，周圍的花香雖然讓人感到舒適，但這份舒適像是生活中短暫的幻象，而我的心底卻充斥著不安，像沉沒的船隻無法找到航向。",
+    "lbs_context": "光復校區花園",
+    "ground_truth": {
+      "Valence": -0.4,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 1,
+    "text": "在光復校區的圖書館裡，我的心情如同書架上的歷史書籍般古老沉重，陽光透過玻璃窗灑落，唤起一股莫名的空虛感，猶如試圖捉摸卻始終找不到答案的期中考題目，學術的壓力像一片烏雲籠罩著每個學生。",
+    "lbs_context": "圖書館",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "剛離開自強校區的深夜，星空在黑暗中閃爍，心情卻如實驗失敗的數據般毫無希望，成功湖邊的水聲彷彿在嘲弄我的無助，今天的結果像是在暗示我們的努力始終無法被世界看見。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "站在成大榕園下，落葉堆積成山，彷彿將我的焦慮一層層覆蓋，壓力如水泥般沉重，卻無法真正掩埋內心的空洞，身旁的行人都在笑談著未來，但我只想逃避期中考的實驗報告。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "走在小東路旁，感覺我的腳步如同被困在拖延的泥沼中，前方的日光燈映照著我的影子，彷彿提醒自己距離期末考的壓力只有數步之遙，環境的繁忙就像一首不協調的交響樂。",
+    "lbs_context": "小東路",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "在宿舍裡無力地翻著期中複習講義，看似井然有序的排版卻完全無法激起內心的斗志，室友的嘻笑聲像突如其來的噪音干擾著我的專注，這一切的混亂教我明白生活有時只能是未完成的拼圖。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "剛從光復校區走回宿舍，腳步踏在夜晚濕潤的地面上，心情像這暗沉的天空般壓抑，實驗的失敗讓我感覺自己的努力像是被消耗殆盡的燃料，只能嘆息著明日再來重頭開始。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "站在綠色長廊下，微風吹過樹葉的聲音彷彿低聲訴說著不為人知的秘密，心中卻如被考試壓力侵蝕的石頭，逐漸崩解，看著身旁的同學笑著討論查分結果，我一瞬間產生了一種奇怪的被遺忘感。",
+    "lbs_context": "綠色長廊",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "成功湖邊的夕陽染紅了整片天空，美麗得令人心碎，彷彿在嘲諷我無法完成今天的專案進度，湖面的平靜就像我內心的無力，考試壓力讓整片風景都變得沉重而不真實。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "走過校門口的石雕，感覺這座城市的喧囂和我的心情形成強烈的對比，像是兩個完全無法溝通的世界，內心的焦慮像一台失控的列車，不斷加速卻找不到終點，成大校園的寧靜在此刻成了反諷的舞台。",
+    "lbs_context": "校門口",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "在成大校友會館外，我望著匆匆忙忙進出的校友們，彷彿看見自己未來的身影，心情如熱鍋上的水蒸氣般蒸騰不定，眼前的壓力像是無法停止的沙漏，計時著我有限的精神和精力。",
+    "lbs_context": "校友會館",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "坐在光復校區的草地上，風吹過耳旁的聲音讓我感覺自己是另一個世界的旁觀者，實驗室的失敗結果像某種悲劇的伏筆，連天空的陰雲都彷彿在暗示生活的諷刺本質。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "在榕園旁的石椅上休息，望著眼前的落葉堆，心中不禁想起自己未完成的學業企劃，那些散落的葉子像我的計畫一樣支離破碎，彷彿喻示著青春的倉促和時光的流逝。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "走在成功校區的操場上，夜晚的燈光照亮了跑道卻照不亮我的心情，今天的考試猶如一場未完結的噩夢，想起自己未達標的分數，感覺成大生活像是無法翻過的高牆，每一步都充滿阻力。",
+    "lbs_context": "成功校區",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "站在南大校區的紅磚道上，望著教學樓的燈光閃爍，內心感到一種難以言喻的恐慌，彷彿所有的努力都融化於紅磚上的腳步聲，期末壓力就像風中的落葉，飄蕩無根，毫無方向可循。",
+    "lbs_context": "南大校區",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "坐在宿舍窗邊，聽著夜晚的蟬鳴，感覺自己的心情像這無法停止的噪音，既喧囂又空洞，窗外的月光似乎在諷刺我今天的懷疑與迷茫，成大生活的壓力讓我迷失了方向已久。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "在自強校區的走廊上徘徊，心裡像是有一座灰色的城牆，牢牢困住了我的思緒，期中考的壓力讓每一個課堂都像是未完成的謎題，連耳邊的嘈雜都變得像一種尖锐的提醒。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "在成大校園的綠意中漫步，樹葉的沙沙聲讓我想起自己散落的計畫，此刻的寧靜卻讓我的焦躁更加凸顯，彷彿提醒著我生活的諷刺是一種無法逃避的命運。",
+    "lbs_context": "校園綠地",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "走過小東路的街燈下，影子在腳步聲中晃動，心裡的焦慮像是路旁的燈光，明亮卻刺眼，今天的學業進度像是一場荒謬的演出，似乎所有的努力都只是為了填滿無底的深淵。",
+    "lbs_context": "小東路",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "成功湖畔的夜色美得驚心動魄，但我卻感覺自己是這美景中的局外人，期中考的壓力像是一個無法承載的重擔，連湖面的倒影都彷彿在嘲笑我的渺小和無力。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "在成大光復校區的教室外，走廊的白燈冷冷地照亮我的心情，實驗的計算結果像是失去方向的風箏，所有的公式都失去了生命力，內心的疲憊彷彿成了生活的唯一答案。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 1,
+    "text": "在光復校區圖書館的角落翻閱著厚重的期刊，眼前的字句像無解方程般令人窒息，窗外成大百年榕樹的影子倒映在桌面，彷彿嘲諷著我的學業就像堆積的落葉般無法清理乾淨。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "自成功湖的寧靜水面回到宿舍，拖著沉重的步伐，像卡在泥濘中的自行車般掙扎不前，內心反覆問自己是否該放掉這些無疾而終的夢想，但也怕放手後只剩空洞。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "夜深人靜，我望著電腦螢幕裡的模擬實驗結果，像是望著一片黑暗中的微弱光點般渴望成功，但成大校園空蕩蕩的走道卻提醒著我孤單的身影，似乎註定只有失落。",
+    "lbs_context": "校園夜晚",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "在成大後門外的夜市，享受著咀嚼鹹酥雞的片刻安慰，然而熱鬧的街道和人群只讓我更覺孤獨，這份對生活的倦怠感像日漸褪色的霓虹燈，失去了往日的光彩。",
+    "lbs_context": "成大後門夜市",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "大禮堂的講座結束，回程路上感覺知識像稻草般湧入腦海，但卻掩蓋不了心底的不安，成大校園的寧靜讓我反思，這些知識是否只是無法治癒人生焦慮的空瓶。",
+    "lbs_context": "成大大禮堂",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "在敬業湖旁讀著考試筆記，燈光打在水面上形成破碎的影像，這些影像像我心裡的渴望一樣模糊又難以拼湊清晰，彷彿生活只是難以拾回的碎片般無能為力。",
+    "lbs_context": "敬業湖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "走進榕園，耳邊是微風穿過樹葉的聲音，它像一首嘲諷的旋律，喚醒我對未來的恐懼，成大這片熟悉的土地卻似乎成了陌生的牢籠，禁錮著我的無力掙扎。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "班上那些活躍的成大同學在討論實習機會，而我卻像一顆沉默的石頭聽著，窗外陽光灑在長凳上，讓我想起自己早已失去了向陽的熱情，徒留陰影伴隨。",
+    "lbs_context": "教室",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "在成大自強校區的實驗室裡，機械運轉的聲音比我還要有活力，看著散落一地的工具，內心感到自己的生活像一台失去動力的引擎，無法修復也無法前進。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "課堂上教授的語調繞耳不去，成大這座象牙塔如今卻似囚禁我的高牆，外表光鮮但裡頭空空如也，我的內心不斷被無法達成的目標所折磨，彷彿沉入深淵。",
+    "lbs_context": "課堂",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "在成功湖的岸邊漫步，柔和的夕陽看似美好卻像一種諷刺，提醒我無法在學業與生活間找到平衡，這片湖水如同我心裡的焦慮，靜得讓人喘不過氣。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "成大校區的椰風大道上，車輛緩慢穿梭，然而我心裡的混亂卻像交通堵塞般無法釐清，這條路像是象徵我人生的平面圖，看似通暢卻暗藏絕望的岔路。",
+    "lbs_context": "椰風大道",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "宿舍裡的寂靜像是無聲的洪流，壓迫著我每一次深呼吸，成大的學業壓力像無形的網絡束縛著我的思緒，看著窗外的星空，我只感受到它們的冷漠。",
+    "lbs_context": "學生宿舍",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "走在光復校區的林蔭道上，陽光穿透樹葉的空隙映射在地面，然而這片光影卻像我心裡的希望一樣破碎不堪，彷彿世界只剩無法拼湊的片段與失落。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "在實驗室裡加班，桌上的咖啡杯不斷堆積，這些殘餘的液體像我的疲憊一樣無法消除，成大的成就感似乎變成了一種幻影，讓人看不清未來的方向。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "夜晚的敬業湖散發著微弱的光芒，湖邊的長椅上空無一人，這種孤寂像是內心的空洞，成大這片寧靜的天地讓我渴望喧囂，卻又害怕其中的冷漠。",
+    "lbs_context": "敬業湖",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "在榕園的樹蔭下坐著，看著地上的斑駁影子，這些影子像是我對自己未來的擔憂，成大這片土地承載著我的成長，但卻也帶來無法擺脫的壓力與失落。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "課堂上的白板被寫滿公式，每一筆劃像是對我心靈的訴說，成大的學術氛圍讓我感到敬畏，但也像冰冷的機器般提醒我自己只是其中的一個模糊齒輪。",
+    "lbs_context": "教室",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "走在成大校園的寧靜小徑上，耳邊的蟲鳴聲像是對人生的嘲諷，這裡的每一步都彷彿讓我更接近遙不可及的目標，內心的矛盾感像霧裡看花般難以化解。",
+    "lbs_context": "校園小徑",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "成大的大禮堂外等待著朋友，鞋底踢著地面的灰石，這種漫不經心的動作像是掩飾著我內心的空虛，學業的壓力與未來的不確定如同背後的影子無法擺脫。",
+    "lbs_context": "大禮堂",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 1,
+    "text": "穿過光復校區的長廊，夕陽把我的影子拖得老遠，我心裡卻像是迷失在一片數據叢林裡，想著教授的提問，如同未解的方程式一般，困住我的思緒。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "今天在電機館的討論室，耳邊充斥著同學們的交談，卻感覺自己像掉入了一個訊息黑洞，努力吸收知識的過程卻像是往空杯裡灌水，心情格外沉重。",
+    "lbs_context": "電機館",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "剛從成功湖畔散步回來，風吹過湖面掀起細波，卻擾不動我心底的煩悶，期末考的壓力像滾石般越來越沉重，這種無力感像是被困在靜止的時間中。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "自強校區的繁忙總讓人窒息，路過熟悉的教學大樓，內心卻像是一片空白的白板，研究進度像擱置的書本毫無進展，這種失落感如霧般籠罩著我。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "圖書館裡的光影交錯，翻閱著沉重的課本，感覺自己被知識的洪流沖得七零八落，這種拼命追趕的壓力如同無法止息的漩渦，讓我喘不過氣。",
+    "lbs_context": "圖書館",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "今天在建築系的工作坊做模型，顏料的味道瀰漫著，手卻像被束縛般僵硬，內心的焦慮像一把火燒得猛烈，靈感的枯竭讓我變得毫無方向。",
+    "lbs_context": "建築系工作坊",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "成功湖旁的晚風讓人感到一絲安慰，然而心中憂慮的漩渦卻依然翻湧，期望與現實的差距像湖中倒影般破碎，難以拼湊成一幅完整的畫面。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "在光復校區的實驗室裡，不斷測試失敗的程式碼，彷彿在和自己的挫折感做無解的辯論，內心的低潮像無盡的寒霧一樣籠罩著我的思維。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "烈日下的自強校區廣場似乎在嘲笑我，汗水滴落的瞬間，那些未完成的作業如沙堆般堆積，內心卻像一顆枯萎的種子，被一整片荒漠吞噬。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "今天在電機館地下室的實驗室加班，燈光微弱得像是心情的倒影，反覆測試的失敗如同打擊一次次敲擊我的脆弱，內心早已疲憊不堪。",
+    "lbs_context": "電機館地下室",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "翻過成大榕樹下的筆記，卻像在翻閱自己失散的夢想，考試前的壓力如同巨石壓在胸口，讓我的呼吸如同淹沒的魚一般困頓而無助。",
+    "lbs_context": "成大榕樹",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "深夜的宿舍裡燈光昏暗，筆記本上的字跡像時間的痕跡，卻無法掩蓋早已失去方向感的內心，那種孤獨像黑夜般濃稠，無法驅散。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "在光復校區的教學樓下停留，腳步變得沉重，明明是熟悉的路徑，卻像走在陌生的荒野，目標的模糊讓希望像晨霧般消失無蹤。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "走過成大校門的道路，彷彿被壓力困住的靈魂在尋找出口，學業的重擔如同濃霧般侵蝕我，掙扎的內心卻像是被困在無聲的牢籠中。",
+    "lbs_context": "成大校門",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "今天在光復校區的食堂吃午餐，身旁的人聲鼎沸，而我內心的孤單卻如同空盤一般空洞，這種反差讓我覺得自我像是一個被丟棄的小島。",
+    "lbs_context": "光復校區食堂",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "實驗室裡的機器聲嗡嗡作響，思維卻像卡住的齒輪無法轉動，工科生活的疲憊如同枷鎖般把我困住，這種疲倦在深夜裡越加沉重。",
+    "lbs_context": "自強校區實驗室",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "在光復校區的大草坪上想著未完成的研究，眼中的世界看似平靜，內心卻如同狂風暴雨，在希望與焦慮的激盪中失去平衡。",
+    "lbs_context": "光復校區大草坪",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "今天在圖書館自習時，翻閱書本的動作像機械般重複，心裡的疲憊卻如同沉入深海的感覺，時間的流逝讓希望像陽光般逐漸黯淡。",
+    "lbs_context": "圖書館",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "在光復校區的教學大樓坐著，窗外的陽光炙熱，卻無法溫暖內心深處的冰冷，學業的壓力讓我像是被困在永無止境的冬季裡。",
+    "lbs_context": "光復校區教學大樓",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "走過成大校園的小徑，鳥鳴聲清脆，卻無法抹去內心深處的沉重，忙碌的學業像是無法停歇的腳步，讓我覺得自己像迷失在一片濃霧中。",
+    "lbs_context": "成大校園小徑",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 1,
+    "text": "在圖書館裡翻閱著厚重的學術期刊，彷彿背負著千斤重的壓力，窗外的綠意像是嘲弄著我的沉重內心，這些無法打破的學習障礙就像成大校園裡的迷宮，讓人無處可逃。",
+    "lbs_context": "成大圖書館",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "剛離開研究生辦公室，心就像被過濾器篩了無數次，渾濁不堪，成功湖的波光粼粼卻刺得眼睛生疼，這種無力感就像收不到面試通知一樣令人窒息。",
+    "lbs_context": "成大成功湖",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "走在榕園懷念著過去的課程，心底忽然像空蕩的教室般冷清，這些被遺忘的友誼和片段的回憶，就像無聲的風蹤，飄過我的記憶卻無法駐足。",
+    "lbs_context": "成大榕園",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "站在成大醫學院門前，感到自己的夢想像未完成的解剖報告般支離破碎，旁邊的救護車聲卻宛如命運的嘲諷，提醒著那些未竟的使命和徒勞的奮鬥。",
+    "lbs_context": "成大醫學院",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.8
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "宿舍的燈光昏暗，像是心情的底色，低垂的台燈映射著孤獨的影子，讀著課本卻感覺知識在腦海中像水滴般滲漏，再多的努力也無法填滿這無底洞。",
+    "lbs_context": "成大學生宿舍",
+    "ground_truth": {
+      "Valence": -1.0,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "剛結束校內跑步活動，雖然汗水像雨般滴落，但心中的自我懷疑卻像深夜的霧無法消散，這種追求未果的疲憊感讓我覺得人生就像一場未完的馬拉松。",
+    "lbs_context": "成大操場",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "自強校區的實驗室空氣中充斥著化學藥劑的味道，像是實驗失敗的殘餘痕跡，每次打開器材卻都像摸索著破碎的信念，疲憊的身心早已不知希望為何物。",
+    "lbs_context": "成大自強校區",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "站在成大校門外，想起曾經奔跑的身影，心底卻彷彿被陰影籠罩，這份被時間吞噬的熱情就像夕陽下的影子，愈拉愈長，逐漸消失在時間的盡頭。",
+    "lbs_context": "成大校門",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "剛離開系館樓梯間，腦海中充滿未完成的作業和疲憊的研究，走進校園時卻覺得自己像落寞的書籤，無法夾住那份飄散的未來理想。",
+    "lbs_context": "成大系館",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "在烏雲籠罩的成大廣場上彷彿感受到天氣鏡射著我的心境，每一步都像踏入未知的深淵，這份對未來的恐懼像是黑雲壓頂般沉重。",
+    "lbs_context": "成大廣場",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "站在夜晚的宿舍陽台，星光像是遺失的希望般忽隱忽現，心中卻充滿著無法填補的空洞，這種孤寂感就像未完成的期末報告，令人煩憂。",
+    "lbs_context": "成大宿舍陽台",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "剛經過校內咖啡廳，咖啡香氣像是對疲憊的慰藉，但內心的空虛卻像冷掉的飲料般失去溫度，這種對充實感的追尋讓人感到無措和迷惘。",
+    "lbs_context": "成大咖啡廳",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "成大演講廳的空氣沉悶得像是時間靜止，內心卻像跑步時的心跳般急促，每一位講者的聲音都像遙遠的回音，提醒著那些未曾抵達的目標。",
+    "lbs_context": "成大演講廳",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "在成大校園內的步道上緩慢行走，感覺自己像是一片落葉，被風帶著飄向未知的方向，那種對未來的徬徨就像步道旁的枯枝般無力。",
+    "lbs_context": "成大步道",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "重返成大物理系館，光線從窗戶灑進室內，卻像是一道冷酷的目光凝視著我的失敗，一切努力像是錯誤公式一般回響在冰冷的牆壁上。",
+    "lbs_context": "成大物理系館",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "在成大文化中心的展覽廳內，明亮的燈光宛如隔絕現實的屏障，但內心卻像被黑暗吞噬，對生活意義的追尋彷彿如展覽上的抽象畫般難以捉摸。",
+    "lbs_context": "成大文化中心",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "站在成大後山的綠意環繞中，突然感覺自己的思緒像是一條錯誤的登山路線，每一步都像是無法解開的迷題，這種挫敗感讓人備受乾涸。",
+    "lbs_context": "成大後山",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "深夜在成大校園的路燈下慢跑，心中卻像沉入黑暗的水底，呼吸聲回蕩於耳畔，猶如警告著生活的壓力如影隨形，令每一口氣都像在挑戰生存。",
+    "lbs_context": "成大校園",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "結束了成大的夜間課程，走出課堂時感到自己的夢想像被反覆擦拭的白板般逐漸模糊，唯有月光那微弱的光芒在提醒著心底的殘存希望。",
+    "lbs_context": "成大教室",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "在成大校園的草坪上獨自坐著，風吹起落葉的聲音像無聲的指控，內心的孤單彷彿吞噬了所有的能量，只剩下對現狀無力改變的深深懷疑。",
+    "lbs_context": "成大草坪",
+    "ground_truth": {
+      "Valence": -1.0,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 1,
+    "text": "走在小東路上，兩旁的榕樹像記憶深處的網絡纏繞著心頭，與其說是迎接期中考，不如說是踏入一場無休止的試煉，心底的壓力像是被扯不斷的蛛絲，仍然懷念開學那份短暫的自由。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "自強校區的夜晚燈光昏黃，像是給疲憊的靈魂罩上一層朦朧的面紗，課堂的討論聲如潮，一波波地打在我心上，時間的流逝竟像實驗數據一樣毫無回頭之路。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.8
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "成大圖書館的閱讀桌像孤島，每個人低頭沉浸於自己的世界，然而我的思緒卻像漂浮在湖面上的落葉，隨著期末壓力微微顫抖，似乎只有深夜的寂靜能稍微撫慰這份無助。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "午後的陽光穿過成大校園的樹梢，像一把刻板的剪刀，切割著我的時間與希望，考試週的到來宛如黑洞吞噬一切，而小吃部的香味卻嘲笑著我空空如也的胃袋。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "宿舍的冷氣聲安慰著我對明天的不安，然而心中那陣無名的風暴卻依然肆虐，彷彿課程進度的壓力像暴雨般將所有的希望沖刷得無影無蹤，只有床鋪可以短暫庇護我的存在。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "在成大校園的綠意中穿梭，卻感覺自己像一片迷路的葉子，即使陽光再燦爛也無法驅逐心底的陰霾，每次經過成功湖，倒影似乎在笑我逃避的習慣，而湖水無聲地流過。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "在空教室裡準備報告，彷彿坐在一片荒蕪的沙漠中，周圍的寂靜像是一種諷刺的陪伴，明明是群體合作的作業，但內心的孤獨感卻像潮水般一波波地侵襲著，無法掙脫。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "自修室裡空氣沉悶得像灌滿了壓力，每個人在桌前奮筆疾書，而我卻像被困在一個無法破譯的方程式裡，時間嘲笑著我的無能為力，桌上的課本像一座無法攀越的高山。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "成大的晨曦撒在宿舍外的地板上，彷彿編織著一張溫暖的網，然而心中的壓力卻無法被驅散，考試前的焦慮像盤踞著的烏雲，阻絕了所有期待的可能性，讓喘息更加艱難。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "成大校園的夜晚燈光閃爍，像是掩蓋著每個學生的疲憊，但我的思緒卻像湖水中無法消失的皺紋，期末考的壓力如同碎片般散落心頭，連深呼吸都像是一種奢侈。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "剛離開自強校區實驗室，感覺我的腦袋就像沒存檔的程式碼一樣空洞，看著成功湖的夕陽，突然覺得這種期中考前的焦慮就像無窮迴圈一樣跑不完，真的很諷刺。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.8
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "考試周的前夜，宿舍的窗外風聲呼嘯，彷彿在嘲笑我毫無進展的複習，課本的字句像一道迷宮，無論如何努力都無法穿過，這份無力感逐漸吞噬自信，留下空洞的疲憊。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -1.0,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "走在成大校園的林蔭大道上，心情就像那秋末飄落的枯葉，迷失在落日的餘暉中，所有的讀書壓力如同沉重的風，將我推向未知的沮喪，連喘息都變得更加困難。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "成功湖的倒影如同一面模糊的鏡子，映照出考試周來臨前的我，心底的壓力像無盡的漩渦，無法找到出口，甚至連湖水的翻涌聲都彷彿在訴說著不被理解的失落。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "成大的清晨陽光洒滿操場，每個奔跑身影都有自己的目標，然而我的腳步卻像被時間的沼澤牢牢黏住，所有的進度像遠去的列車，帶著焦慮飛馳，我只能眼睜睜地看著它遠去。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "夜晚的成大校園寂靜得可怕，燈光的微弱倒影像是心底希望逐漸流逝的象徵，考試的壓力像一張牢固的網將我束縛，然而時間的流逝卻如同無情的風，悄悄吹過我的生命。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "夜晚自強校區的燈火通明，教室內的筆記聲像深夜海浪般起伏，而我的心情卻像沉入無底洞的石頭，那份無法掙脫的無力感，讓期中考的壓迫更像一場無盡的折磨。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -1.0,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "清晨的成大校園宛如一本安靜的小說，陽光是文字的筆劃，學生們的步伐則是段落中的逗號，然而我的心卻像被撕裂的書頁，考試壓力逐漸侵蝕期盼，留下疲憊的碎片。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "在成大校園的樹蔭下漫步，感覺像是置身於一場無盡的夢境，期中考的壓力就像背後逐漸逼近的腳步聲，甚至連陽光投射的影子都像不斷提醒我的異樣心情，無所適從。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "成大圖書館的安靜讓人不敢呼吸，彷佛每個細微的動作都會驚擾其他人的思考，而我的心情卻像翻亂的書頁，壓力與不安不斷交織，隨著時間的推移，愈發無處安放。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 1,
+    "text": "當我漫步在光復校區的幽靜道路上，秋風拂過臉頰的瞬間，就像程式碼中意外觸發的邏輯錯誤般突然感到不安，內心深處的孤寂彷彿藏在雜亂的變數中難以清理，成大生活總在深夜顯得格外沉重。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "在自強校區圖書館翻閱著厚重的學術期刊，沉浸其中的我忽然覺得自己像被封閉在無窮迴圈裡的程式碼，生命的重複令人窒息，而窗外輕微的雨聲卻像是嘲笑我的徒勞，頓時感到一股深深的無力感。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "坐在成功湖畔的長椅上，看著湖面上映著繁星的倒影，心裡卻像亂碼般混亂不堪，期末考的壓力像是緊緊繞上心頭的無窮遞迴，讓原本詩意的夜晚蒙上一層揮之不去的陰霾。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.3,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "在榕園旁看著穿梭的學弟學妹，頓時覺得自己像一個被遺忘的舊版本程式碼，無法再融入這片充滿活力的校園，夕陽將我的影子拉得長長，一如拖得冗長的畢業論文般充滿不確定性。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "走過敬業校區的教學樓，冷清的走廊和空蕩的教室彷彿在嘲笑我這段拼命追逐卻毫無回報的研究生涯，內心的疲憊感逐漸被壓抑，像是處於內存不足的老舊電腦般無法負荷這份壓力。",
+    "lbs_context": "敬業校區",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "在光復操場上夜跑時，耳邊的風聲似乎嘲弄著我的喘息，整個畫面像程序執行到瓶頸時的緩慢卡頓，成大生活的壓力不是運動就能消除的，內心的空虛感像跑步時拉長的影子一樣揮之不去。",
+    "lbs_context": "光復操場",
+    "ground_truth": {
+      "Valence": -0.4,
+      "Arousal": 0.8
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "剛從成大學生會大樓走出，感覺自己像是一個被略過的錯誤行程，不斷被生活中的瑣事和責任拖著走，窗外的樹影晃動讓我想起自己的未來，似乎也如這飄零的樹葉般無法掌握。",
+    "lbs_context": "學生會大樓",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "坐在校門口的咖啡廳裡，望著路人匆匆而過，感覺自己像是被注釋掉的程式碼，乏善可陳的存在讓心情沉入谷底，耳邊的背景音樂似乎在提醒自己，這種平凡何時才能掙脫。",
+    "lbs_context": "校門口咖啡廳",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "在小東路晚餐時，熱鬧的氣氛讓我想到自己像被孤立的函數，在喧囂人群中無法連結任何意義，內心的空虛如餐盤上殘餘的料理般逐漸冷卻，從而生出無法填補的情感空白。",
+    "lbs_context": "小東路",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "踏著暗夜回到宿舍，只有床頭微弱的台燈保持亮著，房間的靜謐讓我想起一段被中止運行的程式碼，那些未完成的夢想與計劃，像掛在牆上的時鐘一般停滯，似乎再也難以重新啟動。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "在光復校區的研究室裡盯著電腦屏幕，程式碼像無解的謎題般讓我倍感挫敗，窗外的狂風呼嘯彷彿在暗示著，這段學術生涯如同無限遞迴般深陷其中，連出口都難以尋覓。",
+    "lbs_context": "光復研究室",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "站在小東夜市的攤位前，熱騰騰的餐點卻無法溫暖我心中的冰冷，那種無法找到歸屬感的失落像是一段遺失的主函數，整個夜晚在燈光之下竟顯得格外蒼白悲涼。",
+    "lbs_context": "小東夜市",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "跑進成功大學的校園裡，周圍的建築和綠意盎然的環境彷彿在嘲笑我內心的空虛，看到迎面走來的學生群，我意識到自己的存在感猶如被丟棄的陳舊程式碼般毫無作用。",
+    "lbs_context": "成大校園",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "在夜晚自強校區的長廊上散步，明亮的路燈和夜空中的繁星卻無法驅散我心中的憂慮，想起學業的壓力如同死循環般無法突破，心情低落得像幽暗角落裡無人觸碰的程式碼。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "坐在光復校區的草地上，聽著秋風吹過樹葉的沙沙聲，突然覺得自己像一個不必要的程式模塊，時間在指尖流走，卻沒有留下有價值的成果，只有一片空白和無助的回音。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "在校門口的便利商店前停下腳步，拿著一罐冰涼的咖啡，內心卻無法平靜下來，生命似乎像一行行不斷被覆蓋修改的程式碼，無法找到那個對的方向，最後迎來的只是一片迷惘。",
+    "lbs_context": "校門口便利商店",
+    "ground_truth": {
+      "Valence": -0.4,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "深夜宿舍的小窗外，蟲鳴交織成一首無名的曲調，我一個人坐在桌前敲打著程式碼，彷彿在與命運對弈，重複的錯誤如同命運的玩笑，我的未來似乎也像這夜晚般毫無光明。",
+    "lbs_context": "宿舍窗邊",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "在綜合球場的看台上，感覺自己像一段被人遺忘的程式碼，周圍的歡呼與活力都不屬於我，內心如同快要過期的功能塊一般孤立失落，這種成大生活的碎片讓我感到莫名的沉重。",
+    "lbs_context": "綜合球場",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "在敬業校區參加學術演講，內容精彩卻無法驅散我心中被拋棄的感覺，彷彿自己像是未被調用的函數，毫無意義地存在於學術的海洋中，講者的熱情卻成為我沉默中的諷刺。",
+    "lbs_context": "敬業校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "漫步在成大校園的雨後小徑上，泥濘的路面讓我想到自己的學術生涯，像是錯誤觸發的程式般，每一步都沉重而無法回頭，窗外的灰色天空讓我的心情深陷如夢魘般的低谷。",
+    "lbs_context": "成大雨後小徑",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 1,
+    "text": "拖著疲憊的身體穿過自強校區，仰望著那灰濛濛的天空，總覺得像是程式碼裡無法解析的錯誤一樣，成大的生活就像那隱約的雨滴，時而清晰，時而模糊，心裡的挫敗感像失效的電池般無法充滿力量。",
+    "lbs_context": "自強校區",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "成功湖旁的黑天鵝悠然地遊弋，然而心中的平靜卻似湖面上的漣漪一樣，被研究所生活的壓力撕裂。不禁覺得自己像是在追一個永遠無法解的函數，無論再努力都只看到更多未知的歧路。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "走進勝利校區的圖書館，滿目皆是埋頭苦讀的身影，氛圍壓抑得像一場無聲的戰爭。腦海中翻滾著那些迴圈代碼，怎麼也找不到出口，彷彿總有一把劍懸在我的頭頂，逐漸沉重。",
+    "lbs_context": "勝利校區",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "清晨的成功湖邊，空氣略帶潮濕，一隻鷺鷥靜靜站在水邊，彷彿在思考什麼。我的心卻被實驗失敗的焦慮壓得喘不過氣，像是那隱隱約約的晨霧，無法知道方向在何處。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "剛結束一堂繁重的機率課程，腦袋像是塞滿了無序的數據，毫無出口。走過桂園時，看到幾片黃葉飄落，心裡突然有種荒涼的感覺，彷彿我在學業的深深迷霧中無法找到一絲亮光。",
+    "lbs_context": "桂園",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "在博雅樓外低頭看著深色濕冷的地磚，無數代碼的錯誤像一個無底洞般吸走我的耐心。四周的寧靜如同一種沉重的壓力，把我的心壓得喘不過氣來，真希望自己可以一鍵編譯，也許會好點。",
+    "lbs_context": "博雅樓",
+    "ground_truth": {
+      "Valence": -0.8,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "實驗室內的冷光燈閃爍著刺眼的白光，彷彿嘲弄著我的疲憊與失落。籌碼的錯誤讓我感覺自己只是個無法執行的程序，卡在debug裡，四周的沉默宛如一場難以醒來的噩夢。",
+    "lbs_context": "實驗室",
+    "ground_truth": {
+      "Valence": -0.9,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "走進校門，迎面而來的風中混雜著汽機車的嘈雜聲，感覺成大的自由與壓迫在這些聲音中交織。心底的焦燥像是開啟了無法停止的隱喩，原來夢想也是一種繁忙的重量，壓得人喘不過氣。",
+    "lbs_context": "校門口",
+    "ground_truth": {
+      "Valence": -0.4,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "在宿舍陽台看著夜晚星空，想起白天那宛如無法解的微分方程式，心中沉甸甸地想著未來，像星星一樣遙不可及。長大後才發現，成大的自由有時就是一張無盡的答題卷，寫到手酸心也累。",
+    "lbs_context": "宿舍陽台",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "走過校園小徑，秋風呼嘯而過，樹葉在地上翻滾著，彷彿要嘲笑我的努力與無助。成大生活就像這一地散亂的落葉，怎麼拾起也拼不成完整的圖景，令人感到心累又無可奈何。",
+    "lbs_context": "校園小徑",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "今天實驗報告的數據竟然又不符，心裡像是編譯失敗的錯誤訊息一樣無法終止，走出活動中心的瞬間，迎面而來的陽光竟使我感到更諷刺，彷彿是學業壓力在嘲笑我的脆弱。",
+    "lbs_context": "活動中心",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "坐在光復校區的草地上，望著天上的白雲變幻，心情卻像被重力拉扯著，無法飛翔。成大的學業如同無法停止的壓力機，總是在不經意間碾碎我的希望，留下一地難以修復的碎片。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "剛走出達觀校區的巡禮，心裡依然充滿矛盾的情緒，像是被速度超過的電流包圍著，刺激得渾身不舒服。成大生活的壓力宛如跑不完的馬拉松，只有焦躁此起彼伏，卻不見終點。",
+    "lbs_context": "達觀校區",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "站在榕園樹下，陽光穿透樹葉的瞬間，突然感受到學業壓力的無情嘲諷。那些未完成的進度就像無法停止的程序碼，讓我的心情跌入谷底，唯有這陽光提醒我生活還存在一絲溫暖。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "Valence": -0.4,
+      "Arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "剛離開博物館，歷史的厚重感與學業的壓力交織在一起，像是一場難以承受的競賽。我的靈魂彷彿被這輕描淡寫的悠久歷史嘲弄著，提醒我自己的存在是如此渺小又脆弱。",
+    "lbs_context": "博物館",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "走進小吃街，周圍人群的喧鬧聲像是碾壓我的耳膜，與我心裡的寂靜形成強烈對比。成大的生活總是如此矛盾，熱鬧的外表與孤獨的內心，就像生活給我開的又一個玩笑。",
+    "lbs_context": "小吃街",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "剛結束在耐人尋味的建築系課堂，微微的風讓思緒翻滾，但卻找不到解方。像是被困在一片森林，眼前的選擇密密麻麻，成大生活真是像一場看不到出口的設計習題。",
+    "lbs_context": "建築系課堂",
+    "ground_truth": {
+      "Valence": -0.5,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "走出學校操場，周圍的人群如同無法停止的生命力，而心裡卻一片荒蕪。成大的學業壓力像是操場上的跑道，無論多努力奔跑，都無法回到原點，令人感到深深的疲憊與迷惘。",
+    "lbs_context": "學校操場",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "成大校區的榕樹下，一片片落葉如同我心中的壓力一樣，堆積在地面上無法掃除。生活的奔波彷彿是一場無法完成的數學題，怎麼計算都感到遙遠，心裡的落寞更是難以形容。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "Valence": -0.6,
+      "Arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "穿過大門走向校園深處，四周寧靜得像是世界突然停止旋轉，而我的內心卻充滿了學業的吵雜。成大生活像是一個爛尾的小說，卻還得逼著自己繼續翻到最後一頁，心累又無奈。",
+    "lbs_context": "校園門口",
+    "ground_truth": {
+      "Valence": -0.7,
+      "Arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  }
+]

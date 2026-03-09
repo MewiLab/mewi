@@ -1,0 +1,2002 @@
+[
+  {
+    "id": 1,
+    "text": "今天早八課又遲到了，圖書館沒位子，後來只好去光復借閱區蹲著讀書。",
+    "lbs_context": "校園",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "中午吃育樂街滷肉飯，太鹹了，還下了一場大雨，鞋子全濕了。",
+    "lbs_context": "校園外",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "在系館待了整天，終於把期末報告 PPT 做完，但電腦又差點沒電。",
+    "lbs_context": "系館",
+    "ground_truth": {
+      "valence": 0.2,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "期中考超硬，題目完全看不懂，感覺會直接二修，整個心態炸裂中。",
+    "lbs_context": "教室",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "寫完報告後跑去勝利路吃燒烤，店裡人擠爆，等了快一小時才輪到。",
+    "lbs_context": "校園外",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "今天機車壞在宿舍樓下，推到修車行修了半天，還花了五百多塊。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "早上圖書館搶不到座位，結果跑去學生活動中心找地方泡了一整天。",
+    "lbs_context": "校園",
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "今天光復操場跑了三圈，超累，鞋子還被跑壞了，明天得去買新的。",
+    "lbs_context": "校園",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "晚餐吃自助餐，結果菜色很普通，還不小心弄翻飲料，真是糟糕的一天。",
+    "lbs_context": "校園外",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "今天去成功湖邊散步，風景不錯，心情稍微好了一點，拍了幾張照片存檔。",
+    "lbs_context": "校園",
+    "ground_truth": {
+      "valence": 0.4,
+      "arousal": 0.2
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "計中冷氣爆冷，寫報告手凍得不行，晚飯隨便買了個便當匆匆解決。",
+    "lbs_context": "校園",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "今天宿舍樓下突然大停電，手機幾乎沒電，整個晚上只能靠手電筒過活。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "午休時間去小福喝咖啡，人潮有點少，剛好找到靠窗位子，心情放鬆了點。",
+    "lbs_context": "校園",
+    "ground_truth": {
+      "valence": 0.4,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "實驗室熬夜趕進度，但實驗數據還是對不上，整個心累到不行，無語。",
+    "lbs_context": "校園",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "晚上自習室燈太亮，頭痛又影響效率，乾脆回宿舍繼續寫作業。",
+    "lbs_context": "校園",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "今天體育課玩排球，結果手被打腫了一大塊，下次一定得注意保護手背。",
+    "lbs_context": "校園",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "機車在育樂街違停被開單，哭死，這月底的生活費又少了一大筆。",
+    "lbs_context": "校園外",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "今天去吃了校門口的滷肉飯，新套餐驚艷到我，還便宜又好吃，真值。",
+    "lbs_context": "校園外",
+    "ground_truth": {
+      "valence": 0.6,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "下午演講聽到打瞌睡，筆記完全沒記下來，最後只好問同學借了抄寫。",
+    "lbs_context": "校園",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "剛在光復操場打籃球，結果摔傷手肘，醫務室貼了藥布，還好傷勢不嚴重。",
+    "lbs_context": "校園",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 1,
+    "text": "今天機車沒油，牽車到育樂街，整個人都累翻了。",
+    "lbs_context": "成大周邊",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "早八的課老師提早結束，突然有空閒不知道要幹嘛。",
+    "lbs_context": "成大校內",
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "研究生辦公室冷氣壞掉了，下午開會只能一直流汗。",
+    "lbs_context": "成大校內",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "宿舍的熱水器又壞了，洗澡只能用冷水，超痛苦。",
+    "lbs_context": "成大宿舍",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "計中印刷機排超長，作業快來不及交了。",
+    "lbs_context": "成大計中",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "圖書館自習室今天很安靜，效率還不錯。",
+    "lbs_context": "成大校內",
+    "ground_truth": {
+      "valence": 0.6,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "早上修健身房卡，下午就去重訓，器材其實有點舊。",
+    "lbs_context": "成大健身房",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "今天解決了期末專題的大部分問題，鬆了一口氣。",
+    "lbs_context": "成大校內",
+    "ground_truth": {
+      "valence": 0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "宿舍室友講電話太大聲，根本無法好好讀書。",
+    "lbs_context": "成大宿舍",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "今天去成功湖散步，看著鯉魚游來游去還挺放鬆。",
+    "lbs_context": "成大校內",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "上課筆電忘帶，乾脆直接回宿舍拼命補筆記。",
+    "lbs_context": "成大宿舍",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "育樂街的鹽酥雞攤今天沒開，晚餐只有吃泡麵。",
+    "lbs_context": "成大周邊",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "今天跑步繞了一圈操場，覺得心情還不錯。",
+    "lbs_context": "成大操場",
+    "ground_truth": {
+      "valence": 0.7,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "社團活動人很少，感覺氣氛有點冷清，沒什麼動力。",
+    "lbs_context": "成大社團",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "今天課堂報告被老師問到卡住，整個超尷尬。",
+    "lbs_context": "成大校內",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "學校食堂的菜今天特別鹹，勉強吃完，胃口一般。",
+    "lbs_context": "成大食堂",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "晚上實驗室停電，數據全沒了，重作超煩。",
+    "lbs_context": "成大校內",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "今天跟朋友討論畢業旅行，整個期待值拉滿。",
+    "lbs_context": "成大校內",
+    "ground_truth": {
+      "valence": 1.0,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "走進校門發現雨傘沒帶，直接被淋成落湯雞。",
+    "lbs_context": "成大校外",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "期中考成績不太理想，晚上抱著課本複習到了半夜。",
+    "lbs_context": "成大宿舍",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 1,
+    "text": "今天校門擠滿人，去小西門買晚餐人超多，等了快半小時。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "圖書館位子搶不到，書沒看幾頁就跑去碧蓮打卡了。",
+    "lbs_context": "圖書館",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "中午吃宿舍便當，菜色還是不太好，吃到一半就不想吃了。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.2
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "研討會報告超緊張，結果老師居然只問了兩個問題就結束。",
+    "lbs_context": "系館",
+    "ground_truth": {
+      "valence": 0.2,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "早上起晚了，騎腳踏車趕到中正堂，還遲到五分鐘。",
+    "lbs_context": "中正堂",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "實驗課被教授盯上，結果操作錯誤，心情直接掉到谷底。",
+    "lbs_context": "實驗室",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "成大商場那碗拉麵太鹹了，吃得我口乾舌燥，價格也不便宜。",
+    "lbs_context": "成大商場",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "宿舍門禁剛剛沒趕上，現在只能在外面等管理員開門。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "水資中心那邊的貓好可愛，今天牠居然跳到桌上跟我玩。",
+    "lbs_context": "水資中心",
+    "ground_truth": {
+      "valence": 0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "今天考數學系統，老師出的題目幾乎沒人會，真的是崩潰。",
+    "lbs_context": "數學系館",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "宿舍沒熱水，洗完冷到發抖，好想投訴生活組。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "晚上在成大湖散步，被蚊子叮得受不了，趕快溜回宿舍。",
+    "lbs_context": "成大湖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "今天陽光超刺眼，去修課室的路上熱到整個人都快融化。",
+    "lbs_context": "修課教室",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "計中空調真的太冷了，結果作業也卡關，總覺得好煩躁。",
+    "lbs_context": "計中",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "今天期末報告終於完成了，不過也失去了一整天休息時間。",
+    "lbs_context": "圖書館",
+    "ground_truth": {
+      "valence": 0.1,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "校內餐廳中午爆滿，只好外帶回宿舍吃，還是太擠了。",
+    "lbs_context": "校內餐廳",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "電機系館電梯壞掉了，爬到四樓的時候快喘不過氣。",
+    "lbs_context": "電機系館",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "今天跟同學去校外吃飯，結果發現新開的店意外便宜又好吃。",
+    "lbs_context": "校外餐廳",
+    "ground_truth": {
+      "valence": 0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "晚上在宿舍陽台聊天，風很大但氣氛還不錯，聊得很盡興。",
+    "lbs_context": "宿舍陽台",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "今天實習太累人了，回來只想躺床上休息，累到連飯也不想吃。",
+    "lbs_context": "校外實習",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.2
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 1,
+    "text": "早上八點的課又睡過頭，早餐還沒吃，只能趕去系館點名。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "中午食堂人擠人，勉強排到一份滷肉飯，味道普通。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": 0.0,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "圖書館冷氣偏冷，筆電快沒電了，忘記充電器。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "晚課超無聊，教授講得好像催眠曲，差點睡著。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "今天又下雨，騎車全身濕，鞋子泡水好不舒服。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "育樂街的滷味真的超好吃，下次要多點幾種配菜。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": 0.8,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "宿舍熱水壞掉了，洗澡只能用冷水，超崩潰。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -1.0,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "期末報告真的爆炸多，今天熬夜做不完還得改格式。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "午休時間太短了，還得趕去下一堂課，完全沒精神。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "傍晚去光復操場跑步，雖然累但心情變好了。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "系館旁邊的樹掉毛毛蟲，差點被爬到手上，超噁。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "今天拿到獎學金，晚餐決定吃燒肉慶祝一下。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": 1.0,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "公車遲到二十分鐘，差點遲到上課，心情很差。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "今天的晚霞好美，在宿舍頂樓拍了一堆照片。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": 0.9,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "洗衣機滿了，一直排不到，衣服只好堆到明天再洗。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "早上跑去誠品晃晃，買了幾本小說，心情不錯。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": 0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "機車出現異音，修車花了一千多塊，實在心痛。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "學校附近的豆花超滑嫩，配料選珍珠就超好吃。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": 1.0,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "中午忘記帶水壺，買飲料又被坑二十五塊，無言。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "今天運動會太陽超大，曬了一整天差點中暑。",
+    "lbs_context": "成大",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 1,
+    "text": "今天雨很大，從宿舍到系館全濕，鞋子泡水不舒服。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "上課忘記帶筆記本了，只能用手機記筆記，超麻煩。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "學校小吃越來越貴，想吃碗滷肉飯都要三十多塊。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "圖書館座位滿滿，想讀點書但找不到地方坐，很煩。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "期中報告壓力山大，晚上睡不著覺，明天還要早課。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "今天在計中打報告打到腦袋發脹，耳機也沒電了。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "學餐的咖啡其實不難喝，就是有點太淡而且不甜。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "剛剛在操場跑步，被蚊子咬到滿腳包，超癢的。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "室友又不洗衣服，房間很臭，受不了只好出去躲清靜。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "今天去體育館打羽球，但場地人好多，等了半個小時。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "又是沒開冷氣的一天，整個下午悶熱到快受不了。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "今天去系辦問事情，等了快一個小時，效率有點低。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "宿舍附近的便利商店排長龍，買個飯糰都要等很久。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "下午的課程超無聊，一直打瞌睡，講義內容很枯燥。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "今天實驗課做錯了流程，老師提醒後才發現滿頭冷汗。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "在宿舍燒水燒太久忘記關火，還好室友提醒才沒出事。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "今天樓下熱炒的味道飄進房間，聞到就超想吃宵夜。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "去泳池游泳，泳帽忘帶被擋在外面，來回跑了兩趟。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "學校的 Wi-Fi 今天又慢到爆，連網頁都打不開。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "今天曬衣服，有隻鳥直接大便到我的白襯衫，傻眼。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 1,
+    "text": "今天在丘頂跑步，鞋子磨腳，真痛。",
+    "lbs_context": "成大丘頂操場",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "宿舍廚房又被用得超亂，垃圾沒人丟。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "今天去榕園，遇到學弟問我課選問題。",
+    "lbs_context": "榕園",
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "期中考前一天，通識報告還沒寫完。",
+    "lbs_context": "圖書館",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "早上買豆漿，結果薯餅賣完了，好餓！",
+    "lbs_context": "光復路早餐店",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "計中冷氣超冷，寫完 C++ 作業了。",
+    "lbs_context": "計中",
+    "ground_truth": {
+      "valence": 0.2,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "晚餐吃育樂街炒飯，蛋少得有點失望。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "今天課好多，下午都在電機系報告。",
+    "lbs_context": "電機系館",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "成大湖邊散步，晚上風大但很舒服。",
+    "lbs_context": "成大光復湖",
+    "ground_truth": {
+      "valence": 0.6,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "今天公車超慢，差點上課遲到。",
+    "lbs_context": "校門口",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "宿舍樓下一堆腳踏車，找不到我的。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "去電機系自習，結果沒位子只好回家。",
+    "lbs_context": "電機系自習室",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "學校自助餐菜色一樣，吃到快膩了。",
+    "lbs_context": "學校餐廳",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "健身房今天人不多，跑步機不用排隊。",
+    "lbs_context": "健身房",
+    "ground_truth": {
+      "valence": 0.4,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "拿到期中考卷，分數低得不敢看。",
+    "lbs_context": "教室",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "全家便利商店奶茶買一送一超划算。",
+    "lbs_context": "校門口全家",
+    "ground_truth": {
+      "valence": 0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "在社科院討論，結果學長超兇，氣炸。",
+    "lbs_context": "社科院",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "今天西門的飲料店優惠，買了奶霜茶。",
+    "lbs_context": "西門外",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "租書館的座位插座壞了，手機快沒電。",
+    "lbs_context": "分館租書區",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "室友開冷氣一整晚，早上起來覺得冷。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 1,
+    "text": "早八遲到五分鐘，老師點到名很尷尬，早餐沒吃超餓。",
+    "lbs_context": "成大校區",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "系館冷氣壞了，大家上課熱到爆，老師也不專心講課。",
+    "lbs_context": "系館",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "午餐吃了學一牛肉麵，肉給得超多，湯底有點太鹹。",
+    "lbs_context": "學一餐廳",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "今天的日晒超烈，等校車曬到快中暑，車也好久才來。",
+    "lbs_context": "校車站",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "昨晚宿舍樓下有人吵鬧到凌晨，今天早上的課超睏。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "實驗課的儀器又壞了，等技工來修，結果整堂課耗掉。",
+    "lbs_context": "實驗室",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "圖書館冷氣真的舒適，坐了一整天把報告寫完了。",
+    "lbs_context": "成大圖書館",
+    "ground_truth": {
+      "valence": 0.7,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "剛剛在小福吃到過期布丁，肚子現在感覺怪怪的。",
+    "lbs_context": "小福餐廳",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "晚上準備在情人湖跑步，竟看到一隻流浪狗跟著我跑。",
+    "lbs_context": "情人湖",
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "社課結束太晚，回宿舍已經沒熱水，只能忍著冷水洗澡。",
+    "lbs_context": "宿舍浴室",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "系辦阿姨忘記幫我登記補助，又多跑一趟才搞定。",
+    "lbs_context": "系辦",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "今天宿舍網路卡到爆，影片根本看不了，下載也超慢。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "運動場晚上燈光太暗，跑步感覺有點危險，下次不去了。",
+    "lbs_context": "運動場",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "室友偷偷用我的洗髮精，明顯變少了，還借口說不是他。",
+    "lbs_context": "宿舍房間",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "學餐今天的咖哩飯，味道還不錯，但肉量變得很少了。",
+    "lbs_context": "成大學餐",
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "同學借了筆電卻還搞壞，打了通電話給我，我超無語。",
+    "lbs_context": "系館",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "下午的太陽曬到手機過熱死機，導致資料全清掉了。",
+    "lbs_context": "校園戶外",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "跑步時被樹上的蟬尿噴到，回宿舍花了好久才洗掉味道。",
+    "lbs_context": "校園步道",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "晚上參加社團活動，朋友分享的笑話真的笑到噴飲料。",
+    "lbs_context": "活動中心",
+    "ground_truth": {
+      "valence": 0.8,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "昨天夜衝市區，回到宿舍卻發現作業還沒寫，頭痛死了。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 1,
+    "text": "圖書館位置好難找，空間又擠，考試週壓力超大！",
+    "lbs_context": "成大考週",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "宿舍晚餐打不到餐位，樓下自助餐又漲價了。",
+    "lbs_context": "成大宿舍",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "今天系館冷氣壞了，大家都跑到計中待著。",
+    "lbs_context": "成大系館",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "南大夜市新開的小攤味道還不錯，下次再試別的。",
+    "lbs_context": "成大夜市",
+    "ground_truth": {
+      "valence": 0.4,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "系辦效率太低，申請的東西要兩周才能拿到。",
+    "lbs_context": "成大系辦",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "今天校門口的早餐車爆滿，結果遲到一節課。",
+    "lbs_context": "成大校門",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "操場晚上燈很暗，跑步時險些摔倒，真危險！",
+    "lbs_context": "成大操場",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "每次要借書都得排老半天，熱門書根本借不到！",
+    "lbs_context": "成大圖書館",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "今天有社團活動，結果下雨取消，超掃興的。",
+    "lbs_context": "成大課外活動",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "宿舍網速突然變超慢，連作業都上傳失敗了。",
+    "lbs_context": "成大宿舍",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "工學院的咖啡又漲價了，每次只能喝小杯的。",
+    "lbs_context": "成大工學院",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "實習報名人超多，面試時間衝堂，選擇真困難！",
+    "lbs_context": "成大實習",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "晚上去中正堂看表演，座位比想像中舒適！",
+    "lbs_context": "成大中正堂",
+    "ground_truth": {
+      "valence": 0.6,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "中午自習室找不到位子，去外面咖啡廳擠一擠。",
+    "lbs_context": "成大自習室",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "校內提款機壞了，還跑去遠百領個錢，超麻煩！",
+    "lbs_context": "成大提款機",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "今天下午突然停電，實驗室電腦資料差點毀了！",
+    "lbs_context": "成大實驗室",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "成大後門的早餐攤又換老闆，味道變難吃了。",
+    "lbs_context": "成大後門",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "今天終於修完某門課，教授好嚴，分數壓力大。",
+    "lbs_context": "成大修課",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "宿舍樓下的飲料機壞掉，想喝杯水都沒辦法！",
+    "lbs_context": "成大宿舍",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "今天在公館遇到校狗跟著我走了一路，好療癒。",
+    "lbs_context": "成大校狗",
+    "ground_truth": {
+      "valence": 0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 1,
+    "text": "中午圖書館座位超滿，等了半小時才找到位子。",
+    "lbs_context": "圖書館",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "宿舍廁所又堵了，洗澡只能去別層樓，超麻煩。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "今天問了教授問題，但他好像心情不好。",
+    "lbs_context": "教授辦公室",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "計中冷氣壞掉，坐了一整天熱得要命。",
+    "lbs_context": "計中",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "晨跑時遇到超多狗，差點被追著跑很狼狽。",
+    "lbs_context": "校園操場",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "騎車去奇美博物館結果下雨，衣服全濕了。",
+    "lbs_context": "台南市區",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "黃昏市場的燒烤很好吃，但等餐等了快一個小時。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": 0.2,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "室友昨天打電動太吵，害我失眠一整晚。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "上課遲到被老師點名，整個課堂都很尷尬。",
+    "lbs_context": "教室",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "買了成大路口的炸雞排，味道不錯但有點貴。",
+    "lbs_context": "成大路口",
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "下課後跑去學校美術館，但今天竟然休館。",
+    "lbs_context": "成大美術館",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "晚餐吃了學餐，今天的咖哩飯特別好吃。",
+    "lbs_context": "學餐",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "機車壞了，推到修理店修花了我一個下午。",
+    "lbs_context": "校園周邊",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "自助洗衣機又壞了，只好排隊等別台。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "早上因為忘帶卡被擋在宿舍門外了。",
+    "lbs_context": "宿舍大門",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "操場上跑步的人爆多，只能繞別的路走。",
+    "lbs_context": "校園操場",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "今天在課堂上發言，結果嗓子啞得說不出話。",
+    "lbs_context": "教室",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "鬧鐘沒響整個人睡過頭，早餐店都關了。",
+    "lbs_context": "宿舍",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "成大光復校區的自助餐菜色，今天竟然沒看頭。",
+    "lbs_context": "光復校區",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "實驗室的 Wi-Fi 突然斷了，什麼資料都傳不上去。",
+    "lbs_context": "實驗室",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 1,
+    "text": "早八上課好累，昨晚熬夜趕報告，早餐隨便吃了個饅頭。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "宿舍熱水又壞了，洗澡冷得不行，明天找宿舍辦公室問問看。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "今天圖書館位子爆滿，只好坐地上看書，明天要早點去搶位。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "機車又被開單，這個月已經第三次了，要看停車位置了。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "新公社的咖啡好苦，還是比較愛成大老麥的冰拿鐵。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.1,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "今天社團練舞超累，還扭傷了腳，之後可能得休息了。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "下午數學課教授講太快，筆記都還沒抄完就結束了。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "宿舍網路又不穩定，開個線上會議一直斷線，快氣死了！",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "中午吃了統一超的便當，菜量不太夠，晚餐要吃多一點。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "去體育場跑五千公尺，最近身體狀況不太行，跑得很差。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "昨天室友開團吃燒肉，結果我沒跟到，現在超後悔的。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "晚餐去吃河堤的牛肉湯，好久沒喝了，味道還是很棒！",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": 0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "校門口的飲料店一直排隊，想喝杯奶茶結果等了半小時。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "實驗室的電腦又當機，數據全部重來，快要哭了。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "今天下午在榕園散步，風景很好，心情也跟著放鬆下來。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": 0.7,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "校園裡的貓又來偷蹭我的便當，真的有點哭笑不得。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "攢了好幾週的衣服才去洗衣，結果洗衣機都被用光了。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "今天課很無聊，一直在想晚上要吃什麼，終於下課了。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": 0.1,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "又接到學長的報告邀約，感覺接下來幾天都沒得休息了。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "今天的雨太大，機車騎到一半全身濕透，早知道就搭公車。",
+    "lbs_context": "成大生活",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  }
+]
