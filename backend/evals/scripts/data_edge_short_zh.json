@@ -1,0 +1,802 @@
+[
+  {
+    "id": 1,
+    "text": "今天早上啊，腦袋超空，怎想都解不出數學題，真的無言。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.2
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "走到成功湖，風不大，倒影很美欸，心情好了一點點哈。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": 1,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "天啊，我在光復晾杉樹前掉手機，蹲著找超狼狽的吧$%#。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "今天真的是無語了$...鍵盤也壞，程式碼都動不了，怎寫啊。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "約朋友在育樂街吃飯，結果太晚來，都沒店>開的好慘！",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "小西門旁邊突然飄雨欸，還以為會大太陽，結果我淋濕了。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "總圖裡找書結果全借光了，白折騰路上一下午，超煩的！",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "寫報告到凌晨，今天感覺半夢游吧，頭暈腦脹還有點冷。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.2
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "光復聖誕樹燈亮得超漂亮！但全是人，手機差點被撞掉！",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "下午發現論文漏了幾個資料，趕緊修還好，不然沒命了吧！",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "聖誕樹下光影超美，但不知為啥#我今天特別想睡，可能是熬夜太多？",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "成功湖邊坐太久了，蚊子多到快爆炸，我只好逃跑了。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "今天腦袋像短#路一樣，什麼事都做不出來，真的是累ssss。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.2
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "小西門旁邊有人在自拍，好像影響到我專心打報告，有點煩躁。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "總圖一樓冷氣開超大，打字手都凍僵，這樣怎麼專心@@？",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "突然想起來明#天要交作業，可是今天打了整晚遊戲，慘了！",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "今天育樂街有燒烤味，好想吃！但月底了，錢包不支持。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": 0.2,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "最近老是忘東忘西，明明做了一堆筆記，結果還是漏掉了功#課QAQ。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "光復聖誕樹旁邊的地板超滑，差點摔倒啦，真的要注意安全。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 0.1,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "成功湖邊的風很舒服，但我還是被報告的壓力搞得很煩躁。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 21,
+    "text": "光復聖誕樹這裡冷風一直吹，手快結冰了，打字都變慢了。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 22,
+    "text": "手機掉在地上，怕會不會摔壞，結果還好沒事。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": 0.1,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 23,
+    "text": "成功湖旁邊的鴨子都聚在一起覓食，好像討論什麼大事情ww。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": 0.6,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 24,
+    "text": "今天課很多，腦袋都有點卡住了，只想趕快回宿舍休息。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 25,
+    "text": "在總圖補報告，結果沒位子，站著寫$好崩潰隨便交算了。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 26,
+    "text": "踩到水漬鞋濕掉心情不好#冬天真的煩死。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 27,
+    "text": "今天小西門好多人，想拍照結果鏡頭一直被擋，好氣。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 28,
+    "text": "育樂街攤位好多選擇，走著發現竟然有一家新開的烤肉店！",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": 0.9,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 29,
+    "text": "找不到充電器，手機剩下最後10%電量，真是天啊阿阿？！",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 1
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 30,
+    "text": "光復聖誕樹前的裝置藝術真的美得讓人想多看兩眼。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 0.8,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 31,
+    "text": "光復聖誕樹上掛滿了燈，但好像有些燈壞了，提不起什麼興趣！",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 32,
+    "text": "腦袋#卡住了，ppt複製來的文字根本!!看不懂，是怎回事？",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 33,
+    "text": "成功湖邊的鴨子今天好像也懶得動，真的是一種共鳴啊。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 34,
+    "text": "總圖今天有好多自修的人…根本找不到$空位來坐著寫作業。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 35,
+    "text": "剛打開一個code文件，整頁紅字，修bug修得我快瘋了。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 36,
+    "text": "育樂街的生煎包太香了吧！肚子餓了瞬間覺得幸福滿滿。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": 1,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 37,
+    "text": "完全沒想到作業竟然還有額外的補充要求，真的整理到崩潰T_T。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 38,
+    "text": "在小西門蹲了一會兒，微風吹著感覺心情平靜一點點。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.2
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 39,
+    "text": "看了一整天的程式碼，眼睛都睏了但頭腦#轉不過來，無解。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 40,
+    "text": "光復聖誕樹附近好涼快，但作業還是寫不出來，感覺有點爆。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 41,
+    "text": "光復聖誕樹旁超冷，手快被寒風凍僵，咖啡都降溫了。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 0,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 42,
+    "text": "今天裸機課，老師講超快，不知道該怎麼繼續聽。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 43,
+    "text": "成功湖邊，微風吹著好舒服，魚在水裡游得好悠閒。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": 1,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 44,
+    "text": "總圖人也太多了吧，連地板都快沒地方坐。悲劇。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 45,
+    "text": "吃飯忘帶錢包，真是糟透了，#今天完全不在狀態",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 46,
+    "text": "小西門的日落顏色好美，忍不住想拍照卻沒帶相機。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": 0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 47,
+    "text": "報告還沒寫完，deadline逼近又不想動，腦袋好空。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.2
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 48,
+    "text": "育樂街新開的店，炸物味道不太對，吃了有點膩。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 49,
+    "text": "光復聖誕樹上的燈泡好像壞了些，裝飾變得有點奇怪。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 50,
+    "text": "考試真煩，準備又不夠，每次都說要改變但又忘了。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 51,
+    "text": "光復聖誕樹下好多小情侶，寒風中單身的我有點小孤單。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 52,
+    "text": "今天筆電又發熱了#$太討厭，手都快烤熟，題目也寫不下去。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 53,
+    "text": "成功湖的鵝還是好肥哈哈，每次路過都好想拍幾張照。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": 0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 54,
+    "text": "總圖裡冷氣太涼，結果只帶薄外套，冷到打字都變慢。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 55,
+    "text": "手賤清空了檔案，進度直接歸零，整天心情低#氣到背後冒汗。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 56,
+    "text": "育樂街的滷味今天$超入味，這種天氣配上熱呼呼的湯根本完美。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": 0.9,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 57,
+    "text": "小西門旁的施工還在弄，機車~吵到我原本的好心情都沒了。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 58,
+    "text": "突然覺得系上作業好多，明明才剛開學&就被壓到沒喘息空間。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 59,
+    "text": "約了朋友在光復聖誕樹見面，但他遲到超久，卻沒說抱歉，無言。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 60,
+    "text": "吃個宵夜，還好育樂街有開，整天的病因是我餓過頭了。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 61,
+    "text": "光復聖誕樹真的有點空，那天的氣氛雖然沒很熱鬧，但有點小溫馨。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 1,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 62,
+    "text": "總圖冷氣太強，手指都快要凍僵，還傳不了訊息給同學。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 63,
+    "text": "今天完全沒動力#$，只能滾來滾去，還誤打字跟同學聊裸機。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": 0,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 64,
+    "text": "在育樂街吃了飯，垃圾桶破了袋，差點被薯條炸得無法活下去。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 65,
+    "text": "成功湖旁有鴨子，跑步遇到它們翻了個白眼，超沒禮貌。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": 0,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 66,
+    "text": "今天只想窩在被子裡，開著程式，結果筆記本直接低電關機。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -1,
+      "arousal": 0.2
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 67,
+    "text": "小西門附近被人推自行車，差點想翻白眼，還好沒被真正撞。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": 0,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 68,
+    "text": "光復聖誕樹那邊夜市開了，但也沒買什麼。看到熟人尷尬到死。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 69,
+    "text": "看程式碼一整天，腦袋真是無盡沙漠。希望明天有雨，思路清晰。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": 0,
+      "arousal": 0.1
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 70,
+    "text": "總圖桌面都被占光了，戴耳機聽電音，居然還碰到學妹問我作業。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 71,
+    "text": "光復聖誕樹晚上好熱鬧，燈光很漂亮但蚊子也很多，腳被咬了好幾個包#癢死。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 72,
+    "text": "突然想吃炸雞，但懶得出門，再偷懶一會好了。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": 0.2,
+      "arousal": 0.3
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 73,
+    "text": "成功湖邊風好大，感覺有點冷但心情蠻平靜的，有點想通某些事。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": 0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 74,
+    "text": "小西門的咖啡店座位滿了，打工的報表根本不知道去哪弄-_-。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 75,
+    "text": "感覺近來#壓力越來越大，真的好想出去透透氣，課業好多爆炸。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 76,
+    "text": "總圖的冷氣這麼強，考前一晚複習本來就不該這麼舒服||",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 77,
+    "text": "育樂街巷口的烤肉超香，不過一想到肚子可能會痛，就忍住了><",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": 0.4,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 78,
+    "text": "根本讀不進去，只好滑手機，結果時間就被我吹掉惹qwq。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 79,
+    "text": "剛剛在光復聖誕樹拍了幾張照片，但拍太糊，有點氣到。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 80,
+    "text": "今天挺平靜，雖然事情沒做完，但還能接受，總之明天繼續努力吧。",
+    "lbs_context": null,
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  }
+]
