@@ -1,0 +1,402 @@
+[
+  {
+    "id": 1,
+    "text": "光復聖誕樹下的燈光閃爍，但我只感到一片冷漠。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "育樂街的晚餐香味撲鼻，還是解不開我的煩悶。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "走過小西門，風像在耳邊輕嘲，真是妙極了。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "總圖的咖啡又難喝又貴，還要排隊，讚啦#。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "成公湖的水面像鏡子，但倒映的只有疲憊的自己",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "光復聖誕樹底下熱鬧非凡，卻沒一個位子屬於我。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "育樂街竟然有新開的店，然後我踩到水坑，哈哈",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": 0.2,
+      "arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "小西門外的貓居然對我喵了一聲，今天賺到了。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": 0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "總圖的冷氣像冰窟，感冒不意外。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "蹲在育樂街吃鹽酥雞，喜悅短暫而油膩。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.8
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "成功湖又下雨，水上加水，太充實了吧。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "光復聖誕樹的燈泡壞了，和我的心情一模一樣。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "總圖裡走過的影子，像時間匆忙地抽離。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "育樂街今天竟然沒什麼人，好像少了靈魂。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "成功湖邊的水鴨看起來快樂，我卻很茫然。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "小西門的光，給人的感覺有點冷清。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "光復聖誕樹下，手裡的熱奶茶也暖不了心。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "總圖裡找不到一個座位，乾脆坐地板算了吧。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "育樂街的燈光閃爍，一如我現在飽飽的肚子。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": 0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "小西門的風吹亂我的頭髮，一切都暫時模糊了。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 21,
+    "text": "光復聖誕樹下，樹還沒亮吧！？冷風刮臉，像被生活嫌棄。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 22,
+    "text": "育樂街今天有什麼魔力，連地瓜球都要等#？餓死了。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 23,
+    "text": "成公湖 湖面像盪漾的情緒，冷得刺骨，注入了無趣。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 24,
+    "text": "小信門人擠人，像蜂巢裡的#工蜂，完全沒空隙喘息。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 25,
+    "text": "總圖悶熱，人多像在蒸煮文字，求生存空氣。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 26,
+    "text": "光復聖誕樹的光，還亮不過心裡的迷霧。冷死吧今天夜晚。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 27,
+    "text": "育樂街居然沒炸雞了，肚子抗議，心情也卡住。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 28,
+    "text": "成功湖旁，風吹著我散亂的思緒，像風箏被拋棄。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 29,
+    "text": "小西門晚餐餿了？今天真的需要個食物奇蹟解救。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 30,
+    "text": "總圖沉默不語，十頁、二十頁，思緒卻沒走一頁。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 31,
+    "text": "光復聖誕樹旁，風冷得像抽離感情，路燈都不溫暖。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 32,
+    "text": "育樂街炸物香氣，卻燒不掉那股心底的苦味。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 33,
+    "text": "成公湖風，今天像刀片，弱弱的心情被劃開。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 34,
+    "text": "小信門天氣陰沉，行人走過，影子都懶得跟上。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 35,
+    "text": "總圖裡的空氣有點軋，向窗外看，草地卻沒人。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 36,
+    "text": "光復聖誕樹下霧濛濛的，像思緒暈染，回不了家。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 37,
+    "text": "育樂街今天超安靜，是大家都放假還是我放空？",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 38,
+    "text": "成公湖邊，感覺心情底色像湖水，深得看不到底。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 39,
+    "text": "小信門人潮散去，孤零零的像光被抽走。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.2
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 40,
+    "text": "總圖樓上玻璃反光，好像另一個#平行的世界，沉默著。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  }
+]

@@ -1,0 +1,402 @@
+[
+  {
+    "id": 1,
+    "text": "夜晚的光復聖誕樹閃著五彩斑斕的燈光，但我心裡卻像是一盞壞掉的霓虹燈，時亮時滅，無法穩定跳動。手裡的奶茶也涼了，彷彿在嘲笑我的無力。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "成公湖上飄著一層薄霧，像是記憶的濾鏡，模糊了班上聚會的笑聲。最近的關係似乎像湖面一樣靜止，但底下暗湧著看不見的焦慮。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "育樂街的燈光刺得眼睛生疼，耳邊的車聲像蒼蠅一樣嗡嗡叫，實驗室的匯報毀了一整天好心情。現在的我，除了想躲到異次元，其他都無感。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "總圖窗邊的位置被佔滿，熱氣霧了玻璃，外頭的陽光顯得多餘。翻開筆記本卻不自覺打了個哈欠，學業的壓力像石頭壓在心口，喘不過氣來。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "小西門的風總是出其不意地刮來，像是提醒我別忘了那些被時間磨平的抱負。站在雞排攤#前，陷入了久違的刺鼻油煙，肚子餓，但沒什麼食慾。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 6,
+    "text": "今天下午的總圖陽光直射在書桌上，書頁像鏡子反射我的倦容。耳機裡的音樂也失去了魔力，手指滑過鍵盤，卻寫不出一個合適的字。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 7,
+    "text": "暮色降臨，光復聖誕樹的燈光映在我模糊的瞳孔裡，像是某個迷幻的世界。不過是週五，為何心卻像是卡在週一的黑洞裡一樣$t無法自拔？",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 8,
+    "text": "成功湖邊有幾隻黑鴨子，牠們遊來遊去，似乎擁有無限的時間與自由。而我，手上的作業像沉重的水泥塊，一點點地拖垮我殘存的好心情。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 9,
+    "text": "育樂街的燒烤煙霧撲面而來，像是生活裡撲不滅的混亂。我從街那頭看到學長，卻不想打招呼，假裝低頭滑手機，邊走邊想，自己是不是變了。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 10,
+    "text": "總圖的冷氣太冷，手指都有些僵硬。筆記本攤在桌上，筆卻在手中轉來轉去，筆芯早已空了，但也正如同我心裡的某根弦，應該也斷了一部分。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 11,
+    "text": "光復聖誕樹周圍散步的人來來去去，我靠著樹下的長椅，看著手中爛掉的筆記本。是我，還是這個學期，太過於失控了呢，像是路上一片被碾過的紙。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 12,
+    "text": "站在小西門外，看見一對情侶牽著手走過，像是畫布上的點綴。但那微笑真的是真心的嗎？還是像我一樣，只不過是掩蓋著某些不想面對的碎片。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 13,
+    "text": "傍晚的成功湖邊，幾位散步的老人低聲交談。他們的白髮像湖邊的雲影，柔和但不真實。我停下腳步，想起自己似乎也成了某種習慣性的影子。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 14,
+    "text": "育樂街的微風帶來燒烤的油煙味，混著某學生的嬉笑聲。走在這裡，頭腦卻像一個電池即將耗盡的時鐘，滯重，且搖搖欲墜。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 15,
+    "text": "小西門外的天空像被濾鏡過度修飾，藍得不真實。我低頭看手機，應該寫作業的時候，卻再次打開重覆播放的歌，像是在催眠自己不需要努力。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 16,
+    "text": "光復聖誕樹的燈光暗了一半，像某種未完成的夢。樹下有一對情侶正抱在一起，像孤島上的兩根枯木互相依靠。我卻感覺這裡沒有什麼是屬於我的。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 17,
+    "text": "總圖的燈光和冷氣一樣冰冷。手中的書被翻了幾頁，卻什麼都沒記住。又是這樣的日子，像是被卡住的時鐘，指針轉動的聲音都成了嘲笑。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 18,
+    "text": "成功湖的荷葉被陽光照得透亮，像一種無法擁抱的遙遠希望。但這樣的燦爛提醒了我自己的平庸，這種對比讓人像被困在不深不淺的水裡，無法呼吸。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 19,
+    "text": "育樂街的燈光閃爍，店招牌像流星雨墜落。點了一份麻辣臭豆腐，卻發現辣味比不上內心的焦火。分不清是自己在消費食物，還是食物在燃燒我。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 20,
+    "text": "光復聖誕樹的燈光亮了又滅，像是下一秒便會消失的美夢。我靠在樹後，翻了翻手機消息，看見朋友們的滿足與充實，心裡卻只感到千斤重的空虛。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 21,
+    "text": "今天光復聖誕樹下有一點涼意，葉子輕輕搖晃像是在嘲笑我。手上的報告寫了一半，腦袋卻像斷了。風，咻咻，還是停不下來。#",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 0.2,
+      "arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 22,
+    "text": "成公湖的水倒映著一片星河，但我的心却像掉進垃圾桶，翻找不到出口。人影散落，湖邊的燈光勉強營造溫暖，卻像虛假的笑容。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 23,
+    "text": "小西門旁的攤販今日格外熱鬧，香氣混著人聲像嘈雜的交響樂。我坐在角落啃著冷掉的肉串，只想著那未完成的專案。味道有些膩。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": 0.1,
+      "arousal": 0.8
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 24,
+    "text": "總圖裡的空調實在太冷了，我的手指不由自主地顫抖。程式碼就像謎語，我讀著，讀不懂，心裡像裂開一條縫，寒風灌進來叫人#生疼。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 25,
+    "text": "育樂街的燈光閃爍，霓虹像劣質的化妝品掩蓋了什麼。走過炸雞攤，聽到爐火發出嘶嘶聲。餓了，但卻沒心情，胃口似乎被壓縮了。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 26,
+    "text": "光復道路旁的聖誕樹，燈光一閃一閃，像在嘲諷每個低頭滑手機的行人。我靠著樹幹，腦袋像積木疊成的塔，隨時會噼哩啪啦倒塌。。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 27,
+    "text": "總圖的咖啡機壞了，這就像是多米諾骨牌倒下的開端。沒有咖啡，怎麼活？外面有點下雨，心情也跟著潮濕，筆記上都是模糊的墨迹。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 28,
+    "text": "育樂街的香味像無形的網，把人牢牢吸住。買了一杯大冰奶茶，手冷得快抓不住，糖的甜蜜卻鎖不住心裡散發的苦澀。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 29,
+    "text": "今天啥都不想做，連窗外的鳥叫都懶得聽。頂著腦袋裡的空氣，覺得自己像個無意義的標點符號，插入錯誤的地方，沒人注意。",
+    "lbs_context": "",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 30,
+    "text": "成公湖邊的椅子有些濕，風一陣陣拍打臉頰。我低頭看著手機，一條新訊傳來。按下去之後，卻沒回應，心情瞬間被按了暫停鍵。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 31,
+    "text": "小西門的冷清是種奇怪的安慰。賣燒餅的攤位少了人潮，老闆靠著椅子抽菸，我的心情像那煙霧一樣，升起又消失。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": 0.0,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 32,
+    "text": "聖誕樹閃爍著快要燒壞的燈泡，那光像抽了筋的笑容。我站在光復路邊，手裡的紅茶已經冷透了，連糖漿都像結冰了一樣。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 33,
+    "text": "育樂街今天有些安靜。人都去哪了？我走過幾家熟悉的店，感覺時間像被攤薄了一樣，空氣中的油煙倒是依舊在漂浮。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": 0.1,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 34,
+    "text": "成公湖的水波被風吹皺，像我腦中的皺摺一樣。坐在湖邊，感受四周的靜默，那靜默卻像耳鳴，愈靜愈吵。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 35,
+    "text": "今天總圖裡的空氣很乾，鼻腔都快裂開來了。翻開一本書卻讀不進去，字母像在搞小團體，拒絕跟我說話。窗外鳥飛過，卻看不清。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 36,
+    "text": "小西門的路人來來往往，臉上的表情像風鈴，每個都在響。我跟著走著，卻覺得腳步像被泥巴黏住了，走不快，走不遠。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 37,
+    "text": "光復聖誕樹的燈光閃爍，像在嘲笑著成大夜晚的這份孤寂。風輕輕吹過，空氣像玻璃碎掉的聲音，砸在心裡，卻沒感覺。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 38,
+    "text": "下午的育樂街人聲吵得像蜂巢被打破，連走路都像踩在蜂蜜裡，很黏。心裡的念頭卻像被鹽巴洗過，又苦又辣。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.1,
+      "arousal": 0.9
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 39,
+    "text": "成公湖邊的景色像幅過期的風景畫，太陽的位置不合時宜，鳥群也飛得零散。人影稀少，像舞台劇的收場，意猶未盡但必須結束。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 40,
+    "text": "總圖裡的安靜總能讓人自我對話，但今天的我似乎說漏了什麼。筆在紙上沙沙響，像細雨敲打窗子，讓人覺得悲傷又輕快。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.3
+    },
+    "routing_label": "Cloud"
+  }
+]

@@ -1,124 +1,106 @@
 import os
 import json
 import time
+import argparse
+import random
+import re  # 新增：用於清洗字串
 from openai import OpenAI
 
-# 1. GITHUB TOKEN 只能使用50次請求
-GITHUB_TOKEN = "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"
-ENDPOINT = "https://models.inference.ai.azure.com"
-MODEL_NAME = "gpt-4o" 
+def parse_args():
+    parser = argparse.ArgumentParser(description="MEW Dataset Generator v2.3 - High Noise Edition")
+    parser.add_argument("--api_key", type=str, required=True, help="GitHub Models API Key")
+    parser.add_argument("--dept", type=str, default="資工系", help="學生系所")
+    parser.add_argument("--lang", type=str, choices=["zh", "en"], default="zh", help="生成語言")
+    parser.add_argument("--mode", type=str, choices=["long", "short"], default="long", help="長篇(80-100)或短篇(20-40)")
+    parser.add_argument("--category", type=str, choices=["edge", "cloud"], default="edge", help="路由分類")
+    parser.add_argument("--count", type=int, default=10, help="數量")
+    parser.add_argument("--noise", type=float, default=0.2, help="雜訊機率 (0.0~1.0)")
+    return parser.parse_args()
 
-client = OpenAI(
-    base_url=ENDPOINT,
-    api_key=GITHUB_TOKEN,
-)
+REAL_LOCATIONS = ["光復聖誕樹", "成功湖", "小西門", "總圖", "育樂街"]
 
-def call_llm(prompt):
-    """通用的 LLM 呼叫與 JSON 清理邏輯"""
+def generate_prompt(args):
+    loc_str = "、".join(REAL_LOCATIONS)
+    lang_str = "繁體中文" if args.lang == "zh" else "English"
+    
+    if args.mode == "long":
+        length_req = "80 到 100 字，包含大量環境描寫與心理戲"
+        example = "範例：『今天下午在總圖待了快四個小時，指標邏輯還是卡住，窗外的夕陽照在成功湖上很美，但我現在只想把這段 code 燒掉。』"
+    else:
+        length_req = "20 到 40 字，語氣簡短像傳 Line"
+        example = "範例：『育樂街人超多，排隊排到心累。』"
+
+    noise_instr = ""
+    if args.noise > 0:
+        noise_instr = (
+            f"【極限噪聲注入 (機率 {args.noise})】：\n"
+            "1. 隨機打錯字（如：邏輯->裸機、成功湖->成公湖）。\n"
+            "2. 隨機漏掉標點或加入無意義符號（如：#、$）。\n"
+            "3. 語法凌亂，像是在跑步或單手打字的感覺。\n"
+            "**警告：噪聲僅限於 text 內容，嚴禁破壞 JSON 的 Key 或結構符號（如 [ ] { } : , \"）。**\n"
+        )
+
+    prompt = (
+        f"你是一位成大{args.dept}學生。請用{lang_str}生成 {args.count} 則微日記。\n"
+        f"【硬性限制】：\n"
+        f"1. 每則字數：嚴格介於 {length_req}。\n"
+        f"2. 地點約束：從 [{loc_str}] 中『隨機』選取，禁止按順序排列。部分日記可不提地點。\n"
+        f"3. 情感數值：V: [-1, 1], A: [0, 1]。\n"
+        f"4. 語意風格：{'直白事實' if args.category == 'edge' else '反諷隱喻或深層情緒'}。\n"
+        f"{noise_instr}"
+        f"\n{example}\n"
+        f"【格式】：純 JSON Array，禁止任何解釋文字。格式：\n"
+        f"[{{id, text, lbs_context, ground_truth:{{valence, arousal}}, routing_label:'{args.category.capitalize()}'}}]"
+    )
+    return prompt
+
+def main():
+    args = parse_args()
+    client = OpenAI(base_url="https://models.inference.ai.azure.com", api_key=args.api_key)
+
+    print(f"⏳ 正在生成: {args.category} | {args.mode} | Noise: {args.noise}")
+    
     try:
         response = client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "你是一位資深 NLP 資料專家。請只輸出純 JSON Array，禁止解釋。"},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "你是一位專門製造『不完美數據』的 NLP 專家。你必須確保輸出為合法的 JSON 格式。"},
+                {"role": "user", "content": generate_prompt(args)}
             ],
-            model=MODEL_NAME,
-            temperature=0.85
+            model="gpt-4o",
+            temperature=0.85 # 稍微調低一點，增加結構穩定性
         )
-        content = response.choices[0].message.content.strip()
         
-        # 清理 Markdown 標籤
-        if content.startswith("```"):
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:].strip()
-            elif content.startswith("\n"):
-                content = content.strip()
+        raw_content = response.choices[0].message.content.strip()
         
-        return json.loads(content)
+        # --- 強力清洗 JSON 邏輯 ---
+        # 使用正則表達式抓取 [ 到 ] 之間的內容
+        match = re.search(r'\[.*\]', raw_content, re.DOTALL)
+        if match:
+            clean_content = match.group(0)
+        else:
+            clean_content = raw_content
+
+        new_data = json.loads(clean_content)
+        filename = f"data_{args.category}_{args.mode}_{args.lang}.json"
+        
+        if os.path.exists(filename):
+            with open(filename, "r", encoding="utf-8") as f:
+                existing_data = json.load(f)
+            start_id = existing_data[-1]['id'] + 1 if existing_data else 1
+            for i, item in enumerate(new_data):
+                item['id'] = start_id + i
+            combined_data = existing_data + new_data
+        else:
+            combined_data = new_data
+
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(combined_data, f, ensure_ascii=False, indent=2)
+        print(f"✅ 完成！目前檔案規模: {len(combined_data)} 筆")
+
     except Exception as e:
         print(f"❌ 錯誤: {e}")
-        # 回傳 None 讓 main() 判斷是否為 API 限制 (如 429)
-        return None
-
-def fetch_batch_data(prompt_type, mode="long", count=10):
-    """
-    生成一般基礎資料 (General Base)
-    定義真實存在的成大地點白名單 (White-list) TODO
-    real_locations = [
-        "勝利校區計中", "光復校區總圖", "育樂街", "東寧路", "成功湖", 
-        "自強校區工學院實驗室", "光復校區操場", "勝後小吃部", "南門庭院", 
-        "大學路星巴克", "光復校區學生第二活動中心", "自強校區電機系館"
-    ]
-    location_str = "、".join(real_locations)
-    """
-    if mode == "long":
-        length_desc = "【硬性要求：長句型】字數必須嚴格介於 80 到 100 字中文之間。包含環境描寫與內心戲，嚴禁寫短句。"
-        example_base = "範例：『今天下午在勝利校區的計中待了快三個小時，主要是在處理 C++ 作業的指標邏輯，雖然冷氣開得很強讓我手有點僵硬，但好險在離開前把所有測資都跑過了，走出大樓看到夕陽心情還算穩定。』"
-        example_edge = "範例：『剛離開自強校區實驗室，感覺我的腦袋就像沒存檔的程式碼一樣空洞，看著成功湖的夕陽，突然覺得這種期中考前的焦慮就像無窮迴圈一樣跑不完，真的很諷刺。』"
-    else:
-        length_desc = "【硬性要求：短句型】字數必須嚴格介於 20 到 40 字中文之間。語氣簡短，像傳 Line。"
-        example_base = "範例：『計中冷氣超冷，寫完 C++ 作業了，晚點去育樂街買飯。』"
-        example_edge = "範例：『Bug 真貼心，陪我到凌晨四點，看來它比我女朋友還專情。』"
-
-    base_context = (
-        f"你是一位成大學生。{length_desc}\n"
-        "內容須包含成大生活細節。數值規範：Valence [-1.0, 1.0], Arousal [0.0, 1.0]。請務必包含負值。"
-    )
-
-    prompts = {
-        "general_base": f"{base_context}\n請生成 {count} 筆「直白事實」日記。標籤 Edge。\n{example_base}\n格式：JSON Array [{{id, text, lbs_context, ground_truth:{{valence, arousal}}, routing_label:'Edge'}}, ...]",
-        "edge_cases": f"{base_context}\n請生成 {count} 筆「隱喻、反諷或深層情緒」日記。標籤 Cloud。\n{example_edge}\n格式：JSON Array [{{id, text, lbs_context, ground_truth, routing_label:'Cloud'}}, ...]"
-    }
-
-    return call_llm(prompts[prompt_type])
-
-def main():
-    # 2. 自動計算路徑：確保存入與 scripts 同級的 data/raw
-    current_script_path = os.path.dirname(os.path.abspath(__file__))
-    output_dir = os.path.abspath(os.path.join(current_script_path, "..", "data", "raw"))
-    
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # 目標：長/短句各類別生 10 批，每批 20 筆 = 200 筆
-    for mode in ["long", "short"]:
-        for category in ["general_base", "edge_cases"]:
-            print(f"🔥 開始生成任務：[{mode.upper()}] - {category}")
-            final_list = []
-            
-            # 建立存檔路徑
-            file_name = f"{category}_{mode}_gpt4o.json"
-            save_path = os.path.join(output_dir, file_name)
-            
-            # 讀取現有進度，避免 429 中斷後需要重頭來過
-            if os.path.exists(save_path):
-                with open(save_path, "r", encoding="utf-8") as f:
-                    final_list = json.load(f)
-                print(f"📦 已載入既有資料: {len(final_list)} 筆")
-
-            for i in range(10): 
-                if len(final_list) >= 200:
-                    print(f"✨ {file_name} 已滿 200 筆。")
-                    break
-
-                print(f"⏳ 正在獲取批次 {i+1}/10...")
-                batch = fetch_batch_data(category, mode=mode, count=20)
-                
-                # 若 batch 為 None 代表觸發 API 限制或錯誤，直接跳出當前類別生成
-                if batch is None:
-                    print("🛑 偵測到 API 限制或網路錯誤，存檔並跳出。")
-                    break
-                
-                final_list.extend(batch)
-                
-                # 每次獲取完立即寫入，確保資料安全
-                with open(save_path, "w", encoding="utf-8") as f:
-                    json.dump(final_list, f, ensure_ascii=False, indent=2)
-                
-                print(f"✅ 成功累積 {len(final_list)} 筆")
-                time.sleep(5) # 建議設為 5 秒，對 GitHub Models 較友善
-            
-            print(f"🏁 {mode}-{category} 任務結束。\n")
+        # 發生錯誤時印出部分原始內容，方便 Debug
+        print(f"原始回傳預覽: {raw_content[:100]}...")
 
 if __name__ == "__main__":
     main()

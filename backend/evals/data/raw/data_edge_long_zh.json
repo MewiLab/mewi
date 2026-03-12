@@ -1,0 +1,402 @@
+[
+  {
+    "id": 1,
+    "text": "光復聖誕樹下，天色漸暗，風微微的涼。我撿起一片落葉，卻想起昨晚與朋友的爭吵，心裡有點堵。光影交錯間，像是放不下的心事。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 2,
+    "text": "在總圖二樓臨窗的位置，書桌上擺滿參考書和雜亂的筆記。窗外的雨滴打在玻璃上，像我腦中的混亂一樣紛雜，有種奇怪的窒息感。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 3,
+    "text": "成公湖邊的水波倒影著碎碎的月光，晚風輕拂，耳機裡的音樂舒緩，但思緒卻無比沉重。那份簡報還沒完成，壓力壓得喘不過氣。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 4,
+    "text": "育樂街的喧囂讓人微微感到眩暈。店家的霓虹燈閃爍不定，街邊飄著烤肉香氣。我點了一份小吃，心裡卻依舊空落落的，像少了什麼。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 5,
+    "text": "夜晚的小西門無比寂靜，只有幾盞路燈陪著我。走在空蕩的石板路上，冷風吹起，卻讓人有一種莫名的平靜感，像是找到了自己的角落。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 6,
+    "text": "總圖裡的冷氣有些過分冷了，讓人忍不住裹緊外套。筆記本上密密麻麻的文字像座迷宮，腳步聲此起彼落。注視著屏幕，卻是一片空白。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 7,
+    "text": "光復聖誕樹的燈光閃爍，像是在演繹一場屬於冬天的浪漫。我拿著咖啡站在一旁，看著人來人往，突然覺得自己像一片孤島。$",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.1,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 8,
+    "text": "在育樂街的夜市裡迷失，腳下的地磚不平，像我的心情一樣起伏不定。香氣撲鼻，但我卻沒太多胃口，靜靜踱步。生活是不是也這樣迷茫？",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 9,
+    "text": "成公湖邊有人放著輕柔的音樂，水波輕蕩著月光。心裡忽然放鬆了一些。也許每件事都會有個答案，只是現在看起來模糊。湖水真清。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": 0.4,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 10,
+    "text": "總圖外的天突然下起雨來，淅淅瀝瀝的聲音落在窗邊。我望著濕漉漉的走道，腦中卻在思考今天那段裸機程式碼怎麼這麼鬼打牆。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 11,
+    "text": "小西門的石階在陰雨天顯得有些滑，冷風裡我縮了縮脖子。空氣中有花香飄過，瞬間讓我回憶起小時候的庭院，暖暖的，卻又帶點遺憾。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": 0.2,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 12,
+    "text": "育樂街的燈光越來越亮，每一聲吆喝都像在呼喊一種遺忘的衝動。我買了一杯甜飲，試圖壓住心裡的不安，但甜味卻讓這種情緒更放大。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 13,
+    "text": "在光復聖誕樹下，手機拿在手裡卻不知道要撥給誰。滿天星空灑下銀色的光，冷風中隱隱約約有樹葉落地的聲音，像是為孤獨伴奏。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 14,
+    "text": "成功湖邊，有鴨子靜靜游著，腳下的石板步道稍微有些濕滑。我停下來看了很久，腦子裡一片混亂，只有這鴨子的波紋讓人感覺一定程度上的寧靜。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 15,
+    "text": "在總土的咖啡角落，四周一片安靜，只有鍵盤聲此起彼落。我的手指停住了，停在一段永遠寫不通的程式碼上，心裡堵得要命，怎麼破。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 16,
+    "text": "小西門的一角，刻滿了歲月痕跡的牆面讓人想起時間的無情，不經意間，我想到了某個遙遠的約定，忍不住笑了一下，真傻。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": 0.1,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 17,
+    "text": "光復聖誕樹那邊有一群人正在拍照，每次來這裡都覺得它像信仰一樣的存在。只是心裡的空洞越來越明顯，像個無底洞，填不滿。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 18,
+    "text": "成公湖邊靜得出奇，連一隻鳥都看不見。遠方傳來學生們的笑聲，但卻更顯得自己孤獨。忽然覺得，這靜謐好像是為我準備的。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 19,
+    "text": "育樂街上的燈光五顏六色，像極了那場夢。人群熙熙攘攘，但我卻覺得格格不入。買了一串章魚燒，咬下去卻燙了嘴，痛得發笑。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.1,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 20,
+    "text": "在總圖的自修室裡坐了一整天，窗外的陽光從未沾到肌膚。打開筆記電腦的瞬間，感覺靈感枯竭，像失去了某種必要的燃料，空洞無措。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 21,
+    "text": "光復聖誕樹下，風冷嘶嘶，書本的字句一片模糊，好像腦袋也跟著成為亂碼；閃爍的燈光竟然讓人煩躁起來？",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 22,
+    "text": "成公湖邊的水波靜靜蕩著，心卻靜不下來。作業好像挑戰了我的IQ極限，真不知這門課為何如此難。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 23,
+    "text": "育樂街補習班前的燈閃爍不停，炸雞味道惹人餓。卻怎麼吃都填不滿心中的那股不安，明明只是小測試…",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 24,
+    "text": "總圖一片寧靜，只聽見打字聲和翻頁聲交錯。一隻貓跳上桌子差點打翻水杯，好像也打翻我的進度。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": 0.2,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 25,
+    "text": "小西門旁的咖啡店，音樂放得過分大聲。耳機中清單輪播，但心裡空得像白紙，我這天到底完成了什麼？",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 26,
+    "text": "夜晚的光復聖誕樹，竟然很冷，忍不住打了個噴嚏。頭腦混亂像被攪拌機瘋狂攪，這份專案怎麼這樣難搞",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 27,
+    "text": "育樂街的燈火通明，但自己像關了燈的手機一樣，電量不足，腦袋一片空白，該怎麼繼續？",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 28,
+    "text": "總圖空調冷得像雪，筆記的內容越來越模糊。誰會想到，AI的參數調法居然有千種可能？無語凝噎…",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.6,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 29,
+    "text": "成公湖邊很多人在散步，雖然看起來很放鬆…我卻只敢拿著筆電繼續debug。這人生也太苦了吧。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.9
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 30,
+    "text": "小西門的街道有微風，但我卻滿頭大汗，手裡緊握著筆記本，腦中還在回響著上課聽不懂的數學公式。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.8
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 31,
+    "text": "光復聖誕樹旁偶然看到一隻小狗跑過，我的心竟然雀躍了一下。真希望考試也能有這麼簡單的快樂。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 0.4,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 32,
+    "text": "總圖後面跑過幾隻流浪貓，喵喵聲此起彼伏，卻讓人感到安心。多希望自己的生活也能這麼隨性。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": 0.3,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 33,
+    "text": "小西門的霓虹燈閃爍不息，腳步卻越走越沉。好累啊，地上的影子也被路燈拉得老長，快撐不住了。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 34,
+    "text": "育樂街的鐵板燒香得要命，卻沒心情停下來。今天的奇怪bug很討厭，腦袋像被炸了一樣一團漿。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 35,
+    "text": "成公湖邊的風吹來，湖水的涼意很舒服。看著同學們健走，我卻只能低頭改報告，還要多久才會結束？",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 36,
+    "text": "光復聖誕樹下，我遇見了久未見的好友。話雖不多，但卻有種安心感，像找到以前的自己。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": 0.7,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 37,
+    "text": "總圖的自習室越來越擠，熱鬧的程度像夜市一樣。但我只覺得腦袋更亂了，正考慮要不然回宿舍算了。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.2,
+      "arousal": 0.6
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 38,
+    "text": "小西門的小吃攤一個接一個，香氣撲鼻。手裡拿著冰淇淋就像治癒劑，彷彿生活變甜了一點。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": 0.5,
+      "arousal": 0.7
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 39,
+    "text": "坐在成公湖對岸草坪，發現一隻孤零零的白鷺鷥，不知不覺想到自己是不是也像它，被生活丟棄了。",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.5
+    },
+    "routing_label": "Edge"
+  },
+  {
+    "id": 40,
+    "text": "育樂街的金色閃亮著人潮，高聲談笑聲充斥耳旁。卻像與世界脫離了的孤島般，自己一個人走著。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.4,
+      "arousal": 0.4
+    },
+    "routing_label": "Edge"
+  }
+]
