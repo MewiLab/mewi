@@ -3,9 +3,8 @@ from pydantic import BaseModel, Field
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# 👉 這裡對應您統一的新檔名
-from judge_a import run_agent_a
-from judge_b import run_agent_b
+from backend.runner.judge_a import run_agent_a
+from backend.runner.judge_b import run_agent_b
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(dotenv_path=os.path.join(current_dir, '.env'), override=True)
