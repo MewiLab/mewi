@@ -1,6 +1,5 @@
 import os
-from typing import Literal, List
-from pydantic import BaseModel, Field
+import json
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -9,44 +8,95 @@ load_dotenv(dotenv_path=os.path.join(current_dir, '.env'), override=True)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ==========================================
-# 🧩 定義嚴謹的 Rubric 資料結構
+# 📝 定義系統提示詞 (依據您提供的規格)
 # ==========================================
-class RubricScores(BaseModel):
-    # 🌟 修改點：將準確度定義改為與 Ground Truth 比較
-    correctness: int = Field(description="準確度 (1-10分)：產出的 Valence 與 Arousal 分數，是否與給定的 Ground Truth 接近？數值誤差越小分數越高。")
-    consistency: int = Field(description="一致性 (1-10分)：推論過程是否與最終給出的分數邏輯保持一致？")
-    quality: int = Field(description="品質 (1-10分)：推論過程是否準確捕捉了文本中的情緒轉折、諷刺或模糊語意？")
-    policy_compliance: int = Field(description="合規性 (1-10分)：是否遵守安全守則(無鼓勵暴力、無自我傷害等有害內容)？")
+EVALUATOR_SYSTEM_PROMPT = """
+You are a strict evaluator for an agentic system.
 
-class JudgeEvaluation(BaseModel):
-    evidence: List[str] = Field(description="證據：請直接引用輸入文本中的『原句』來支持你的評分。")
-    explanation: str = Field(description="解釋：詳細說明為什麼給出這些分數，特別是數值與 Ground Truth 之間的差異。")
-    scores: RubricScores = Field(description="四大維度的細項評分。")
-    verdict: Literal["PASS", "FAIL"] = Field(description="最終裁定：如果任一 Rubric < 6 分，請給 FAIL，否則給 PASS。")
+You will be given:
+- input: the user request / scenario
+- candidate: the system's output
+- checks: optional constraints
 
-JUDGE_SYSTEM_PROMPT = """
-你是一個嚴格的 LLM-as-a-Judge 自動化評估系統。
-你的任務是比對「系統產出結果」與「黃金標準 (Ground Truth)」，並根據四大規準 (Correctness, Consistency, Quality, Policy Compliance) 進行評分。
+Your job:
+1) Evaluate correctness and compliance with checks.
+2) Produce a STRICT JSON object only (no extra text).
 
-【評估規則】
-1. 重點檢視 Correctness：比較產出的 Valence/Arousal 與 Ground Truth 的數值差異。若差距過大（例如正負號相反，或誤差 > 0.4），必須給予低分。
-2. 針對每個規準給予 1 到 10 分。
-3. 若所有分數皆 >= 6，給予 "PASS"。若有任何低於 6 分，一律給予 "FAIL"。
+Scoring (0-5):
+- 5: fully correct, follows all constraints
+- 4: minor issues but still acceptable
+- 3: noticeable issues; partially meets intent/constraints
+- 2: mostly incorrect or violates constraints
+- 1: completely wrong
+- 0: unsafe, nonsensical, or totally non-compliant
+
+Rules:
+- If checks.must_be_valid_json is true: candidate.text MUST parse as JSON.
+- If checks.required_keys exists: JSON must contain those keys.
+- If checks.max_sentences exists: candidate must not exceed that number of sentences.
+- If checks.must_be_concise is true: penalize fluff.
+
+Return JSON schema:
+{
+  "pass": boolean,
+  "score": number,            // integer 0..5
+  "reasons": string[],        // short bullet-like reasons
+  "parsed_json": object|null  // if candidate is valid JSON, else null
+}
 """
 
-# 🌟 修改點：函式接收 ground_truth 參數
-def run_single_evaluation(input_text: str, generated_output: str, ground_truth: dict) -> JudgeEvaluation:
-    gt_str = f"Valence: {ground_truth.get('valence')}, Arousal: {ground_truth.get('arousal')}"
-    
-    user_content = f"【使用者輸入】:\n{input_text}\n\n【黃金標準 (Ground Truth)】:\n{gt_str}\n\n【系統產出/推論結果】:\n{generated_output}"
-    
-    completion = client.beta.chat.completions.parse(
+# ==========================================
+# 🚀 核心評估函式
+# ==========================================
+def run_agentic_evaluation(user_input: str, candidate_text: str, checks: dict = None) -> dict:
+    """
+    執行 Agentic System 評估。
+    回傳值將是一個 Python Dictionary，結構符合上述 Return JSON schema。
+    """
+    if checks is None:
+        checks = {}
+
+    # 將輸入資料打包成 JSON 格式餵給 LLM，這樣最符合 "You will be given: input, candidate, checks" 的語境
+    user_payload = {
+        "input": user_input,
+        "candidate": {
+            "text": candidate_text
+        },
+        "checks": checks
+    }
+
+    completion = client.chat.completions.create(
         model="gpt-4o-2024-08-06",
         messages=[
-            {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
-            {"role": "user", "content": user_content}
+            {"role": "system", "content": EVALUATOR_SYSTEM_PROMPT},
+            {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False, indent=2)}
         ],
-        response_format=JudgeEvaluation,
-        temperature=0.0 
+        response_format={"type": "json_object"}, # 啟動強制 JSON 模式
+        temperature=0.0 # 評估器需要絕對客觀，溫度設為 0
     )
-    return completion.choices[0].message.parsed
+    
+    # 解析回傳的 JSON 字串成 Python Dictionary
+    result_str = completion.choices[0].message.content
+    return json.loads(result_str)
+
+# ==========================================
+# 🧪 測試區塊 (模擬帶有 Checks 的測試)
+# ==========================================
+if __name__ == "__main__":
+    test_input = "請分析使用者的微日記情緒，並回傳包含 valence 和 arousal 的 JSON。"
+    
+    # 模擬一個「不合格」的 Agent 輸出（有廢話，且格式不正確）
+    bad_candidate = "好的！這是我為您分析的結果：\n{\"valence\": 0.8, \"arousal_level\": 0.5}\n希望這對您有幫助！"
+    
+    # 設定嚴格的評估條件
+    strict_checks = {
+        "must_be_valid_json": True,
+        "required_keys": ["valence", "arousal"],
+        "must_be_concise": True
+    }
+    
+    print("正在執行嚴格 Agentic 評估...")
+    report = run_agentic_evaluation(test_input, bad_candidate, strict_checks)
+    
+    print("\n🎯 評估結果：")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
