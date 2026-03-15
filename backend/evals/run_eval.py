@@ -2,10 +2,6 @@
 EDD Eval Runner Interface
  
 Usage:
- - preferred:
-    uv run python run_eval.py --eval_type="backend"
-    uv run python run_eval.py --eval_type="backend" --config="pr_subset.yaml"
- - or:
     uv run python run_eval.py --eval_type backend
     uv run python run_eval.py --eval_type backend --config pr_subset.yaml
 """
