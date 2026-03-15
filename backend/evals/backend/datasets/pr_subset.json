@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "text": "光復聖誕樹下的燈光閃爍，但我只感到一片冷漠。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 2,
+    "text": "育樂街的晚餐香味撲鼻，還是解不開我的煩悶。",
+    "lbs_context": "育樂街",
+    "ground_truth": {
+      "valence": -0.3,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 3,
+    "text": "走過小西門，風像在耳邊輕嘲，真是妙極了。",
+    "lbs_context": "小西門",
+    "ground_truth": {
+      "valence": -0.7,
+      "arousal": 0.4
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 4,
+    "text": "總圖的咖啡又難喝又貴，還要排隊，讚啦#。",
+    "lbs_context": "總圖",
+    "ground_truth": {
+      "valence": -0.8,
+      "arousal": 0.7
+    },
+    "routing_label": "Cloud"
+  },
+  {
+    "id": 5,
+    "text": "成公湖的水面像鏡子，但倒映的只有疲憊的自己",
+    "lbs_context": "成功湖",
+    "ground_truth": {
+      "valence": -0.9,
+      "arousal": 0.5
+    },
+    "routing_label": "Cloud"
+  },
+]

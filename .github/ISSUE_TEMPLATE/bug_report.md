@@ -1,48 +1,70 @@
 ---
-name: "Feature Request"
-about: Suggest a new capability or enhancement for the project
-title: "[Feature] "
-labels: [enhancement]
+name: "Bug Report"
+about: Report broken, incorrect, or unexpected behavior
+title: "[Bug] "
+labels: [bug]
 ---
 
-## ✨ What feature would you like?
-A clear and concise description of the improvement or new functionality.
+## 🐞 Summary
+Provide a short description of the bug.
 
-## 🎯 Why is this needed?
-Explain the problem or limitation. What value does this add?
+## ✅ Expected behavior
+What should have happened?
 
-## ✅ Success criteria (measurable)
-How will we know it works?
+## ❌ Actual behavior
+What actually happened?
+
+## 🔁 Steps to reproduce
+List the steps clearly.
+
+1. Go to `...`
+2. Click / run `...`
+3. Observe `...`
+
+## 🧪 Reproducibility
+How often does this happen?
+
+- [ ] Always
+- [ ] Sometimes
+- [ ] Rarely
+- [ ] Unable to reproduce consistently
+
+## 📍 Affected area
+Which part of the project is affected?
 
 Examples:
-- PR subset eval pass rate ≥ `95%` on `dataset vX`
-- Latency reduced from `A` to `B`
-- Judge score average increases from `A` to `B`
+- frontend
+- backend
+- eval pipeline
+- worker
+- API
+- docs
+- infra
 
-Write yours:
-- Metric(s): `...`
-- Target(s): `...`
+## 🚨 Severity / impact
+What is the impact?
 
-## 🧩 Proposed solution
-How do you think this should work?
+Examples:
+- blocks development
+- user-facing issue
+- incorrect output
+- performance degradation
+- cosmetic only
 
-- UI changes (if any):
-- API changes (if any):
-- Domain behavior changes:
+## 🖥️ Environment
+Provide environment details if relevant.
 
-## 🚫 Non-goals
-What is explicitly out of scope?
+Examples:
+- OS:
+- Browser:
+- Python / Node / package version:
+- Branch / commit:
+- Dataset / config:
 
-## 🔍 Alternatives considered
-Any alternative approaches?
+## 📎 Logs / screenshots
+Paste error messages, stack traces, screenshots, or other evidence here.
 
-## 🧪 Testing expectations
-What tests should confirm this works?
+## 🛠️ Possible cause or workaround
+Optional.
 
-- [ ] Unit tests added/updated
-- [ ] Integration tests added/updated
-- [ ] Evals updated/added (datasets/rubrics/configs)
-- [ ] CI passing required
-
-## 📎 Additional context
-Screenshots, diagrams, example prompts, links, references.
+If you already suspect the cause or found a temporary workaround, describe it here.
