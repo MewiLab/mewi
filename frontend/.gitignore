@@ -474,3 +474,17 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,windows,python,reactnative,linux
+
+# eval outputs
+backend/evals/backend/out/
+backend/evals/**/out/
+*.jsonl
+
+
+app/[Ll]ibrary/
+app/[Tt]emp/
+app/[Ll]ogs/
+app/[Uu]ser[Ss]ettings/
+*.csproj
+*.sln
+*.slnx
