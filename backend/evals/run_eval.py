@@ -2,15 +2,11 @@
 """CLI entry point for the E2E Agentic System eval runner.
 
 Usage (from project root):
-    python evals/run_eval.py --input evals/scripts/data_cloud_short_zh.json --output evals/scripts/results.json
+    python evals/run_eval.py --input evals/scripts/data_cloud_short_zh.json --output evals/scripts/report_cloud_short.json
 
 Exit codes:
     0 — suite passed all thresholds
     1 — suite failed, or a hard error occurred
-
-Why a separate entry point?
-  GitHub Actions reads the exit code to set the PR status check.
-  Keeping it thin lets us test the runner logic without spawning a subprocess.
 """
 
 import argparse
@@ -27,8 +23,7 @@ sys.path.insert(0, str(evals_dir))
 # 載入環境變數 (.env)
 load_dotenv(dotenv_path=evals_dir / '.env', override=True)
 
-# 引入我們自訂的評估模組
-from backend.runner.meta_judge import get_panel_consensus
+from backend.runner.unified_judge import run_unified_judge
 from backend.rubrics.rubric_evaluator import run_agentic_evaluation
 
 def run_eval_pipeline(input_file: str, output_file: str, pass_threshold: float = 0.8) -> dict:
@@ -44,7 +39,6 @@ def run_eval_pipeline(input_file: str, output_file: str, pass_threshold: float =
     results = []
     total_cases = len(test_cases)
     
-    # 統計用變數
     passed_count = 0
     total_score = 0
     schema_errors = 0
@@ -59,11 +53,11 @@ def run_eval_pipeline(input_file: str, output_file: str, pass_threshold: float =
         print(f"🔄 [進度 {idx+1}/{total_cases}] 評估 ID: {log_id} ...", end=" ", flush=True)
 
         try:
-            # 步驟 A: 多代理人陪審團產生結果
-            consensus = get_panel_consensus(text, context)
-            generated_output = f"Valence: {consensus.final_valence}, Arousal: {consensus.final_arousal}, Ambiguity: {consensus.final_ambiguity}\nReasoning: {consensus.final_reasoning}"
+            # --- 步驟 A: 單一法官產生推論結果 (Unified Judge) ---
+            judge_result = run_unified_judge(text, context)
+            generated_output = f"Valence: {judge_result.valence}, Arousal: {judge_result.arousal}, Ambiguity: {judge_result.ambiguity_level}\nReasoning: {judge_result.reasoning}"
             
-            # 步驟 B: Rubric Evaluator 進行嚴格審核
+            # --- 步驟 B: Rubric Evaluator 進行嚴格審核 ---
             eval_checks = {
                 "must_be_valid_json": True,
                 "must_be_concise": True,
@@ -81,22 +75,21 @@ def run_eval_pipeline(input_file: str, output_file: str, pass_threshold: float =
             is_pass = rubric_report.get("pass", False)
             score = rubric_report.get("score", 0)
             
-            if is_pass:
-                passed_count += 1
+            if is_pass: passed_count += 1
             total_score += score
             
-            # 如果法官回傳的格式有缺漏，計入 schema error
             if "pass" not in rubric_report or "score" not in rubric_report:
                 schema_errors += 1
 
             print(f"{'✅ PASS' if is_pass else '❌ FAIL'} (Score: {score}/5)")
 
-            # 儲存紀錄
+            # 儲存紀錄 (將單一法官的產出轉為 dict 存入)
             results.append({
                 "id": log_id,
                 "input_text": text,
+                "lbs_context": context,
                 "ground_truth": ground_truth,
-                "panel_consensus": consensus.model_dump(),
+                "unified_judge_output": judge_result.model_dump(),
                 "evaluation_report": rubric_report
             })
 
@@ -110,12 +103,10 @@ def run_eval_pipeline(input_file: str, output_file: str, pass_threshold: float =
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
 
-    # 計算統計摘要 (Summary)
+    # 計算統計摘要
     pass_rate = passed_count / total_cases if total_cases > 0 else 0.0
     avg_score = total_score / total_cases if total_cases > 0 else 0.0
     schema_error_rate = schema_errors / total_cases if total_cases > 0 else 0.0
-    
-    # 判斷整個測試套件是否達標 (例如：過關率 >= 80%)
     suite_pass = pass_rate >= pass_threshold
 
     return {
@@ -146,7 +137,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print(f"🚀 Starting Eval Suite")
+    print(f"🚀 Starting MVP Eval Suite")
     print(f"Input: {args.input}\n")
 
     try:
@@ -155,7 +146,6 @@ def main() -> None:
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    # Pretty-print the summary so it appears cleanly in the CI log
     print("\n" + "="*40)
     print("📊 Evaluation Summary:")
     print(json.dumps(summary, indent=2))
@@ -169,7 +159,6 @@ def main() -> None:
         f"schema_errors={summary['schema_error_rate']:.1%}"
     )
 
-    # Github Actions 依靠這裡的 Exit code 決定 PR 是否能合併
     if not summary["suite_pass"]:
         sys.exit(1)
 
