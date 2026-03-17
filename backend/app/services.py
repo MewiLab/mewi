@@ -1,24 +1,19 @@
 import json
 import os
-import random
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "../evals/data")
+MOCK_DATA_PATH = os.path.join(os.path.dirname(__file__), "mock_data/test_sample.json")
 
 async def get_scent_samples(count: int, category: str, mode: str):
-    # ex. data_edge_short_zh.json
-    filename = f"data_{category}_{mode}_zh.json"
-    file_path = os.path.join(DATA_DIR, filename)
+    with open(MOCK_DATA_PATH, "r", encoding="utf-8") as f:
+        all_data = json.load(f)
     
-    if not os.path.exists(file_path):
-        return []
-
-    # read file
-    with open(file_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    # 找出符合類別跟模式的資料
+    filtered = [
+        item for item in all_data 
+        if item["routing_label"].lower() == category.lower() 
+        and item["mode"].lower() == mode.lower()
+    ]
     
-    # check if maximum, then return all data
-    if count >= len(data):
-        return data
-    
-    # randomly select samples
-    return random.sample(data, count)
+    # 如果過濾完沒東西，就隨機回傳一筆保險
+    result = filtered if filtered else all_data
+    return result[:count]
