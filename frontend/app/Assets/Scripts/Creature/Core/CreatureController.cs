@@ -58,7 +58,7 @@ public class CreatureController : MonoBehaviour
     // -> Tactical FSM decision (may be swap by llm brain intent)
     
     {
-        _board.ClearFrameFlag(); // Why?
+        _board.ClearFrameFlags(); // Why?
         if (_perception != null) _perception.Tick();
         if (_reflex != null)     _reflex.Tick();
         if (_brain != null)      _brain.Tick();
