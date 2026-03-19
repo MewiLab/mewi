@@ -58,7 +58,8 @@ public class CreatureController : MonoBehaviour
     // -> Tactical FSM decision (may be swap by llm brain intent)
     
     {
-        _board.ClearFrameFlags(); // Why?
+        _board.ClearFrameFlags(); // Clear previous frame perception flag for reflex
+        Debug.Log("Creature ticking");
         if (_perception != null) _perception.Tick();
         if (_reflex != null)     _reflex.Tick();
         if (_brain != null)      _brain.Tick();

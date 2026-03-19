@@ -83,7 +83,7 @@ public class CreatureBrain : MonoBehaviour
     // Just a cheap simulation of the external perception between agent and virtual world
     {
         _board.SetCurrentHunger(
-            Mathf.Clamp01(_board.GetCurrentHunger() + Time.deltaTime * 0.05f)
+            Mathf.Clamp01(_board.hunger + Time.deltaTime * 0.05f)
         );
     }
 
