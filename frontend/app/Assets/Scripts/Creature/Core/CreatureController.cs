@@ -1,0 +1,79 @@
+using UnityEngine;
+
+public class CreatureController : MonoBehaviour
+{   
+    [Header("config")]
+    [Tooltip("Create via Assets > Create > Creature > Config")]
+    public CreatureConfig config;
+    CreatureBlackBoard   _board;
+    CreaturePerception   _perception;
+    CreatureReflexRunner _reflex;
+    CreatureBrain        _brain;
+    PeriodicMind         _mind;
+
+    // We use dependency injections for more explicit initialzation setup
+    // Rather then the magic hood under unity monobehavior framework
+    // Which help use get to know the order each line is executed
+    void Awake()
+    {
+        _board      = GetComponent<CreatureBlackBoard>();
+        _perception = GetComponent<CreaturePerception>();
+        _reflex     = GetComponent<CreatureReflexRunner>();
+        _brain      = GetComponent<CreatureBrain>();
+        _mind       = GetComponent<PeriodicMind>();
+
+        if (config == null)
+        {
+            Debug.LogError("[CreatureController] No CreatureConfig assigned! " +
+                           "Create one via Assets > Create > Creature > Config");
+            enabled = false;
+            return;
+        }
+
+        if (_board == null)
+        {
+            Debug.LogError("[CreatureController] Missing CreatureBlackBoard component!");
+            enabled = false;
+            return;            
+        }
+
+        if (_perception != null) _perception.Init(_board, config);
+        if (_reflex != null)     _reflex.Init(_board, config);
+        if (_brain != null)      _brain.Init(_board, config);
+        if (_mind != null)       _mind.Init(_board, config, _brain);
+    }
+    void Start()
+    {
+        if (_mind != null) _mind.StartThinking();
+    }
+
+    // Human threshold 100ms feel instantaneous
+    // 30 FPS: requires each frame in completed in 33.33 ms (milliseconds).
+    // 60 FPS: 16.67 ms.
+    // 90 FPS (common for VR): 11.11 ms.
+    void Update()
+    // Frame start with procedural call, just mvp. [Will move to concurrency layered + priority queue]
+    // -> Creature perceive the world
+    // -> Reflex instant reactions
+    // -> Tactical FSM decision (may be swap by llm brain intent)
+    
+    {
+        _board.ClearFrameFlag(); // Why?
+        if (_perception != null) _perception.Tick();
+        if (_reflex != null)     _reflex.Tick();
+        if (_brain != null)      _brain.Tick();
+
+        // Why mind do not?
+        // Why animation do not?
+    }
+
+    void OnDisable()
+    {
+        if (_mind != null) _mind.StopThinking();
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        
+    }
+}
