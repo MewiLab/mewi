@@ -481,5 +481,15 @@ backend/evals/**/out/
 *.jsonl
 
 
+<<<<<<< HEAD
 frontend/app/[Aa]ssets/Malbers Animations/
 frontend/app/[Aa]ssets/Malbers Animations.meta
+=======
+frontend/app/[Ll]ibrary/
+frontend/app/[Tt]emp/
+frontend/app/[Ll]ogs/
+frontend/app/[Uu]ser[Ss]ettings/
+*.csproj
+*.sln
+*.slnx
+>>>>>>> 0346b47a1ee308dfda79c08199ffd3a32f7c4587

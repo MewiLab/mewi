@@ -38,12 +38,20 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 8900000, guid: 619e305f5165a9946b7f72464e44ca4a, type: 3}
   m_Sun: {fileID: 2114283754330233425}
+<<<<<<< HEAD
+=======
+  m_IndirectSpecularColor: {r: 0.1727952, g: 0.2600245, b: 0.36693013, a: 1}
+>>>>>>> 0346b47a1ee308dfda79c08199ffd3a32f7c4587
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
+<<<<<<< HEAD
   serializedVersion: 13
   m_BakeOnSceneLoad: 0
+=======
+  serializedVersion: 12
+>>>>>>> 0346b47a1ee308dfda79c08199ffd3a32f7c4587
   m_GISettings:
     serializedVersion: 2
     m_BounceScale: 1
@@ -184,6 +192,7 @@ ReflectionProbe:
   m_UseOcclusionCulling: 1
   m_Importance: 1
   m_CustomBakedTexture: {fileID: 0}
+<<<<<<< HEAD
 --- !u!1001 &635053480
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -322,6 +331,8 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e4787d9893583de4e88559fedaffbc85, type: 3}
+=======
+>>>>>>> 0346b47a1ee308dfda79c08199ffd3a32f7c4587
 --- !u!1001 &746329221
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -727,6 +738,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2114283753834967213}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+<<<<<<< HEAD
 --- !u!1001 &1613173341
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -784,6 +796,8 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: bdbcfe4f0625b674eb950579f77aacc5, type: 3}
+=======
+>>>>>>> 0346b47a1ee308dfda79c08199ffd3a32f7c4587
 --- !u!1 &1764214107
 GameObject:
   m_ObjectHideFlags: 0
@@ -1180,14 +1194,22 @@ Light:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2114283754330233424}
   m_Enabled: 1
+<<<<<<< HEAD
   serializedVersion: 12
+=======
+  serializedVersion: 11
+>>>>>>> 0346b47a1ee308dfda79c08199ffd3a32f7c4587
   m_Type: 1
   m_Color: {r: 0.972549, g: 0.9607843, b: 0.8784314, a: 1}
   m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
+<<<<<<< HEAD
   m_CookieSize2D: {x: 10, y: 10}
+=======
+  m_CookieSize: 10
+>>>>>>> 0346b47a1ee308dfda79c08199ffd3a32f7c4587
   m_Shadows:
     m_Type: 2
     m_Resolution: 2
@@ -1264,6 +1286,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+<<<<<<< HEAD
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
   m_CustomShadowLayers: 0
@@ -1281,6 +1304,19 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+=======
+  m_Version: 3
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_LightLayerMask: 1
+  m_RenderingLayers: 1
+  m_CustomShadowLayers: 0
+  m_ShadowLayerMask: 1
+  m_ShadowRenderingLayers: 1
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+>>>>>>> 0346b47a1ee308dfda79c08199ffd3a32f7c4587
 --- !u!1001 &5393215579111688471
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1423,6 +1459,9 @@ SceneRoots:
   - {fileID: 5393215579111688471}
   - {fileID: 1979352518}
   - {fileID: 746329221}
+<<<<<<< HEAD
   - {fileID: 1613173341}
   - {fileID: 661660428}
   - {fileID: 635053480}
+=======
+>>>>>>> 0346b47a1ee308dfda79c08199ffd3a32f7c4587
