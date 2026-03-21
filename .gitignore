@@ -479,3 +479,7 @@ $RECYCLE.BIN/
 backend/evals/backend/out/
 backend/evals/**/out/
 *.jsonl
+
+
+frontend/app/[Aa]ssets/Malbers Animations/
+frontend/app/[Aa]ssets/Malbers Animations.meta
