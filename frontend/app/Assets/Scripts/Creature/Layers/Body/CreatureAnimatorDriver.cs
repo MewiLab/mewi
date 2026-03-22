@@ -27,6 +27,7 @@ public class CreatureAnimatorDriver : MonoBehaviour
     Animator       _anim;
     NavMeshAgent   _nav;
     CreatureBlackBoard _board;
+    CreatureConfig     _config;
 
     // ─────────────────────────────────────────────
     // CONFIG
@@ -70,11 +71,12 @@ public class CreatureAnimatorDriver : MonoBehaviour
     // LIFECYCLE
     // ─────────────────────────────────────────────
 
-    public void Init(CreatureBlackBoard board)
+    public void Init(CreatureBlackBoard board, CreatureConfig config)
     {
-        _board = board;
-        _anim  = GetComponent<Animator>();
-        _nav   = GetComponent<NavMeshAgent>();
+        _board  = board;
+        _config = config;
+        _anim   = GetComponent<Animator>();
+        _nav    = GetComponent<NavMeshAgent>();
 
         // Find the combat layer index by name
         for (int i = 0; i < _anim.layerCount; i++)
@@ -98,8 +100,10 @@ public class CreatureAnimatorDriver : MonoBehaviour
     {
         if (_board == null || _anim == null) return;
         IntentMessage intent = _board.ResolveActiveIntent();
+        UpdateNavigation(intent); // TODO: Create a separate CreatureMotor component that owns NavMeshAgent and navigation logic.
         UpdateLocomotion();
         UpdateState(intent.intent);
+        UpdateIdleVariants(intent.intent);
         UpdateCombatLayer();
     }
 
@@ -232,4 +236,105 @@ public class CreatureAnimatorDriver : MonoBehaviour
 
     /// <summary>Is combat layer active?</summary>
     public bool IsInCombat => _targetCombatWeight > 0.5f;
+
+    
+    //
+    // ─────────────────────────────────────────────
+    // MVP testing
+    // ─────────────────────────────────────────────
+
+    static readonly int H_IdleVariant = Animator.StringToHash("IdleVariant");
+    float _idleVariantTimer;
+
+    void UpdateIdleVariants(string intent)
+    {
+        if (intent != "idle") return;
+        
+        _idleVariantTimer += Time.deltaTime;
+        if (_idleVariantTimer > Random.Range(4f, 8f))
+        {
+            _idleVariantTimer = 0f;
+            // Match your Animator transition conditions
+            // 0=base idle, 1=look left, 2=look right, 3=look around, 4=scratch L, 5=scratch R, 6=yawn
+            _anim.SetInteger(H_IdleVariant, Random.Range(1, 7));
+        }
+        else
+        {
+            _anim.SetInteger(H_IdleVariant, 0); // back to base idle
+        }
+    }
+
+    // In a CreatureMotor or inside AnimatorDriver for MVP
+    void UpdateNavigation(IntentMessage intent)
+    {
+        switch (intent.intent)
+        {
+            case "wander":
+                if (!_nav.hasPath || _nav.remainingDistance < 0.5f)
+                {
+                    _nav.speed = _config.wanderSpeed;
+                    _nav.SetDestination(PickWanderPoint());
+                }
+                break;
+            case "investigate":
+                _nav.speed = 0.5f;
+                _nav.SetDestination(PickInvestigatePoint());
+                break;
+            case "flee":
+                _nav.speed = _config.fleeSpeed;
+                if (!_nav.hasPath)
+                    _nav.SetDestination(PickFleePoint());
+                break;
+            case "idle":
+            case "flinch":
+                _nav.ResetPath();
+                break;
+        }
+    }
+
+
+
+    // MVP helper test
+    Vector3 PickWanderPoint()
+    {
+        // Random point within wanderRadius on the NavMesh
+        Vector3 randomDir = Random.insideUnitSphere * _config.wanderRadius;
+        randomDir += transform.position;
+        
+        if (NavMesh.SamplePosition(randomDir, out NavMeshHit hit, _config.wanderRadius, NavMesh.AllAreas))
+            return hit.position;
+        
+        return transform.position; // fallback: stay put
+    }
+
+    Vector3 PickFleePoint()
+    {
+        // Run directly away from the player
+        if (_board.closestPlayer == null) 
+            return PickWanderPoint(); // no player, just wander
+        
+        Vector3 awayDir = (transform.position - _board.closestPlayer.position).normalized;
+        Vector3 fleeTarget = transform.position + awayDir * _config.fleeDistance;
+        
+        if (NavMesh.SamplePosition(fleeTarget, out NavMeshHit hit, _config.fleeDistance, NavMesh.AllAreas))
+            return hit.position;
+        
+        return transform.position;
+    }
+
+    Vector3 PickInvestigatePoint()
+    {
+        // Walk toward the player — this is your "follow" behavior
+        if (_board.closestPlayer == null)
+            return PickWanderPoint();
+        
+        // Don't walk right on top of them — stop at personal space
+        Vector3 toPlayer = _board.closestPlayer.position - transform.position;
+        float stopDist = _config.personalSpaceRadius;
+        
+        if (toPlayer.magnitude <= stopDist)
+            return transform.position; // close enough, stay put
+        
+        return _board.closestPlayer.position;
+    }
 }

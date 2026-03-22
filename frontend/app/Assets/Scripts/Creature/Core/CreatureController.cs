@@ -43,7 +43,7 @@ public class CreatureController : MonoBehaviour
         if (_reflex != null)     _reflex.Init(_board, config);
         if (_brain != null)      _brain.Init(_board, config);
         if (_mind != null)       _mind.Init(_board, config);
-        if (_animDriver != null) _animDriver.Init(_board);
+        if (_animDriver != null) _animDriver.Init(_board, config);
     }
     void Start()
     {
@@ -57,10 +57,10 @@ public class CreatureController : MonoBehaviour
     void Update()
     // TODO: concurrency task
     {
-        Debug.Log("Creature ticking");
+        // Debug.Log("Creature ticking");
         _board.ClearFrameFlags(); // Clear previous frame perception flag for reflex
         _board.ScoreDrives();
-        Debug.Log($"Current_hunger: {_board.health.hunger}");
+        // Debug.Log($"Current_hunger: {_board.health.hunger}");
 
         if (_perception != null) _perception.Tick();
         if (_reflex != null)     _reflex.Tick();

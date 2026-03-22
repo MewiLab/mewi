@@ -20,9 +20,11 @@ public class CreatureConfig : ScriptableObject
     public float startleDuration      = 0.6f;   // how long startled state lasts
 
     [Header("Tactical")]
+    public float wanderSpeed          = 0.2f;
     public float wanderRadius         = 5f;
     public float waypointReachDist    = 0.6f;
     public float fleeThreshold        = 0.6f;
+    public float fleeSpeed            = 0.6f;
     public float investigateThreshold = 0.7f;
     public float fleeDistance          = 8f;    // how far to run
 

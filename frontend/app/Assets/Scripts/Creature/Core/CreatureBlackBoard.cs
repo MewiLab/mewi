@@ -182,4 +182,7 @@ public class CreatureBlackBoard : MonoBehaviour
     {
         health.hunger = Mathf.Clamp01(health.hunger + Time.deltaTime * 0.05f);
     }
+
+
+    public int pendingActionId;
 }
