@@ -28,69 +28,26 @@ public class CreatureBrain : MonoBehaviour
     [Header("References — set by CreatureController")]
     CreatureBlackBoard _board;
     CreatureConfig     _config;
-    NavMeshAgent _nav;
     CreatureState _state;
     float _stateTimer;
 
     Dictionary<CreatureState, List<FSMEdge>> _graph 
         = new Dictionary<CreatureState, List<FSMEdge>>();
 
-    // Why need Intent Queue
-    // Drawback: 
-    readonly System.Collections.Generic.Queue<string> _intentQueue 
-        = new System.Collections.Generic.Queue<string>();
-    readonly object _lock = new object();
 
     public void Init(CreatureBlackBoard board, CreatureConfig config)
     {   
         _board = board;
         _config = config;
-        _nav = GetComponent<NavMeshAgent>();
         InitFSM();
     }
 
-
-    /// <summary>
-    /// Called by CreatureController each frame.
-    /// Returns early if reflex layer has taken control.
-    /// </summary>
     public void Tick()
     {
-        Debug.Log($"Current_hunger: {_board.health.hunger}");
-        DrainIntentQueue();
-        ScoreDrives();
         RunFSM();
     }
 
-    public void EnqueueIntentQueue(string intent)
-    // PeriodicMind would call the queue to save its intent based on the LLM thinking
-    {
-        lock (_lock) _intentQueue.Enqueue(intent);
-    }
-
-    public void DrainIntentQueue()
-    {
-        lock (_lock)
-        {
-            while (_intentQueue.Count > 0)
-            {
-                _board.SetCurrentIntent(_intentQueue.Dequeue());
-            }
-        }
-    }
-
-    void ScoreDrives()
-    // Just a cheap simulation of the external perception between agent and virtual world
-    {
-        _board.SetCurrentHunger(
-            Mathf.Clamp01(_board.hunger + Time.deltaTime * 0.05f)
-        );
-    }
-
-
-/// <summary>
-/// FSM
-/// </summary>
+// --- FSM ----
     void InitFSM()
     {
         void AddEdge(CreatureState from, CreatureState to,
@@ -120,16 +77,16 @@ public class CreatureBrain : MonoBehaviour
 
         AddEdge(
             from: CreatureState.Wander,
-            to:   CreatureState.Investigate,
-            condition:    () => _board.health.hunger > _config.investigateThreshold,
-            onTransition: () => Debug.Log("[Brain] Wander→Investigate")
+            to:   CreatureState.Flee,
+            condition:    () => _board.mood.fear > _config.fleeThreshold,
+            onTransition: () => Debug.Log("[Brain] Wander→Flee (fear)")
         );
 
         AddEdge(
             from: CreatureState.Wander,
-            to:   CreatureState.Flee,
-            condition:    () => _board.mood.fear > _config.fleeThreshold,
-            onTransition: () => Debug.Log("[Brain] Wander→Flee (fear)")
+            to:   CreatureState.Investigate,
+            condition:    () => _board.health.hunger > _config.investigateThreshold,
+            onTransition: () => Debug.Log("[Brain] Wander→Investigate")
         );
 
         AddEdge(
@@ -149,13 +106,6 @@ public class CreatureBrain : MonoBehaviour
 
     void RunFSM()
     {
-        CreatureState desired = IntentToState(_board.GetCurrentIntent());
-        if (desired != _state) {
-            TransitionTo(desired); // _state get swap by 
-            // For now to let the interruption state be add in new frame 
-            // rather than in the mid, which is more easy to debug for now
-            return; 
-        }
         _stateTimer += Time.deltaTime;
         
         if (_graph.TryGetValue(_state, out var edges)) // the first condition matched, so it is DFA
@@ -171,32 +121,29 @@ public class CreatureBrain : MonoBehaviour
             }
         }
     }
-
-    CreatureState IntentToState(string intent)
-    // Gameplay mapping
-    {
-        return intent switch
-        {
-            "flee"           => CreatureState.Flee,
-            "investigate"    => CreatureState.Investigate,
-            "wander"         => CreatureState.Wander,
-            _                => CreatureState.Idle,
-        };
-    }
-
+    
+    // No _animDriver reference. Brain doesn't know Body exists.  
     void TransitionTo(CreatureState next)
-    {   
-        Debug.Log($"[Brain] Transition from {_state} to {next}");
+    {
         _state = next;
         _stateTimer = 0f;
-        _board.LogEvent($"enter {next}");
 
-        // TODO: Hook Malbers state/mode activation here
-        // Example:
-        // switch (next) {
-        //     case CreatureState.Idle:   animal.State_Activate(StateID.Idle); break;
-        //     case CreatureState.Wander: animal.SetDestination(PickWanderPoint()); break;
-        //     case CreatureState.Flee:   animal.State_Activate(StateID.Run); break;
-        // }
+        switch (next)
+        {
+            case CreatureState.Idle:
+                _board.SetTacticalCurrent("idle");
+                break;
+
+            case CreatureState.Wander:
+                _board.SetTacticalCurrent("wander");
+                break;
+
+            case CreatureState.Flee:
+                _board.SetTacticalCurrent("flee");
+                break;
+            case CreatureState.Investigate:
+                _board.SetTacticalCurrent("investigate");
+                break;
+        }
     }
 }

@@ -4,12 +4,13 @@ public class CreatureController : MonoBehaviour
 {   
     [Header("config")]
     [Tooltip("Create via Assets > Create > Creature > Config")]
-    public CreatureConfig config;
-    CreatureBlackBoard   _board;
-    CreaturePerception   _perception;
-    CreatureReflexRunner _reflex;
-    CreatureBrain        _brain;
-    PeriodicMind         _mind;
+    public CreatureConfig  config;
+    CreatureBlackBoard     _board;
+    CreaturePerception     _perception;
+    CreatureReflexRunner   _reflex;
+    CreatureBrain          _brain;
+    PeriodicMind           _mind;
+    CreatureAnimatorDriver _animDriver;
 
     // We use dependency injections for more explicit initialzation setup
     // Rather then the magic hood under unity monobehavior framework
@@ -21,6 +22,7 @@ public class CreatureController : MonoBehaviour
         _reflex     = GetComponent<CreatureReflexRunner>();
         _brain      = GetComponent<CreatureBrain>();
         _mind       = GetComponent<PeriodicMind>();
+        _animDriver = GetComponent<CreatureAnimatorDriver>();
 
         if (config == null)
         {
@@ -40,7 +42,8 @@ public class CreatureController : MonoBehaviour
         if (_perception != null) _perception.Init(_board, config);
         if (_reflex != null)     _reflex.Init(_board, config);
         if (_brain != null)      _brain.Init(_board, config);
-        if (_mind != null)       _mind.Init(_board, config, _brain);
+        if (_mind != null)       _mind.Init(_board, config);
+        if (_animDriver != null) _animDriver.Tick();
     }
     void Start()
     {
@@ -52,20 +55,18 @@ public class CreatureController : MonoBehaviour
     // 60 FPS: 16.67 ms.
     // 90 FPS (common for VR): 11.11 ms.
     void Update()
-    // Frame start with procedural call, just mvp. [Will move to concurrency layered + priority queue]
-    // -> Creature perceive the world
-    // -> Reflex instant reactions
-    // -> Tactical FSM decision (may be swap by llm brain intent)
-    
+    // TODO: concurrency task
     {
-        _board.ClearFrameFlags(); // Clear previous frame perception flag for reflex
         Debug.Log("Creature ticking");
+        _board.ClearFrameFlags(); // Clear previous frame perception flag for reflex
+        _board.ScoreDrives();
+        Debug.Log($"Current_hunger: {_board.health.hunger}");
+
         if (_perception != null) _perception.Tick();
         if (_reflex != null)     _reflex.Tick();
         if (_brain != null)      _brain.Tick();
-
-        // Why mind do not?
-        // Why animation do not?
+        if (_animDriver != null) _animDriver.Tick();
+        _board.UpdateDebugDisplay();
     }
 
     void OnDisable()

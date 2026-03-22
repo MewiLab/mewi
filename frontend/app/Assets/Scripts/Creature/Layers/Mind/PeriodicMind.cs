@@ -14,14 +14,12 @@ public class PeriodicMind : MonoBehaviour
 {
     CreatureBlackBoard _board;
     CreatureConfig     _config;
-    CreatureBrain      _brain; // to enqueue intent, may be remove later
     
     bool _running;
-    public void Init(CreatureBlackBoard board, CreatureConfig config, CreatureBrain brain)
+    public void Init(CreatureBlackBoard board, CreatureConfig config)
     {
         _board = board;
         _config = config;
-        _brain = brain;
     }
 
     public void StartThinking()
@@ -47,11 +45,9 @@ public class PeriodicMind : MonoBehaviour
         }
     }
 
-    /// TODO: Make this call the backend agent to think and make it not concurrency but async probabily
-    /// <summary>
-    /// One "thought cycle." Reads blackboard state, updates mood, picks intent.
-    /// This runs on a slow timer — never blocks the main thread.
-    /// </summary>
+    // TODO: Make this call the backend agent to think and make it not concurrency but async probabily
+    // One "thought cycle." Reads blackboard state, updates mood, picks intent.
+    // This runs on a slow timer — never blocks the main thread.
     void Think()
     {
         MoodModel mood = _board.mood;
@@ -94,16 +90,13 @@ public class PeriodicMind : MonoBehaviour
 
         // ── 4. Select intent based on mood ──
         string intent = SelectIntent(mood);
-        _brain.EnqueueIntentQueue(intent);
+        _board.SetMindIntent(intent);
 
-        _board.LogEvent($"mind: {intent} (mood: {mood})");
         Debug.Log($"[PeriodicMind] intent={intent} | {mood}");
     }
 
-    /// <summary>
-    /// MVP intent selection — simple priority rules based on mood.
-    /// Replace this with LLM call for richer behavior.
-    /// </summary>
+    // TODO: Replace this with LLM call for richer behavior.
+    // MVP intent selection — simple priority rules based on mood.
     string SelectIntent(MoodModel mood)
     {
         // High fear → flee
