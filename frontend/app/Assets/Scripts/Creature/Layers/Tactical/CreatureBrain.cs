@@ -102,6 +102,13 @@ public class CreatureBrain : MonoBehaviour
             condition:    () => _stateTimer > 5f,
             onTransition: () => Debug.Log("[Brain] Investigate→Idle (done)")
         );
+
+        AddEdge(
+            from: CreatureState.Wander, 
+            to:   CreatureState.Idle,
+            condition: () => _board.health.hunger < _config.hungerThreshold * 0.5f && _stateTimer > 3f,
+            onTransition: () => Debug.Log("[Brain] Wander→Idle (satisfied)")
+        );
     }
 
     void RunFSM()
