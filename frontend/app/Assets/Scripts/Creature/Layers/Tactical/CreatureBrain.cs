@@ -22,7 +22,6 @@ public class FSMEdge
 /// With Malbers: each state calls Malbers API (SetDestination, State_Activate, Mode_Activate).
 /// For MVP: states just log and set NavMeshAgent destination.
 /// </summary>
-[RequireComponent(typeof(NavMeshAgent), typeof(Animator))]
 public class CreatureBrain : MonoBehaviour
 {   
     [Header("References — set by CreatureController")]
@@ -100,7 +99,7 @@ public class CreatureBrain : MonoBehaviour
             from: CreatureState.Flee,
             to:   CreatureState.Idle,
             condition:    () => _stateTimer > 5f,
-            onTransition: () => Debug.Log("[Brain] Investigate→Idle (done)")
+            onTransition: () => Debug.Log("[Brain] Flee→Idle (done)")
         );
 
         AddEdge(

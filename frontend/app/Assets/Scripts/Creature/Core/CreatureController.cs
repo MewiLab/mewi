@@ -43,7 +43,7 @@ public class CreatureController : MonoBehaviour
         if (_reflex != null)     _reflex.Init(_board, config);
         if (_brain != null)      _brain.Init(_board, config);
         if (_mind != null)       _mind.Init(_board, config);
-        if (_animDriver != null) _animDriver.Tick();
+        if (_animDriver != null) _animDriver.Init(_board);
     }
     void Start()
     {
