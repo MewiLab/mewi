@@ -2,14 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Shared data bus — every layer reads/writes here, no layer talks to another directly.
-/// 
-/// Ownership convention:
-///   Perception  → writes: sensory fields (closestPlayer, heardSound, etc.)
-///   Reflex      → writes: reflex override flags (isStartled, gazeOverrideTarget)
-///   Tactical    → writes: currentIntent (via intent queue from Mind)
-///   Mind        → writes: mood, trust, curiosity (slow update)
-///   Animation   → reads only (drives Malbers / Animator)
+/// Shared data bus using Brooks' Subsumption Architecture. 
+/// Layers read/write to typed Intent slots in a fixed priority: Reflex (highest) -> Tactical -> Mind (lowest).
 /// </summary>
 public class CreatureBlackBoard : MonoBehaviour
 {
