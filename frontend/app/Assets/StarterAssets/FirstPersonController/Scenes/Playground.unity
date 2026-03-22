@@ -861,6 +861,7 @@ MonoBehaviour:
     water: 0.3
     hunger: 0.1
     blood: 0.2
+  pendingActionId: 0
 --- !u!114 &1404930657
 MonoBehaviour:
   m_ObjectHideFlags: 0
