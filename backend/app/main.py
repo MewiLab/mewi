@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api_endpoint import micrologs, assets, agent
+from app.api.routes import micrologs, assets, agent
 
 app = FastAPI(
     title="MEW API",

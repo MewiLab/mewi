@@ -1,6 +1,6 @@
 from fastapi.encoders import jsonable_encoder
 from app.db.base import supabase
-from backend.app.db.models import MicrologSchema
+from app.db.models import MicrologSchema
 from typing import List, Dict, Any
 from postgrest.exceptions import APIError
 
