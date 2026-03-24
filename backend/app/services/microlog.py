@@ -1,14 +1,14 @@
 import os
 import logging
 from openai import OpenAI
-from app.db.models import MicrologSchema
+from backend.app.models.microlog import Microlog
 
 logger = logging.getLogger(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-class AgentMemoryService:
+class MicrologService:
     @staticmethod
-    def process_new_microlog(log_data: MicrologSchema) -> MicrologSchema:
+    def process_new_microlog(log_data: Microlog) -> Microlog:
         if not log_data.content or not log_data.content.strip():
             return log_data
             

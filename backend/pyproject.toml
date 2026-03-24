@@ -9,6 +9,22 @@ dependencies = [
     "openai>=2.24.0",
     "python-dotenv>=1.2.2",
     "pyyaml>=6.0.3",
+    "redis>=7.3.0",
     "supabase>=2.28.3",
     "uvicorn>=0.42.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest-env>=1.6.0",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+env = [
+    "SUPABASE_URL=http://fake-supabase",
+    "SUPABASE_KEY=fake-key",
+    "OPENAI_API_KEY=fake-openai-key",
 ]

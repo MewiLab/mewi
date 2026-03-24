@@ -1,11 +1,10 @@
 import redis
 import os
-import json
 from dotenv import load_dotenv
 
 load_dotenv()
 
-class RedisService:
+class RedisDB:
     def __init__(self):
         # 建立 Connection Pool
         self.pool = redis.ConnectionPool(
@@ -22,4 +21,4 @@ class RedisService:
     def get_agent_status(self, user_id: str):
         return self.r.get(f"agent_status:{user_id}") or "idle"
 
-redis_service = RedisService()
+redis_client = RedisDB()

@@ -1,13 +1,26 @@
+"""
+/agent routes — real-time status for Unity client polling.
+"""
+
 from fastapi import APIRouter
-from app.services.redis_service import redis_service
 
-router = APIRouter()
+from app.api.deps import RedisDep, SettingsDep
+from app.services.agent import AgentService
 
-@router.get("/status/{user_id}", summary="查詢 Agent 目前的即時狀態")
-async def get_agent_status(user_id: str):
-    status = redis_service.get_agent_status(user_id)
+router = APIRouter(prefix="/agent", tags=["agent"])
+
+
+@router.get("/status/{user_id}")
+async def get_agent_status(
+    user_id: str,
+    redis: RedisDep,
+    settings: SettingsDep,
+):
+    """Query the agent's current real-time status (used by Unity to drive animations)."""
+    svc = AgentService(redis, settings)
+    status = await svc.get_status(user_id)
     return {
-        "user_id": user_id, 
+        "user_id": user_id,
         "status": status,
-        "is_thinking": status == "thinking"
+        "is_thinking": status == "thinking",
     }
