@@ -8,9 +8,9 @@ from pydantic import BaseModel, Field
 
 class UserRead(BaseModel):
     id: UUID
-    aura: list[str]|None = None
-    movement: list[str]|None = None
-    identity: list[str]|None = None
+    aura: str | None = None
+    movement: str | None = None
+    identity: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -23,6 +23,6 @@ class UserCreatureRelationRead(BaseModel):
     bond_score: int = 0
     episodic_memories: list[str] = Field(default_factory=list)
     emotional_tags: list[str] = Field(default_factory=list)
-    last_seen_at: list[datetime] = None
+    last_seen_at: datetime | None = None
 
     model_config = {"from_attributes": True}

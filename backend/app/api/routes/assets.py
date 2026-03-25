@@ -11,13 +11,11 @@ from app.services.storage import StorageService
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
-
 class MediaType(str, Enum):
     image = "image"
     video = "video"
     voice = "voice"
-
-
+    
 @router.post("/upload")
 async def upload_media(
     db: SupabaseDep,

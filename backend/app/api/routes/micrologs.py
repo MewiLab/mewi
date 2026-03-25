@@ -1,8 +1,9 @@
 """
 /micrologs routes — thin controllers.
-
+ 
 Pattern: Route → Service → Repository → DB
 Routes should contain NO business logic.
+(Only contains a little orchestration logic)
 """
 
 from uuid import UUID
@@ -17,9 +18,8 @@ from app.workers.agent_tasks import agent_thinking_task
 
 router = APIRouter(prefix="/micrologs", tags=["micrologs"])
 
-
 @router.get("/{user_id}", response_model=list[MicrologRead])
-async def list_logs(
+async def list_log(
     user_id: UUID,
     db: SupabaseDep,
     count: int = Query(10, ge=1, le=100),
@@ -30,7 +30,7 @@ async def list_logs(
     return repo.get_by_user(str(user_id), limit=count, offset=offset)
 
 
-@router.post("/", response_model=MicrologRead, status_code=201)
+@router.post("/", status_code=201, response_model=MicrologRead)
 async def create_log(
     body: MicrologCreate,
     background_tasks: BackgroundTasks,
@@ -38,17 +38,15 @@ async def create_log(
     redis: RedisDep,
     settings: SettingsDep,
 ):
-    """Create a microlog entry, embed its content, and kick off agent thinking."""
-    # 1. Embed
+    """1 Create a microlog entry, 2 embed its content, and 3 trigger agent thinking task."""
+    
     embedding_svc = EmbeddingService(settings)
     vector = embedding_svc.embed_text(body.content)
-
-    # 2. Persist
+    
     enriched = MicrologInDB(**body.model_dump(), embedding=vector or None)
     repo = MicrologRepository(db)
     row = repo.create(enriched)
-
-    # 3. Background agent task
+    
     background_tasks.add_task(
         agent_thinking_task,
         log_id=row["id"],
@@ -58,5 +56,5 @@ async def create_log(
         redis=redis,
         settings=settings,
     )
-
+    
     return row

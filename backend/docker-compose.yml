@@ -1,3 +1,5 @@
+# Local development only — NOT used in CI (GitHub Actions has its own services).
+
 services:
   agent-runtime:
     build: .
@@ -5,9 +7,33 @@ services:
     restart: always
     env_file:
       - .env
+    environment:
+      # Override .env so the app finds Redis inside Docker network
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
-      - .:/app          # Syncs your code
-      - /app/.venv      # Protects the library folder
+      - .:/app
+      - /app/.venv        # protect installed packages
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: mewi_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis_data:

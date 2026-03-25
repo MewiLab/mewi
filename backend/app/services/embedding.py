@@ -6,7 +6,6 @@ providers or mock in tests.
 """
 
 import logging
-from typing import List
 
 from openai import OpenAI
 
@@ -22,7 +21,7 @@ class EmbeddingService:
     def __init__(self, settings: Settings):
         self._client = OpenAI(api_key=settings.openai_api_key)
 
-    def embed_text(self, text: str) -> List[float]:
+    def embed_text(self, text: str) -> list[float]:
         """Return the embedding vector for a single text string."""
         if not text or not text.strip():
             return []

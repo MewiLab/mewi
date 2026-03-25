@@ -1,11 +1,10 @@
 ### Stage 1: dependency build stage ###
-FROM python:3.11-slim AS builder
+FROM python:3.12-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-# Tells uv to compile .pyc bytecode during install.
 ENV UV_COMPILE_BYTECODE=1
 
 COPY pyproject.toml uv.lock ./
@@ -18,9 +17,8 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# From previous stage we only want its /app/.venv, the output of uv sync
 COPY --from=builder /app/.venv /app/.venv
-ENV PATH="/app/.venv/bin:%PATH"
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY . .
 

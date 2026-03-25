@@ -50,36 +50,3 @@ class MicrologUpdate(BaseModel):
     reply: str | None = None
     valence: float | None = None
     arousal: float | None = None
-
-
-
-# from pydantic import BaseModel, Field
-# from typing import List, Optional
-# from datetime import datetime
-# from uuid import UUID
-
-class Microlog(BaseModel):
-    """微日記模型：處理文字、情緒值、多媒體 URL 與向量"""
-    id: UUID|None = None
-    userId: UUID = Field(..., alias="user_id")
-    content: str
-    valence: float = 0.0
-    arousal: float = 0.0
-    imageUrl: str|None = Field(None, alias="image_url")
-    videoUrl: str|None = Field(None, alias="video_url")
-    voiceUrl: str|None = Field(None, alias="voice_url")
-    embedding: list[float]|None = None 
-    reply: str|None = None
-    createdAt: datetime|None = Field(None, alias="created_at")
-
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
-            "example": {
-                "user_id": "00000000-0000-0000-0000-000000000000",
-                "content": "今天心情不錯",
-                "valence": 0.8,
-                "arousal": 0.2,
-                "image_url": "https://example.com/image.jpg"
-            }
-        }
