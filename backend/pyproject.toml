@@ -24,6 +24,7 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["paid: marks tests that call paid external APIs"]
 # no env here — pytest-env handles it below
 
 [tool.pytest_env]

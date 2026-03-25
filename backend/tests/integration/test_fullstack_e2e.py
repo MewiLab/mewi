@@ -40,9 +40,12 @@ class TestFullStackE2E:
         # 1. Act — user creates a microlog through the API
         payload = {
             "user_id": TEST_USER_ID,
-            "content": "Full-stack test: verify Supabase write",
+            "content": "Full-stack verify: Supabase write",
             "valence": 0.8,
             "arousal": 0.4,
+            "image_url": None,
+            "video_url": None,
+            "voice_url": None,
         }
         resp = await real_client.post("/api/v1/micrologs/", json=payload)
         assert resp.status_code == 201, f"API returned {resp.status_code}: {resp.text}"
@@ -149,9 +152,12 @@ class TestFullStackE2E:
         # 1. Act — user creates a microlog
         payload = {
             "user_id": TEST_USER_ID,
-            "content": "Round-trip test: both stores",
+            "content": "Round-trip verify: both stores",
             "valence": 0.7,
             "arousal": 0.6,
+            "image_url": None,
+            "video_url": None,
+            "voice_url": None,
         }
         resp = await real_client.post("/api/v1/micrologs/", json=payload)
         assert resp.status_code == 201
