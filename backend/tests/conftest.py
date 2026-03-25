@@ -13,7 +13,6 @@ from httpx import AsyncClient, ASGITransport
 import pytest
 import redis.asyncio as aioredis
 from dotenv import load_dotenv
-from fastapi.testclient import TestClient
 
 from app.core.config import Settings
 from app.api.deps import get_supabase, get_redis, get_settings
@@ -26,25 +25,16 @@ load_dotenv(override=True)  # .env values win over pytest-env fakes
 # ── Unit fixtures (no real connections) ───────────────────────────────────────
 
 @pytest.fixture
-<<<<<<< HEAD
 def mock_settings():
     return Settings(
         supabase_url="http://fake-supabase",
         supabase_publishable_key="fake-anon-key",
         supabase_secret_key="fake-secret-key",
         openai_api_key="fake-openai-key"
-=======
-def settings():
-    return Settings(
-        supabase_url="http://fake-supabase",
-        supabase_key="fake-key",
-        openai_api_key="fake-openai-key",
->>>>>>> 02c28f2ae67c28e318cae31e2027ef626160c933
     )
 
 
 @pytest.fixture
-<<<<<<< HEAD
 def settings(mock_settings):
     return mock_settings
 
@@ -55,8 +45,6 @@ def fake_settings(mock_settings):
 
 
 @pytest.fixture
-=======
->>>>>>> 02c28f2ae67c28e318cae31e2027ef626160c933
 def mock_redis():
     client = AsyncMock()
     client.set = AsyncMock()
@@ -91,12 +79,8 @@ def real_settings():
     """Settings from your actual .env file."""
     return Settings(
         supabase_url=os.environ["SUPABASE_URL"],
-<<<<<<< HEAD
         supabase_publishable_key=os.environ["SUPABASE_PUBLISHABLE_KEY"],
         supabase_secret_key=os.environ["SUPABASE_SECRET_KEY"],
-=======
-        supabase_key=os.environ["SUPABASE_KEY"],
->>>>>>> 02c28f2ae67c28e318cae31e2027ef626160c933
         openai_api_key=os.environ["OPENAI_API_KEY"],
         redis_host=os.getenv("REDIS_HOST", "localhost"),
         redis_port=int(os.getenv("REDIS_PORT", 6379)),
@@ -147,8 +131,4 @@ async def real_client(real_settings, real_supabase, real_redis):
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
         yield client
 
-<<<<<<< HEAD
     app.dependency_overrides.clear()
-=======
-    app.dependency_overrides.clear()
->>>>>>> 02c28f2ae67c28e318cae31e2027ef626160c933
