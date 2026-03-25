@@ -489,3 +489,4 @@ evals/backend/out/
 backend/evals/backend/out/
 backend/evals/**/out/
 *.jsonl
+.terraform.lock.hcl
