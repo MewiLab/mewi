@@ -26,12 +26,23 @@ load_dotenv(override=True)  # .env values win over pytest-env fakes
 # ── Unit fixtures (no real connections) ───────────────────────────────────────
 
 @pytest.fixture
-def settings():
+def mock_settings():
     return Settings(
         supabase_url="http://fake-supabase",
-        supabase_key="fake-key",
-        openai_api_key="fake-openai-key",
+        supabase_publishable_key="fake-anon-key",
+        supabase_secret_key="fake-secret-key",
+        openai_api_key="fake-openai-key"
     )
+
+
+@pytest.fixture
+def settings(mock_settings):
+    return mock_settings
+
+
+@pytest.fixture
+def fake_settings(mock_settings):
+    return mock_settings
 
 
 @pytest.fixture
@@ -69,7 +80,8 @@ def real_settings():
     """Settings from your actual .env file."""
     return Settings(
         supabase_url=os.environ["SUPABASE_URL"],
-        supabase_key=os.environ["SUPABASE_KEY"],
+        supabase_publishable_key=os.environ["SUPABASE_PUBLISHABLE_KEY"],
+        supabase_secret_key=os.environ["SUPABASE_SECRET_KEY"],
         openai_api_key=os.environ["OPENAI_API_KEY"],
         redis_host=os.getenv("REDIS_HOST", "localhost"),
         redis_port=int(os.getenv("REDIS_PORT", 6379)),
