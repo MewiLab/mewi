@@ -2,30 +2,14 @@
 Integration test: verify Redis read/write with real server.
 
 Marked @paid — requires a running Redis instance.
-Only runs with `make test-all CONFIRM_PAID=1`.
+Only runs with `make test-integration CONFIRM_PAID=1`.
+
+The `real_redis` fixture is provided by conftest.py (shared with E2E tests).
 """
 
 import pytest
-import redis.asyncio as aioredis
 
 from app.services.agent import AgentService
-
-
-@pytest.fixture
-async def real_redis(real_settings):
-    """Connect to real Redis, yield client, then clean up test keys."""
-    pool = aioredis.ConnectionPool.from_url(
-        f"redis://{real_settings.redis_host}:{real_settings.redis_port}/0",
-        decode_responses=True,
-    )
-    client = aioredis.Redis(connection_pool=pool)
-    yield client
-    # Cleanup: delete any test keys we created
-    keys = await client.keys("agent_status:test-*")
-    if keys:
-        await client.delete(*keys)
-    await client.aclose()
-    await pool.disconnect()
 
 
 @pytest.mark.paid
