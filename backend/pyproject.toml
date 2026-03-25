@@ -24,7 +24,6 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
-<<<<<<< HEAD
 # no env here — pytest-env handles it below
 
 [tool.pytest_env]
@@ -32,10 +31,3 @@ SUPABASE_URL = "http://fake-supabase"
 SUPABASE_PUBLISHABLE_KEY = "fake-anon-key"
 SUPABASE_SECRET_KEY = "fake-service-role-key"
 OPENAI_API_KEY = "fake-openai-key"
-=======
-env = [
-    "SUPABASE_URL=http://fake-supabase",
-    "SUPABASE_KEY=fake-key",
-    "OPENAI_API_KEY=fake-openai-key",
-]
->>>>>>> 02c28f2ae67c28e318cae31e2027ef626160c933
