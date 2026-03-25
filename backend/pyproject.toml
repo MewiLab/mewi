@@ -23,6 +23,7 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["."]
 env = [
     "SUPABASE_URL=http://fake-supabase",
     "SUPABASE_KEY=fake-key",

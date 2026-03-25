@@ -5,7 +5,6 @@ Pattern: Route → Service → Repository → DB
 Routes should contain NO business logic.
 """
 
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Query
@@ -19,7 +18,7 @@ from app.workers.agent_tasks import agent_thinking_task
 router = APIRouter(prefix="/micrologs", tags=["micrologs"])
 
 
-@router.get("/{user_id}", response_model=List[MicrologRead])
+@router.get("/{user_id}", response_model=list[MicrologRead])
 async def list_logs(
     user_id: UUID,
     db: SupabaseDep,
