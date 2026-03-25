@@ -1,4 +1,4 @@
-name: Run Eval on Merge
+name: AWS OCID Conection Test
 on:
   push:
     branches: [main]
@@ -33,4 +33,4 @@ jobs:
         run: uv run python backend/evals/run_eval.py --eval_type backend
 
       - name: Upload results to S3
-        run: aws s3 cp ./backend/evals/backend/results/ s3://mewi-eval-result-v0/runs/${{ github.sha }}/ --recursive
+        run: aws s3 cp ./backend/evals/backend/results/ s3://mewi-eval-result-v0/runs/connection-test-${{ github.sha }}/ --recursive
