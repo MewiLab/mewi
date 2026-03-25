@@ -2,37 +2,39 @@
 PY := uv run
 PYTEST_ARGS ?=
 
-.PHONY: test test-all lint format fix update-tapes ci help migration migrate migrate-ci
+.PHONY: test test-s test-all test-unit test-integration help migration migrate migrate-ci
 
 help:
-	@echo "make test         - pytest excluding paid tests"
-	@echo "make test-all     - run all tests (may cost money)"
+	@echo "make test              - unit tests only (free, no API calls)"
+	@echo "make test-s            - unit tests with stdout"
+	@echo "make test-unit         - same as 'make test'"
+	@echo "make test-integration  - paid tests only (needs .env + running services)"
+	@echo "make test-all          - all tests (set CONFIRM_PAID=1)"
 
-# Default: Run free tests
+# ── Unit tests (free, mocked) ────────────────────────────────
 test:
 	$(PY) pytest -m "not paid" $(PYTEST_ARGS)
 
 test-s:
-	$(PY) pytest -m "not paid" -s
+	$(PY) pytest -m "not paid" -s $(PYTEST_ARGS)
 
-# Potentially expensive (opt-in)
+test-unit: test
+
+# ── Integration tests (paid, real APIs) ──────────────────────
+test-integration:
+	@test "$(CONFIRM_PAID)" = "1" || (echo "⚠️  Set CONFIRM_PAID=1 to run paid tests"; exit 1)
+	$(PY) pytest tests/integration -m "paid" -s $(PYTEST_ARGS)
+
+# ── Everything ───────────────────────────────────────────────
 test-all:
-	@test "$(CONFIRM_PAID)" = "1" || (echo "Set CONFIRM_PAID=1 to run paid tests"; exit 1)
+	@test "$(CONFIRM_PAID)" = "1" || (echo "⚠️  Set CONFIRM_PAID=1 to run paid tests"; exit 1)
 	$(PY) pytest $(PYTEST_ARGS)
 
-# ------------------------------------------------------------------
-# DB Migrations (Docker Integration)
-# ------------------------------------------------------------------
-
-# 1. GENERATE the script (Run this when you change models.py)
-# Usage: make migration msg="add skills table"
+# ── DB migrations ────────────────────────────────────────────
 migration:
-	# ✅ FIX 2: Safety check for empty message
 	@test -n "$(msg)" || (echo "Error: msg is undefined. Usage: make migration msg='your message'"; exit 1)
 	docker compose exec agent-runtime alembic revision --autogenerate -m "$(msg)"
 
-# 2. APPLY the changes (Run this if you want to update DB without restarting)
-# Usage: make migrate
 migrate:
 	docker compose exec agent-runtime alembic upgrade head
 
