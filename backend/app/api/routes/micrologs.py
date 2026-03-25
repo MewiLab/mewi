@@ -11,7 +11,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Query
 
 from app.api.deps import RedisDep, SettingsDep, SupabaseDep
-from app.models.mircolog import MicrologCreate, MicrologInDB, MicrologRead
+from app.models.microlog import MicrologCreate, MicrologInDB, MicrologRead
 from app.repositories.microlog_repo import MicrologRepository
 from app.services.embedding import EmbeddingService
 from app.workers.agent_tasks import agent_thinking_task
@@ -30,6 +30,7 @@ async def list_log(
     return repo.get_by_user(str(user_id), limit=count, offset=offset)
 
 
+@router.post("/", status_code=201, response_model=MicrologRead)
 async def create_log(
     body: MicrologCreate,
     background_tasks: BackgroundTasks,

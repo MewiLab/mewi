@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     # ── Supabase ──────────────────────────────────────────────
     supabase_url: str
     supabase_key: str
-
+    supabase_timeout: float = 10.0  # seconds
+    
     # ── Redis ─────────────────────────────────────────────────
     redis_host: str = "localhost"
     redis_port: int = 6379
@@ -31,6 +32,7 @@ class Settings(BaseSettings):
     # ── App ───────────────────────────────────────────────────
     debug: bool = False
     agent_status_ttl: int = 300  # seconds
+    
 
 
 @lru_cache

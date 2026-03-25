@@ -13,10 +13,10 @@ help:
 
 # ── Unit tests (free, mocked) ────────────────────────────────
 test:
-	$(PY) pytest -m "not paid" $(PYTEST_ARGS)
+	$(PY) pytest tests -m "not paid" $(PYTEST_ARGS)
 
 test-s:
-	$(PY) pytest -m "not paid" -s $(PYTEST_ARGS)
+	$(PY) pytest tests -m "not paid" -s $(PYTEST_ARGS)
 
 test-unit: test
 

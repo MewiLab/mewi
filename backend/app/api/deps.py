@@ -24,7 +24,7 @@ SettingsDep: TypeAlias = Annotated[Settings, Depends(get_settings)]
 
 
 # ── Supabase ──────────────────────────────────────────────────
-def get_supabase(request: Request, settings: SettingsDep = Depends(get_settings)) -> Client:
+def get_supabase(request: Request, settings: SettingsDep) -> Client:
     return request.app.state.supabase
 
 
@@ -32,7 +32,7 @@ SupabaseDep: TypeAlias = Annotated[Client, Depends(get_supabase)]
 
 
 # ── Redis ─────────────────────────────────────────────────────
-def get_redis(request: Request,  settings: SettingsDep = Depends(get_settings)) -> aioredis.Redis:
+def get_redis(request: Request, settings: SettingsDep) -> aioredis.Redis:
     return request.app.state.redis
 
 

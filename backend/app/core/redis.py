@@ -19,7 +19,7 @@ def create_redis(settings: Settings) -> aioredis:
         host=settings.redis_host,
         port=settings.redis_port,
         db=settings.redis_db,
-        decode_response=True,
+        decode_responses=True,
     )
     
 async def close_redis(client: aioredis.Redis) -> None:

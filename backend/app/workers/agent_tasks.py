@@ -12,7 +12,7 @@ import redis.asyncio as aioredis
 from supabase import Client
 
 from app.core.config import Settings
-from app.models.mircolog import MicrologUpdate
+from app.models.microlog import MicrologUpdate
 from app.repositories.microlog_repo import MicrologRepository
 from app.services.agent import AgentService
 

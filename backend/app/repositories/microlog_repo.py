@@ -15,7 +15,7 @@ from postgrest.exceptions import APIError
 from supabase import Client
 
 from app.core.exceptions import DatabaseError, NotFoundError
-from app.models.mircolog import MicrologInDB, MicrologUpdate
+from app.models.microlog import MicrologInDB, MicrologUpdate
 
 logger = logging.getLogger(__name__)
 
