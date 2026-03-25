@@ -485,3 +485,8 @@ evals/backend/out/
 *.tfstate.backup
 *.tfplan
 .terraform.lock.hcl
+# eval outputs
+backend/evals/backend/out/
+backend/evals/**/out/
+*.jsonl
+.terraform.lock.hcl

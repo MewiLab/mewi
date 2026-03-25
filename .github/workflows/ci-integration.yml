@@ -1,0 +1,51 @@
+# .github/workflows/ci-integration.yml
+# ──────────────────────────────────────────────────────────────
+# Integration tests against real Supabase + Redis.
+# Runs on main push OR manual trigger. Costs ~$0.001 per run.
+# ──────────────────────────────────────────────────────────────
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/app/db/**"
+      - "backend/app/repositories/**"
+      - "backend/app/services/**"
+  workflow_dispatch:  # manual trigger from GitHub UI
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: uv sync --frozen
+
+      - name: Run integration tests
+        working-directory: ./backend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+        run: uv run pytest tests/integration -m "paid" -s --tb=short
