@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.exceptions import AppError
 from app.core.lifespan import lifespan
-from backend.app.api.routes import agent
+from app.api.routes import agent
 
 logging.basicConfig(
     level=logging.INFO,

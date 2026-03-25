@@ -1,26 +1,14 @@
-# Local development only — NOT used in CI (GitHub Actions has its own services).
+# ──────────────────────────────────────────────────────────────
+# docker-compose.yml
+#
+# Two modes:
+#   Local dev:  `make dev`  → starts Redis here, app runs natively
+#   Deploy test: `make docker-up` → builds image + runs everything
+# ──────────────────────────────────────────────────────────────
 
 services:
-  agent-runtime:
-    build: .
-    container_name: mewi_agent_runtime
-    restart: always
-    env_file:
-      - .env
-    environment:
-      # Override .env so the app finds Redis inside Docker network
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    volumes:
-      - .:/app
-      - /app/.venv        # protect installed packages
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8000:8000"
-    depends_on:
-      redis:
-        condition: service_healthy
 
+  # ── Infrastructure (always needed) ──────────────────────────
   redis:
     image: redis:7-alpine
     container_name: mewi_redis
@@ -34,6 +22,25 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  # ── App container (deploy / staging test only) ──────────────
+  # Not used during daily development. Start with: make docker-up
+  agent-runtime:
+    build: .
+    container_name: mewi_agent_runtime
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles:
+      - deploy
 
 volumes:
   redis_data:
