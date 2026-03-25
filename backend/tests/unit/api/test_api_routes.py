@@ -6,7 +6,7 @@ No real Supabase, Redis, or OpenAI calls happen.
 """
 
 from uuid import uuid4
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -27,7 +27,6 @@ FAKE_ROW = {
     "image_url": None,
     "video_url": None,
     "voice_url": None,
-    "reply": None,
     "created_at": "2025-06-01T12:00:00Z",
 }
 
@@ -114,6 +113,10 @@ class TestMicrologRoutes:
 
 # ── /api/v1/agent ─────────────────────────────────────────────
 
+FAKE_CREATURE_ID = str(uuid4())
+FAKE_SNAPSHOT = {"location": "park", "mood": "curious", "nearby_humans": 2}
+
+
 class TestAgentRoutes:
     def test_get_status_returns_idle_by_default(self, client, mock_redis_dep):
         mock_redis_dep.get.return_value = None
@@ -129,6 +132,21 @@ class TestAgentRoutes:
         data = resp.json()
         assert data["status"] == "thinking"
         assert data["is_thinking"] is True
+
+    @patch("app.workers.agent_tasks.agent_thinking_task", new_callable=AsyncMock)
+    def test_trigger_think_returns_202(self, mock_task, client):
+        payload = {"creature_id": FAKE_CREATURE_ID, "snapshot": FAKE_SNAPSHOT}
+        resp = client.post("/api/v1/agent/think", json=payload)
+        assert resp.status_code == 202
+        assert resp.json() == {"queued": True}
+
+    def test_trigger_think_missing_snapshot_returns_422(self, client):
+        resp = client.post("/api/v1/agent/think", json={"creature_id": FAKE_CREATURE_ID})
+        assert resp.status_code == 422
+
+    def test_trigger_think_missing_creature_id_returns_422(self, client):
+        resp = client.post("/api/v1/agent/think", json={"snapshot": FAKE_SNAPSHOT})
+        assert resp.status_code == 422
 
 
 # ── /api/v1/assets ────────────────────────────────────────────

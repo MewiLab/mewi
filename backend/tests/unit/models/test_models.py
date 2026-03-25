@@ -45,7 +45,6 @@ class TestMicrologInDB:
             embedding=[0.1, 0.2, 0.3],
         )
         assert m.embedding == [0.1, 0.2, 0.3]
-        assert m.reply is None
 
     def test_embedding_defaults_to_none(self):
         m = MicrologInDB(user_id=uuid4(), content="hi")
@@ -53,10 +52,10 @@ class TestMicrologInDB:
 
 
 class TestMicrologUpdate:
-    def test_partial_update_reply_only(self):
-        patch = MicrologUpdate(reply="喵～")
+    def test_partial_update_valence_only(self):
+        patch = MicrologUpdate(valence=0.8)
         dump = patch.model_dump(exclude_none=True)
-        assert dump == {"reply": "喵～"}
+        assert dump == {"valence": 0.8}
 
     def test_empty_update_dumps_nothing(self):
         patch = MicrologUpdate()

@@ -12,19 +12,16 @@ import pytest
 from app.workers.agent_tasks import agent_thinking_task
 
 
-FAKE_LOG_ID = "log-abc-123"
-FAKE_USER_ID = "user-xyz-789"
+FAKE_CREATURE_ID = "creature-abc-123"
+FAKE_SNAPSHOT = {"location": "park", "mood": "curious", "nearby_humans": 2}
 
 
 class TestAgentThinkingTask:
     @patch("app.workers.agent_tasks.asyncio.sleep", new_callable=AsyncMock)
     async def test_sets_thinking_then_idle(self, mock_sleep, settings, mock_redis, mock_supabase):
-        mock_supabase._builder.execute.return_value = MagicMock(data=[{"id": FAKE_LOG_ID}])
-
         await agent_thinking_task(
-            log_id=FAKE_LOG_ID,
-            user_id=FAKE_USER_ID,
-            content="今天很開心",
+            creature_id=FAKE_CREATURE_ID,
+            snapshot=FAKE_SNAPSHOT,
             supabase=mock_supabase,
             redis=mock_redis,
             settings=settings,
@@ -33,35 +30,29 @@ class TestAgentThinkingTask:
         # Redis should have been called: thinking → idle
         calls = mock_redis.set.call_args_list
         assert len(calls) == 2
-        assert calls[0].args == (f"agent_status:{FAKE_USER_ID}", "thinking")
-        assert calls[1].args == (f"agent_status:{FAKE_USER_ID}", "idle")
+        assert calls[0].args == (f"agent_status:{FAKE_CREATURE_ID}", "thinking")
+        assert calls[1].args == (f"agent_status:{FAKE_CREATURE_ID}", "idle")
 
     @patch("app.workers.agent_tasks.asyncio.sleep", new_callable=AsyncMock)
-    async def test_updates_reply_in_supabase(self, mock_sleep, settings, mock_redis, mock_supabase):
-        mock_supabase._builder.execute.return_value = MagicMock(data=[{"id": FAKE_LOG_ID}])
-
+    async def test_sleep_simulates_thinking(self, mock_sleep, settings, mock_redis, mock_supabase):
         await agent_thinking_task(
-            log_id=FAKE_LOG_ID,
-            user_id=FAKE_USER_ID,
-            content="測試回覆",
+            creature_id=FAKE_CREATURE_ID,
+            snapshot=FAKE_SNAPSHOT,
             supabase=mock_supabase,
             redis=mock_redis,
             settings=settings,
         )
 
-        # Supabase should have received an update call
-        mock_supabase.table.assert_called_with("micrologs")
-        mock_supabase._builder.update.assert_called_once()
+        mock_sleep.assert_awaited_once()
 
     @patch("app.workers.agent_tasks.asyncio.sleep", new_callable=AsyncMock)
     async def test_restores_idle_on_error(self, mock_sleep, settings, mock_redis, mock_supabase):
-        """Even if the repo.update() fails, status must return to idle."""
-        mock_supabase._builder.execute.side_effect = RuntimeError("DB down")
+        """Even if thinking raises, status must return to idle."""
+        mock_sleep.side_effect = RuntimeError("thinking exploded")
 
         await agent_thinking_task(
-            log_id=FAKE_LOG_ID,
-            user_id=FAKE_USER_ID,
-            content="error case",
+            creature_id=FAKE_CREATURE_ID,
+            snapshot=FAKE_SNAPSHOT,
             supabase=mock_supabase,
             redis=mock_redis,
             settings=settings,
