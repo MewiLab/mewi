@@ -13,7 +13,6 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.api.deps import get_supabase, get_redis, get_settings
-from app.core.config import Settings
 
 
 FAKE_USER_ID = str(uuid4())
@@ -31,15 +30,6 @@ FAKE_ROW = {
     "reply": None,
     "created_at": "2025-06-01T12:00:00Z",
 }
-
-
-@pytest.fixture
-def fake_settings():
-    return Settings(
-        supabase_url="http://fake",
-        supabase_key="k",
-        openai_api_key="k",
-    )
 
 
 @pytest.fixture

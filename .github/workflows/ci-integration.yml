@@ -44,7 +44,12 @@ jobs:
         working-directory: ./backend
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+<<<<<<< HEAD
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+=======
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+>>>>>>> 02c28f2ae67c28e318cae31e2027ef626160c933
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           REDIS_HOST: localhost
           REDIS_PORT: 6379
