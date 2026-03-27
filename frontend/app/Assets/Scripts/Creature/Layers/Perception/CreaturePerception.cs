@@ -9,7 +9,7 @@ using UnityEngine;
 /// </summary>
 public class CreaturePerception : MonoBehaviour
 {
-    CreatureBlackBoard _board;
+    CreatureBlackboard _board;
     CreatureConfig     _config;
     Transform          _self;
 
@@ -17,7 +17,7 @@ public class CreaturePerception : MonoBehaviour
     Vector3 _prevPlayerPos;
     float   _playerSpeedEstimate;
 
-    public void Init(CreatureBlackBoard board, CreatureConfig config)
+    public void Init(CreatureBlackboard board, CreatureConfig config)
     {
         _board  = board;
         _config = config;

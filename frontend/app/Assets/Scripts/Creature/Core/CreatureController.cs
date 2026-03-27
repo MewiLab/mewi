@@ -5,24 +5,24 @@ public class CreatureController : MonoBehaviour
     [Header("config")]
     [Tooltip("Create via Assets > Create > Creature > Config")]
     public CreatureConfig  config;
-    CreatureBlackBoard     _board;
+    CreatureBlackboard     _board;
     CreaturePerception     _perception;
     CreatureReflexRunner   _reflex;
     CreatureBrain          _brain;
     PeriodicMind           _mind;
-    CreatureAnimatorDriver _animDriver;
+    CreatureMotor          _motor;
 
     // We use dependency injections for more explicit initialzation setup
     // Rather then the magic hood under unity monobehavior framework
     // Which help use get to know the order each line is executed
     void Awake()
     {
-        _board      = GetComponent<CreatureBlackBoard>();
+        _board      = GetComponent<CreatureBlackboard>();
         _perception = GetComponent<CreaturePerception>();
         _reflex     = GetComponent<CreatureReflexRunner>();
         _brain      = GetComponent<CreatureBrain>();
         _mind       = GetComponent<PeriodicMind>();
-        _animDriver = GetComponent<CreatureAnimatorDriver>();
+        _motor      = GetComponent<CreatureMotor>();
 
         if (config == null)
         {
@@ -43,7 +43,7 @@ public class CreatureController : MonoBehaviour
         if (_reflex != null)     _reflex.Init(_board, config);
         if (_brain != null)      _brain.Init(_board, config);
         if (_mind != null)       _mind.Init(_board, config);
-        if (_animDriver != null) _animDriver.Init(_board, config);
+        if (_motor != null)      _motor.Init(_board, config);
     }
     void Start()
     {
@@ -57,15 +57,13 @@ public class CreatureController : MonoBehaviour
     void Update()
     // TODO: concurrency task
     {
-        // Debug.Log("Creature ticking");
         _board.ClearFrameFlags(); // Clear previous frame perception flag for reflex
         _board.ScoreDrives();
-        // Debug.Log($"Current_hunger: {_board.health.hunger}");
 
         if (_perception != null) _perception.Tick();
         if (_reflex != null)     _reflex.Tick();
         if (_brain != null)      _brain.Tick();
-        if (_animDriver != null) _animDriver.Tick();
+        if (_motor != null)      _motor.Tick();
         _board.UpdateDebugDisplay();
     }
 

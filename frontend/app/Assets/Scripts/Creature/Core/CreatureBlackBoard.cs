@@ -5,7 +5,7 @@ using UnityEngine;
 /// Shared data bus using Brooks' Subsumption Architecture. 
 /// Layers read/write to typed Intent slots in a fixed priority: Reflex (highest) -> Tactical -> Mind (lowest).
 /// </summary>
-public class CreatureBlackBoard : MonoBehaviour
+public class CreatureBlackboard : MonoBehaviour
 {
 
 

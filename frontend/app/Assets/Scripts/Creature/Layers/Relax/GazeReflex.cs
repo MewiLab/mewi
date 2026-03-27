@@ -11,7 +11,7 @@ public class GazeReflex : MonoBehaviour, IReflex
 {
     public int Priority => 10; // low priority, doesn't interrupt anything
 
-    public bool Evaluate(CreatureBlackBoard board, CreatureConfig config)
+    public bool Evaluate(CreatureBlackboard board, CreatureConfig config)
     {
         // Priority 1: recent sound
         if (Time.time - board.lastHeardSoundTime < 2f)

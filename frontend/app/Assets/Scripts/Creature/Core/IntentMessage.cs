@@ -9,39 +9,55 @@ public enum LayerSource
 
 public struct IntentMessage
 {
-   
-    public string intent;  // eg. "flinch", "wander", "flee"
-    public LayerSource source;  // eg. mind, perception, relax
-    public float setTime; // Used for expiry checks
+    [Tooltip("e.g. 'flinch', 'wander', 'flee', 'eat'")]
+    public string Intent;  
 
+    [Tooltip("Which layer generated this intent")]
+    public LayerSource Source;  
+
+    [Tooltip("Time.time when this intent was created")]
+    public float SetTime; 
 
     /// <summary>
     /// How long this slot stays active. Negative = indefinite (tactical, mind).
     /// Positive = auto-expires after this many seconds (reflex).
     /// </summary>
-    public float duration;
-    public Vector3 directionHint; // direction or target associated with this intent
-    public bool IsActive => duration < 0f || (Time.time - setTime) < duration; // Is this slot still active? Checks expiry if duration is positive
+    public float Duration;
+    
+    /// <summary>
+    /// A spatial hint for the motor (e.g., where to look, where to move, where to flee from).
+    /// </summary>
+    public Vector3 DirectionHint; 
+
+    /// <summary>
+    /// Is this slot still active? Checks expiry if duration is positive.
+    /// </summary>
+    public bool IsActive => Duration < 0f || (Time.time - SetTime) < Duration; 
+    
+    /// <summary>
+    /// How many seconds remain before this slot expires. -1 if indefinite.
+    /// </summary>
     public float TimeRemaining =>
-        duration < 0f ? -1f : Mathf.Max(0f, duration - (Time.time - setTime)); // How many seconds remain before this slot expires. -1 if indefinite.
+        Duration < 0f ? -1f : Mathf.Max(0f, Duration - (Time.time - SetTime)); 
 
-
-
+    /// <summary>
+    /// Factory method to cleanly generate an IntentMessage.
+    /// </summary>
     public static IntentMessage Create(string intent, LayerSource source, float duration = -1f, Vector3 directionHint = default)
     {
         return new IntentMessage
         {
-            intent        = intent,
-            source        = source,
-            setTime       = Time.time,
-            duration      = duration,
-            directionHint = directionHint,
+            Intent        = intent,
+            Source        = source,
+            SetTime       = Time.time,
+            Duration      = duration,
+            DirectionHint = directionHint,
         };
     }
 
     public override string ToString()
     {
-        string dur = duration < 0f ? "∞" : $"{TimeRemaining:F1}s";
-        return $"[{source}] {intent} ({dur})";
+        string dur = Duration < 0f ? "∞" : $"{TimeRemaining:F1}s";
+        return $"[{Source}] {Intent} ({dur})";
     }
 }

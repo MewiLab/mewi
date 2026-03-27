@@ -11,5 +11,5 @@ public interface IReflex
     /// Evaluate and optionally act. Returns true if this reflex wants to
     /// block the tactical layer this frame (e.g., flinch overrides wander).
     /// </summary>
-    bool Evaluate(CreatureBlackBoard board, CreatureConfig config);
+    bool Evaluate(CreatureBlackboard board, CreatureConfig config);
 }

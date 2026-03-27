@@ -9,11 +9,11 @@ using UnityEngine.AI;
 public class CreatureMVPTest : MonoBehaviour
 {
     public CreatureConfig config;
-    CreatureBlackBoard _board;
+    CreatureBlackboard _board;
 
     void Start()
     {
-        _board = GetComponent<CreatureBlackBoard>();
+        _board = GetComponent<CreatureBlackboard>();
         Invoke(nameof(TestHungerCycle),    1f);
         Invoke(nameof(TestReflexOverride), 4f);
         Invoke(nameof(TestMindFallback),   7f);

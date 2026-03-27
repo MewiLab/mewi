@@ -11,7 +11,7 @@ public class AvoidanceReflex : MonoBehaviour, IReflex
 {
     public int Priority => 50; // between flinch (100) and gaze (10)
 
-    public bool Evaluate(CreatureBlackBoard board, CreatureConfig config)
+    public bool Evaluate(CreatureBlackboard board, CreatureConfig config)
     {
         // MVP: no-op, NavMesh handles avoidance
         // TODO: add SphereCast for dynamic obstacles

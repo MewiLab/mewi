@@ -13,7 +13,7 @@ public class FlinchReflex : MonoBehaviour, IReflex
 
     float _lastFlinchTime = -999f;
 
-    public bool Evaluate(CreatureBlackBoard board, CreatureConfig config)
+    public bool Evaluate(CreatureBlackboard board, CreatureConfig config)
     {
         // Already flinching? IntentMessage handles expiry automatically.
         if (board.IsReflexActive)

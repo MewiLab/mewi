@@ -14,7 +14,7 @@ public enum MindMode { Simulated, LLM }
 
 public class PeriodicMind : MonoBehaviour
 {
-    CreatureBlackBoard _board;
+    CreatureBlackboard _board;
     CreatureConfig     _config;
     
     [Header("Mind Mode")]
@@ -23,7 +23,7 @@ public class PeriodicMind : MonoBehaviour
     bool _running;
     bool _waitingForLLM;
 
-    public void Init(CreatureBlackBoard board, CreatureConfig config)
+    public void Init(CreatureBlackboard board, CreatureConfig config)
     {
         _board = board;
         _config = config;

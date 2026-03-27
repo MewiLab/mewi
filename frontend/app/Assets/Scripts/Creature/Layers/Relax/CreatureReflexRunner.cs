@@ -10,11 +10,11 @@ using System.Linq;
 /// </summary>
 public class CreatureReflexRunner : MonoBehaviour
 {
-    CreatureBlackBoard _board;
+    CreatureBlackboard _board;
     CreatureConfig     _config;
     List<IReflex>      _reflexes;
 
-    public void Init(CreatureBlackBoard board, CreatureConfig config)
+    public void Init(CreatureBlackboard board, CreatureConfig config)
     {
         _board    = board;
         _config   = config;

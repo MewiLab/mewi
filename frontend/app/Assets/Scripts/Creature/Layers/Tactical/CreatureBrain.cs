@@ -25,7 +25,7 @@ public class FSMEdge
 public class CreatureBrain : MonoBehaviour
 {   
     [Header("References — set by CreatureController")]
-    CreatureBlackBoard _board;
+    CreatureBlackboard _board;
     CreatureConfig     _config;
     CreatureState _state;
     float _stateTimer;
@@ -34,7 +34,7 @@ public class CreatureBrain : MonoBehaviour
         = new Dictionary<CreatureState, List<FSMEdge>>();
 
 
-    public void Init(CreatureBlackBoard board, CreatureConfig config)
+    public void Init(CreatureBlackboard board, CreatureConfig config)
     {   
         _board = board;
         _config = config;
