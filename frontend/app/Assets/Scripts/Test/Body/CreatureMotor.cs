@@ -1,459 +1,404 @@
 using UnityEngine;
+using UnityEngine.AI;
+using MalbersAnimations;
 using MalbersAnimations.Controller;
 using MalbersAnimations.Controller.AI;
+using MalbersAnimations.Scriptables;
 
 /// <summary>
-/// CreatureMotor: Layer 5 (Body) 
-/// 
-/// Translates the resolved intent from the blackboard each tick into 
-/// Malbers Animal Controller API calls.
+/// The "body" — reads the resolved intent from the blackboard each frame
+/// and translates it into Malbers Animal Controller API calls.
+///
+/// This is the ONLY script that talks to Malbers. Brain, Reflex, and Mind
+/// never touch animation or movement directly.
+///
+/// ── Intent vocabulary ──
+///   Locomotion  : idle | wander | flee | investigate
+///   Reflex      : flinch
+///   Scripted    : eat | drink | sit | lie | sleep | groom | smell | alert | vocalize
+///   Terminal    : die
+///
+/// ── Malbers Speed ──
+///   Speed_CurrentIndex_Set(int) sets speed index within the active SpeedSet.
+///   Index starts at 1: Ground set → 1=Walk, 2=Trot, 3=Run.
+///   animal.Sprint = true/false toggles sprint.
+///
+/// ── Malbers Modes ──
+///   All scripted actions share the Action ModeID.
+///   Ability index matches the slot order in your MAnimal's Action mode list.
+///   OnModeEnd fires when the animation finishes; the motor clears the
+///   tactical slot so the creature naturally transitions back to wander/idle.
+///
+/// ── Malbers States ──
+///   State_Force(StateID) bypasses conditions and forces the state immediately.
+///   Used only for death (irreversible terminal transition).
+///
+/// ── Malbers AI Control (IAIControl) ──
+///   SetDestination(Vector3), SetTarget(Transform), Stop(), SetActive(bool).
+///   Arrival is event-based: subscribe to OnArrived.
 /// </summary>
 public class CreatureMotor : MonoBehaviour
 {
-    // ──────────────────────────────────────────────
-    //  REFERENCES
-    // ──────────────────────────────────────────────
+    // ─── Set by CreatureController.Init ───
+    CreatureBlackboard _board;
+    CreatureConfig     _config;
 
+    // ─── Malbers references ───
     [Header("Malbers References")]
-    [Tooltip("The MAnimal component on this creature")]
-    [SerializeField] private MAnimal animal;
+    public MAnimal         animal;
+    public MAnimalAIControl aiControl;
 
-    [Tooltip("The AI Animal Control component (usually on a child object)")]
-    [SerializeField] private MAnimalAIControl aiControl;
+    // ─── Mode setup ───
+    [Header("Mode Setup")]
+    [Tooltip("ModeID asset for the 'Action' mode (drag from Project)")]
+    public ModeID actionMode;
 
-    private CreatureBlackboard board;
-    private CreatureConfig config;
+    // ─── Action ability indices — match your MAnimal Action mode list (1-based) ───
+    // Defaults match the Malbers preset. Override in the Inspector if your list differs.
+    [Header("Action Ability Indices (match MAnimal Action mode list order)")]
+    public int startleAbilityIndex  = 1;   // Stun / startle
+    public int eatAbilityIndex      = 2;   // Eat
+    public int drinkAbilityIndex    = 7;   // Drink
+    public int sitAbilityIndex      = 8;   // Seat / Sit
+    public int lieAbilityIndex      = 11;  // Lie Down
+    public int sleepAbilityIndex    = 6;   // Sleep
+    public int groomAbilityIndex    = 0;   // Groom (set index in Inspector)
+    public int smellAbilityIndex    = 16;  // Smell / Sniff
+    public int alertAbilityIndex    = 0;   // Alert (set index in Inspector)
+    public int vocalizeAbilityIndex = 20;  // Meow / Howl / Vocalize
 
-    // ──────────────────────────────────────────────
-    //  MODE IDs — Match these to your Malbers Animator
-    // ──────────────────────────────────────────────
-    [Header("Mode IDs")]
-    [SerializeField] private int attackModeID = 1;
-    [SerializeField] private int actionModeID = 4;
+    // ─── Stance setup ───
+    [Header("Stance Setup")]
+    public StanceID defaultStance;
+    public StanceID sneakStance;
 
-    [Header("Action Ability Indices")]
-    [SerializeField] private int eatAbilityIndex   = 6;
-    [SerializeField] private int drinkAbilityIndex = 7;
-    [SerializeField] private int sleepAbilityIndex = 8;
-    [SerializeField] private int sitAbilityIndex   = 5;
-    [SerializeField] private int groomAbilityIndex = 9;
-    [SerializeField] private int playAbilityIndex  = 10;
+    // ─── Speed indices matching your Ground MSpeedSet (starts at 1) ───
+    [Header("Speed Indices (Ground SpeedSet)")]
+    [Tooltip("Walk = 1, Trot = 2, Run = 3 — match your MSpeedSet list order")]
+    public int walkSpeedIndex = 1;
+    public int trotSpeedIndex = 2;
+    public int runSpeedIndex  = 3;
 
-    [Header("Speed Indices (Ground speed set)")]
-    [SerializeField] private int walkSpeedIndex = 1;
-    [SerializeField] private int trotSpeedIndex = 2;
-    [SerializeField] private int runSpeedIndex  = 3;
+    // ─── State references ───
+    [Header("State References")]
+    [Tooltip("Drag the Cat Death StateID ScriptableObject here")]
+    public StateID deathState;
 
-    [Header("Stance IDs")]
-    [SerializeField] private int alertStanceID   = 1;
-    [SerializeField] private int sneakStanceID   = 2;
-    [SerializeField] private int defaultStanceID = 0;
+    // ─── Motor-specific fallbacks ───
+    [Header("Motor Defaults")]
+    public float wanderRadius       = 10f;
+    public float wanderRetargetTime = 5f;
+    public float fleeDistance        = 15f;
 
-    [Header("Wander Settings")]
-    [SerializeField] private float wanderRadius = 15f;
-    [SerializeField] private float wanderInterval = 5f;
+    // ─── Internal ───
+    string _currentIntent = "";
+    float  _wanderTimer;
+    bool   _hasArrived;
 
-    // ──────────────────────────────────────────────
-    //  INTERNAL STATE
-    // ──────────────────────────────────────────────
+    // Set when we're holding an action-mode intent so OnModeEnd can clear it.
+    bool _inActionIntent;
 
-    private string lastIntentString = "";
-    private float wanderTimer;
-    private bool waitingForArrival;
-    private bool waitingForModeExit;
+    // ═══════════════════════════════════════════════
+    //  INIT / TEARDOWN
+    // ═══════════════════════════════════════════════
 
-    // ──────────────────────────────────────────────
-    //  LIFECYCLE & INITIALIZATION
-    // ──────────────────────────────────────────────
+    public void Init(CreatureBlackboard board, CreatureConfig config)
+    {
+        _board  = board;
+        _config = config;
+
+        if (animal == null)    animal    = GetComponent<MAnimal>();
+        if (aiControl == null) aiControl = GetComponent<MAnimalAIControl>();
+
+        if (animal == null)    Debug.LogError("[CreatureMotor] No MAnimal found!");
+        if (aiControl == null) Debug.LogError("[CreatureMotor] No MAnimalAIControl found!");
+
+        if (aiControl != null)
+            aiControl.OnArrived.AddListener(OnArrived);
+
+        if (animal != null)
+            animal.OnModeEnd.AddListener(OnModeEnded);
+    }
+
+    void OnDisable()
+    {
+        if (aiControl != null)
+            aiControl.OnArrived.RemoveListener(OnArrived);
+
+        if (animal != null)
+            animal.OnModeEnd.RemoveListener(OnModeEnded);
+    }
+
+    void OnArrived(Transform target) => _hasArrived = true;
 
     /// <summary>
-    /// Called explicitly by CreatureController.Awake()
+    /// Called by Malbers when any Mode animation finishes.
+    /// If we're currently holding an action intent, clear it so the creature
+    /// naturally falls back to whatever the Brain/Mind has queued.
     /// </summary>
-    public void Init(CreatureBlackboard blackboard, CreatureConfig creatureConfig)
+    void OnModeEnded(int modeID, int abilityIndex)
     {
-        board = blackboard;
-        config = creatureConfig;
+        if (!_inActionIntent) return;
+        if (actionMode == null || modeID != actionMode.ID) return;
 
-        if (animal == null) animal = GetComponent<MAnimal>();
-        if (aiControl == null) aiControl = GetComponentInChildren<MAnimalAIControl>();
-
-        // Subscribe to Malbers AI feedback events
-        if (aiControl != null)
-        {
-            // Subscribe to position and transform arrival events
-            aiControl.OnTargetArrived.AddListener(OnTargetArrived);
-            aiControl.OnTargetPositionArrived.AddListener(OnPositionArrived);
-        }
+        _inActionIntent = false;
+        _board?.SetTacticalCurrent("idle");   // Brain will overwrite on its next tick
     }
 
-    private void OnDisable()
-    {
-        if (aiControl != null)
-        {
-            aiControl.OnTargetArrived.RemoveListener(OnTargetArrived);
-            aiControl.OnTargetPositionArrived.RemoveListener(OnPositionArrived);
-        }
-    }
+    // ─── Config accessors (CreatureConfig → local fallback) ───
+    float WanderRadius       => _config != null ? _config.wanderRadius       : wanderRadius;
+    float WanderRetargetTime => _config != null ? _config.wanderRetargetTime : wanderRetargetTime;
+    float FleeDistance       => _config != null ? _config.fleeDistance        : fleeDistance;
 
-    // ──────────────────────────────────────────────
-    //  MAIN LOOP: Called by CreatureController.Update()
-    // ──────────────────────────────────────────────
+    // ═══════════════════════════════════════════════
+    //  TICK (called by CreatureController.Update)
+    // ═══════════════════════════════════════════════
 
     public void Tick()
     {
-        if (board == null || animal == null || aiControl == null) return;
+        if (animal == null || aiControl == null) return;
 
-        // Resolve the highest priority intent
-        var currentIntentMsg = board.ResolveActiveIntent();
-        
-        // NOTE: Assuming IntentMessage has a string property called 'Intent'
-        // If your struct uses a different name (e.g., 'Action', 'Name'), update it here.
-        string currentIntentString = currentIntentMsg.Intent; 
-        Debug.Log($"[Motor]: receive current intetn {currentIntentString}, lastIntent {lastIntentString} ");
-        
-        // 1. Detect Intent Change (One-shot triggers)
-        if (currentIntentString != lastIntentString)
+        HandleGaze();
+
+        IntentMessage intent = _board.ResolveActiveIntent();
+
+        if (intent.Intent != _currentIntent)
         {
-            OnIntentChanged(lastIntentString, currentIntentString, currentIntentMsg);
-            lastIntentString = currentIntentString;
+            ExitIntent(_currentIntent);
+            EnterIntent(intent);
+            _currentIntent = intent.Intent;
         }
 
-        // 2. Handle Continuous Intents (Updates every frame)
-        HandleContinuousIntent(currentIntentString, currentIntentMsg);
+        ExecuteIntent(intent);
     }
 
-    private void OnIntentChanged(string oldIntent, string newIntent, IntentMessage msg)
+    // ═══════════════════════════════════════════════
+    //  SPEED HELPER
+    // ═══════════════════════════════════════════════
+
+    void SetSpeed(int targetIndex)
     {
-        ExitIntent(oldIntent);
-
-        waitingForArrival = false;
-        waitingForModeExit = false;
-
-        switch (newIntent)
-        {
-            case "idle":         EnterIdle(); break;
-            case "wander":       EnterWander(); break;
-            case "flee":         EnterFlee(msg); break;
-            case "go_to":        EnterGoTo(msg); break;
-            case "investigate":  EnterInvestigate(msg); break;
-            case "eat":          EnterEat(msg); break;
-            case "drink":        EnterDrink(msg); break;
-            case "sleep":        EnterSleep(); break;
-            case "sit":          EnterSit(); break;
-            case "groom":        EnterGroom(); break;
-            case "play":         EnterPlay(msg); break;
-            case "attack":       EnterAttack(msg); break;
-            case "alert":        EnterAlert(); break;
-            case "sneak":        EnterSneak(msg); break;
-            case "flinch":       EnterSneak(msg); break;
-            case "gaze":        EnterSneak(msg); break;
-            default:
-                EnterIdle(); 
-                break;
-        }
+        animal.Speed_CurrentIndex_Set(targetIndex);
     }
 
-    private void HandleContinuousIntent(string currentIntent, IntentMessage msg)
+    // ═══════════════════════════════════════════════
+    //  ACTION HELPER
+    //
+    //  All scripted one-shot actions (eat, drink, sleep, …) share this pattern:
+    //    1. Stop AI navigation so the creature doesn't slide while animating.
+    //    2. Pin the Action ModeID and the ability slot.
+    //    3. Fire the input to start the animation.
+    //  OnModeEnd (above) automatically clears the intent when the clip finishes.
+    // ═══════════════════════════════════════════════
+
+    void TriggerAction(int abilityIndex)
     {
-        switch (currentIntent)
+        if (actionMode == null || abilityIndex <= 0)
         {
-            case "wander": UpdateWander(); break;
-            case "flee":   UpdateFlee(msg); break;
+            Debug.LogWarning($"[CreatureMotor] TriggerAction: actionMode not set or abilityIndex = {abilityIndex}");
+            return;
         }
+
+        aiControl.Stop();
+        _inActionIntent = true;
+
+        animal.Mode_Pin(actionMode);
+        animal.Mode_Pin_Ability(abilityIndex);
+        animal.Mode_Pin_Input(true);
     }
 
-    private void ExitIntent(string oldIntent)
+    // ═══════════════════════════════════════════════
+    //  INTENT LIFECYCLE
+    // ═══════════════════════════════════════════════
+
+    /// <summary>Cleanup when LEAVING an intent (like MAnimalBrain Finish_Tasks).</summary>
+    void ExitIntent(string oldIntent)
     {
         switch (oldIntent)
         {
-            case "alert":
-            case "sneak":
-                animal.Stance_Set(defaultStanceID);
-                break;
-            case "eat":
-            case "drink":
-            case "sleep":
-            case "sit":
-            case "groom":
-            case "play":
-            case "attack":
-                animal.Mode_Interrupt();
-                break;
-        }
-    }
-
-    // ──────────────────────────────────────────────
-    //  INTENT HANDLERS
-    // ──────────────────────────────────────────────
-
-    private void EnterIdle()
-    {
-        aiControl.Stop();
-        animal.Mode_Stop();
-        animal.Stance_Set(defaultStanceID);
-    }
-
-    private void EnterWander()
-    {
-        animal.Stance_Set(defaultStanceID);
-        SetSpeed(walkSpeedIndex);
-        PickNewWanderTarget();
-        wanderTimer = wanderInterval;
-    }
-
-    private void UpdateWander()
-    {
-        wanderTimer -= Time.deltaTime;
-        if (wanderTimer <= 0f || !waitingForArrival)
-        {
-            PickNewWanderTarget();
-            wanderTimer = wanderInterval;
-        }
-    }
-
-    private void PickNewWanderTarget()
-    {
-        Debug.Log("[Motor] PickNewWanderTarget()");
-        Vector3 randomDir = Random.insideUnitSphere * wanderRadius;
-        randomDir += transform.position;
-        
-        if (UnityEngine.AI.NavMesh.SamplePosition(randomDir, out var hit, wanderRadius, UnityEngine.AI.NavMesh.AllAreas))
-        {
-            aiControl.SetDestination(hit.position, true);
-            waitingForArrival = true;
-        }
-    }
-
-    private void EnterFlee(IntentMessage msg)
-    {
-        SetSpeed(runSpeedIndex);
-        animal.SetSprint(true);
-        UpdateFleeDestination(msg);
-    }
-
-    private void UpdateFlee(IntentMessage msg)
-    {
-        UpdateFleeDestination(msg);
-    }
-
-    private void UpdateFleeDestination(IntentMessage msg)
-    {
-        // Flee away from the closest player, or away from the directionHint
-        Vector3 threatPos = board.closestPlayer != null ? board.closestPlayer.position : msg.DirectionHint;
-        Vector3 awayDir = (transform.position - threatPos).normalized;
-        Vector3 fleeTarget = transform.position + awayDir * 15f;
-
-        if (UnityEngine.AI.NavMesh.SamplePosition(fleeTarget, out var hit, 15f, UnityEngine.AI.NavMesh.AllAreas))
-        {
-            aiControl.SetDestination(hit.position, true);
-        }
-    }
-
-    private void EnterGoTo(IntentMessage msg)
-    {
-        SetSpeed(trotSpeedIndex);
-        aiControl.SetDestination(msg.DirectionHint, true);
-        waitingForArrival = true;
-    }
-
-    private void EnterInvestigate(IntentMessage msg)
-    {
-        SetSpeed(walkSpeedIndex);
-        animal.Stance_Set(alertStanceID);
-        aiControl.SetDestination(msg.DirectionHint, true);
-        waitingForArrival = true;
-    }
-
-    // --- ACTION INTENTS ---
-
-    private void EnterEat(IntentMessage msg)
-    {
-        // Check distance to food (directionHint)
-        if (Vector3.Distance(transform.position, msg.DirectionHint) > 2f)
-        {
-            SetSpeed(trotSpeedIndex);
-            aiControl.SetDestination(msg.DirectionHint, true);
-            waitingForArrival = true;
-        }
-        else
-        {
-            aiControl.Stop();
-            ActivateActionMode(eatAbilityIndex);
-        }
-    }
-
-    private void EnterDrink(IntentMessage msg)
-    {
-        if (Vector3.Distance(transform.position, msg.DirectionHint) > 2f)
-        {
-            SetSpeed(trotSpeedIndex);
-            aiControl.SetDestination(msg.DirectionHint, true);
-            waitingForArrival = true;
-        }
-        else
-        {
-            aiControl.Stop();
-            ActivateActionMode(drinkAbilityIndex);
-        }
-    }
-
-    private void EnterSleep()
-    {
-        aiControl.Stop();
-        ActivateActionMode(sleepAbilityIndex);
-    }
-
-    private void EnterSit()
-    {
-        aiControl.Stop();
-        ActivateActionMode(sitAbilityIndex);
-    }
-
-    private void EnterGroom()
-    {
-        aiControl.Stop();
-        ActivateActionMode(groomAbilityIndex);
-    }
-
-    private void EnterPlay(IntentMessage msg)
-    {
-        if (msg.DirectionHint != Vector3.zero && Vector3.Distance(transform.position, msg.DirectionHint) > 3f)
-        {
-            SetSpeed(runSpeedIndex);
-            aiControl.SetDestination(msg.DirectionHint, true);
-            waitingForArrival = true;
-        }
-        else
-        {
-            aiControl.Stop();
-            ActivateActionMode(playAbilityIndex);
-        }
-    }
-
-    private void EnterAttack(IntentMessage msg)
-    {
-        Transform target = board.closestPlayer; 
-        if (target != null)
-        {
-            aiControl.SetTarget(target, true);
-            SetSpeed(runSpeedIndex);
-            animal.Mode_Activate(attackModeID, -99); // -99 usually triggers a random ability in Malbers
-            waitingForModeExit = true;
-        }
-    }
-
-    private void EnterAlert()
-    {
-        animal.Stance_Set(alertStanceID);
-    }
-
-    private void EnterSneak(IntentMessage msg)
-    {
-        animal.Stance_Set(sneakStanceID);
-        SetSpeed(walkSpeedIndex);
-
-        if (msg.DirectionHint != Vector3.zero)
-        {
-            aiControl.SetDestination(msg.DirectionHint, true);
-            waitingForArrival = true;
-        }
-    }
-
-    // ──────────────────────────────────────────────
-    //  MALBERS API HELPERS
-    // ──────────────────────────────────────────────
-
-    private void SetSpeed(int speedIndex)
-    {
-        // For Malbers MAnimal, setting the sprint bool based on the speed index
-        animal.SetSprint(speedIndex >= runSpeedIndex);
-        
-        // Ensure the AI moves. Speed modulation can depend on your specific Malbers version setup.
-        // Usually, aiControl naturally requests higher speeds, but you can force it if needed.
-    }
-
-    private void ActivateActionMode(int abilityIndex)
-    {
-        animal.Mode_Activate(actionModeID, abilityIndex);
-        waitingForModeExit = true;
-    }
-
-    // ──────────────────────────────────────────────
-    //  FEEDBACK: Malbers → Blackboard
-    // ──────────────────────────────────────────────
-
-    private void OnTargetArrived(Transform target)
-    {
-        waitingForArrival = false;
-        ProcessArrival();
-    }
-
-    private void OnPositionArrived(Vector3 position)
-    {
-        waitingForArrival = false;
-        ProcessArrival();
-    }
-
-    private void ProcessArrival()
-    {
-        switch (lastIntentString)
-        {
-            case "eat":
-                aiControl.Stop();
-                ActivateActionMode(eatAbilityIndex);
-                break;
-            case "drink":
-                aiControl.Stop();
-                ActivateActionMode(drinkAbilityIndex);
-                break;
-            case "play":
-                aiControl.Stop();
-                ActivateActionMode(playAbilityIndex);
-                break;
-            case "investigate":
-                board.LogEvent("arrived_at_poi");
-                break;
-            case "go_to":
-                board.LogEvent("arrived_at_target");
-                break;
             case "flee":
-                board.LogEvent("flee_point_reached");
+                animal.Sprint = false;
+                SetSpeed(walkSpeedIndex);
+                if (defaultStance != null) animal.Stance = defaultStance;
+                break;
+
+            case "flinch":
+                aiControl.SetActive(true);
+                break;
+
+            case "investigate":
+                if (defaultStance != null) animal.Stance = defaultStance;
+                break;
+
+            case "die":
+                // Death is terminal — do not exit.
                 break;
         }
     }
 
-    /// <summary>
-    /// Called when a Malbers Mode finishes. 
-    /// Wire this to the MAnimal -> Modes -> [Action Mode] -> Events -> OnExit UnityEvent in the Inspector!
-    /// </summary>
-    public void OnActionModeExited()
+    /// <summary>Setup when ENTERING an intent (like MAnimalBrain Start_AIState).</summary>
+    void EnterIntent(IntentMessage intent)
     {
-        waitingForModeExit = false;
+        Debug.Log($"[Motor] Intent: {_currentIntent} → {intent.Intent}");
+        _hasArrived = false;
 
-        switch (lastIntentString)
+        switch (intent.Intent)
         {
-            case "eat":    board.LogEvent("eat_complete"); break;
-            case "drink":  board.LogEvent("drink_complete"); break;
-            case "sleep":  board.LogEvent("sleep_complete"); break;
-            case "attack": board.LogEvent("attack_complete"); break;
-            case "groom":  board.LogEvent("groom_complete"); break;
-            case "play":   board.LogEvent("play_complete"); break;
+            // ── Locomotion ──────────────────────────────────────────────────
+
+            case "idle":
+                aiControl.Stop();
+                if (defaultStance != null) animal.Stance = defaultStance;
+                SetSpeed(walkSpeedIndex);
+                break;
+
+            case "wander":
+                if (defaultStance != null) animal.Stance = defaultStance;
+                SetSpeed(trotSpeedIndex);
+                PickWanderTarget();
+                break;
+
+            case "flee":
+                SetSpeed(runSpeedIndex);
+                animal.Sprint = true;
+                SetFleeDestination(intent.DirectionHint);
+                break;
+
+            case "investigate":
+                if (sneakStance != null) animal.Stance = sneakStance;
+                SetSpeed(walkSpeedIndex);
+                if (_board.closestPlayer != null)
+                    aiControl.SetTarget(_board.closestPlayer);
+                break;
+
+            // ── Reflex ───────────────────────────────────────────────────────
+
+            case "flinch":
+                aiControl.Stop();
+                TriggerAction(startleAbilityIndex);
+                break;
+
+            // ── Scripted actions (one-shot, auto-clear via OnModeEnd) ────────
+
+            case "eat":
+                TriggerAction(eatAbilityIndex);
+                break;
+
+            case "drink":
+                TriggerAction(drinkAbilityIndex);
+                break;
+
+            case "sit":
+                TriggerAction(sitAbilityIndex);
+                break;
+
+            case "lie":
+                TriggerAction(lieAbilityIndex);
+                break;
+
+            case "sleep":
+                TriggerAction(sleepAbilityIndex);
+                break;
+
+            case "groom":
+                TriggerAction(groomAbilityIndex);
+                break;
+
+            case "smell":
+                TriggerAction(smellAbilityIndex);
+                break;
+
+            case "alert":
+                aiControl.Stop();
+                TriggerAction(alertAbilityIndex);
+                break;
+
+            case "vocalize":
+                aiControl.Stop();
+                TriggerAction(vocalizeAbilityIndex);
+                break;
+
+            // ── Terminal ─────────────────────────────────────────────────────
+
+            case "die":
+                aiControl.SetActive(false);
+                animal.Sprint = false;
+                if (deathState != null)
+                    animal.State_Force(deathState);
+                else
+                    Debug.LogWarning("[CreatureMotor] 'die' intent fired but no deathState assigned.");
+                break;
+
+            default:
+                Debug.LogWarning($"[Motor] Unknown intent: {intent.Intent}");
+                aiControl.Stop();
+                break;
         }
     }
 
-#if UNITY_EDITOR
-    private void OnDrawGizmosSelected()
+    /// <summary>Per-frame update while an intent is active (like MAnimalBrain Update_State).</summary>
+    void ExecuteIntent(IntentMessage intent)
     {
-        Gizmos.color = new Color(0.2f, 0.8f, 0.5f, 0.15f);
-        Gizmos.DrawWireSphere(transform.position, wanderRadius);
-
-        if (Application.isPlaying && board != null)
+        switch (intent.Intent)
         {
-            UnityEditor.Handles.Label(
-                transform.position + Vector3.up * 2.5f,
-                $"Intent: {lastIntentString}\nWaiting: arrival={waitingForArrival} mode={waitingForModeExit}"
-            );
+            case "wander":
+                _wanderTimer += Time.deltaTime;
+                if (_wanderTimer > WanderRetargetTime || _hasArrived)
+                    PickWanderTarget();
+                break;
+
+            case "flee":
+                if (intent.DirectionHint != Vector3.zero)
+                    SetFleeDestination(intent.DirectionHint);
+                break;
+
+            case "investigate":
+                if (_board.closestPlayer != null)
+                    aiControl.SetTarget(_board.closestPlayer);
+                break;
+
+            // All action intents are one-shot — nothing to poll per frame.
+            // OnModeEnd handles completion.
         }
     }
-#endif
+
+    // ═══════════════════════════════════════════════
+    //  GAZE (parallel channel — does not block intents)
+    // ═══════════════════════════════════════════════
+
+    void HandleGaze()
+    {
+        if (!_board.hasGazeOverride) return;
+
+        // Hook into your Malbers Look At or Head Track component here.
+        // Example:  lookAt.SetTarget(_board.gazeOverrideTarget);
+    }
+
+    // ═══════════════════════════════════════════════
+    //  MOVEMENT HELPERS
+    // ═══════════════════════════════════════════════
+
+    void PickWanderTarget()
+    {
+        _wanderTimer = 0f;
+        _hasArrived  = false;
+
+        Vector3 randomDir = Random.insideUnitSphere * WanderRadius + transform.position;
+        randomDir.y = transform.position.y;
+
+        if (NavMesh.SamplePosition(randomDir, out NavMeshHit hit, WanderRadius, NavMesh.AllAreas))
+            aiControl.SetDestination(hit.position);
+    }
+
+    void SetFleeDestination(Vector3 threatPosition)
+    {
+        Vector3 fleeDir = (threatPosition == Vector3.zero)
+            ? -transform.forward
+            : (transform.position - threatPosition).normalized;
+
+        Vector3 fleeTarget = transform.position + fleeDir * FleeDistance;
+
+        if (NavMesh.SamplePosition(fleeTarget, out NavMeshHit hit, FleeDistance, NavMesh.AllAreas))
+            aiControl.SetDestination(hit.position);
+    }
 }
