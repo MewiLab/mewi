@@ -72,63 +72,115 @@ def mock_supabase():
     return client
 
 
-# ── Integration fixtures (real credentials from .env) ─────────────────────────
+
+"""
+Test for agent grpah
+
+Every fixture builds from the bottom up:
+  mock client → action manager → creature agent
+"""
+from app.agent.schemas.perception_schema import (
+    Vector3,
+    EntityObservation,
+    CreatureSnapshot,
+    EnvironmentSnapshot,
+    PerceptionSummary,
+    ThreatLevel,
+)
+from app.agent.schemas.action_schema import ActionSchema
+from app.agent.perception import SnapshotManager
+from app.agent.memory import MemoryManager
+from app.agent.action import ActionManager
+from app.agent.creature_agent import CreatureAgent
+
+from tests.mock_unity_client import MockUnityClient
+
+
+# ─── Unity client ────────────────────────────────────────────────────────────
 
 @pytest.fixture
-def real_settings():
-    """Settings from your actual .env file."""
-    return Settings(
-        supabase_url=os.environ["SUPABASE_URL"],
-        supabase_publishable_key=os.environ["SUPABASE_PUBLISHABLE_KEY"],
-        supabase_secret_key=os.environ["SUPABASE_SECRET_KEY"],
-        openai_api_key=os.environ["OPENAI_API_KEY"],
-        redis_host=os.getenv("REDIS_HOST", "localhost"),
-        redis_port=int(os.getenv("REDIS_PORT", 6379)),
-    )
+def mock_client() -> MockUnityClient:
+    """A fresh mock client with default actions registered."""
+    client = MockUnityClient()
+    client.add_action("Sprint", "toggle", "Hold to run faster")
+    client.add_action("Jump", "press", "Jump or climb surface")
+    client.add_action("Attack1", "press", "Primary attack")
+    return client
+
+
+# ─── Subsystems ──────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def eye() -> SnapshotManager:
+    return SnapshotManager(relevance_radius=30.0, threat_radius=10.0)
 
 
 @pytest.fixture
-def real_supabase(real_settings):
-    """Real Supabase client from factory."""
-    return create_supabase(real_settings)
+def memory() -> MemoryManager:
+    return MemoryManager(max_ticks=20)
 
 
 @pytest.fixture
-async def real_redis(real_settings):
-    """Real async Redis client. Cleans up test keys after use."""
-    pool = aioredis.ConnectionPool.from_url(
-        f"redis://{real_settings.redis_host}:{real_settings.redis_port}/0",
-        decode_responses=True,
-    )
-    client = aioredis.Redis(connection_pool=pool)
-    yield client
-    # Cleanup test keys
-    keys = await client.keys("agent_status:test-*")
-    if keys:
-        await client.delete(*keys)
-    await client.aclose()
-    await pool.disconnect()
+def body(mock_client) -> ActionManager:
+    return ActionManager(client=mock_client)
+
+
+# ─── Agent ───────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def agent(eye, memory, body) -> CreatureAgent:
+    return CreatureAgent(eye=eye, memory=memory, body=body)
+
+
+# ─── Sample data builders ───────────────────────────────────────────────────
+
+@pytest.fixture
+def make_unity_payload():
+    """Factory fixture — call with overrides to build a Unity JSON payload."""
+
+    def _build(
+        creature_pos: tuple[float, float, float] = (10, 0, 5),
+        creature_state: str = "Locomotion",
+        entities: list[dict] | None = None,
+        time_of_day: float = 12.0,
+    ) -> dict:
+        if entities is None:
+            entities = []
+
+        return {
+            "environment_snapshot": {
+                "time_of_day": time_of_day,
+                "weather": "clear",
+                "entities": entities,
+            },
+            "creature_snapshot": {
+                "position": {"x": creature_pos[0], "y": creature_pos[1], "z": creature_pos[2]},
+                "rotation_y": 0.0,
+                "active_state": creature_state,
+                "active_stance": "Default",
+                "grounded": True,
+                "speed": 1.0,
+                "sprint": False,
+            },
+        }
+
+    return _build
 
 
 @pytest.fixture
-async def real_client(real_settings, real_supabase, real_redis):
-    """
-    Truly ASYNC test client wired to REAL Supabase + Redis.
+def make_entity():
+    """Factory fixture — build an entity dict for inclusion in payloads."""
 
-    We use httpx.AsyncClient + ASGITransport instead of FastAPI's TestClient
-    so that the tests, the app, and the database connections all happily 
-    share the exact same asyncio event loop.
-    """
-    app = create_app()
-    app.dependency_overrides[get_settings] = lambda: real_settings
-    app.dependency_overrides[get_supabase] = lambda: real_supabase
-    app.dependency_overrides[get_redis] = lambda: real_redis
+    def _build(
+        name: str = "Dog",
+        tag: str = "neutral",
+        pos: tuple[float, float, float] = (15, 0, 5),
+    ) -> dict:
+        return {
+            "name": name,
+            "tag": tag,
+            "position": {"x": pos[0], "y": pos[1], "z": pos[2]},
+            "distance": 0.0,
+        }
 
-    # 1. Wrap your FastAPI app in an ASGI transport layer
-    transport = ASGITransport(app=app)
-    
-    # 2. Use httpx.AsyncClient instead of TestClient
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
-
-    app.dependency_overrides.clear()
+    return _build

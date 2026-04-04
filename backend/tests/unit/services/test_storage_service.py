@@ -11,7 +11,7 @@ from io import BytesIO
 from fastapi import UploadFile
 
 from app.core.exceptions import StorageError
-from app.services.storage import StorageService
+from app.services.storage_service import StorageService
 
 
 @pytest.fixture

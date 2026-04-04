@@ -7,7 +7,7 @@ Only runs with `make test-all CONFIRM_PAID=1`.
 
 import pytest
 
-from app.services.embedding import EmbeddingService
+from app.services.embedding_service import EmbeddingService
 
 
 @pytest.mark.paid

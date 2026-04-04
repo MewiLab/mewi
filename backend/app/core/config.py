@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     debug: bool = False
     agent_status_ttl: int = 300  # seconds
     
+    # ── App ───────────────────────────────────────────────────
+    unity_bridge_url: str = "http://localhost:8080"
+    
 
 
 @lru_cache

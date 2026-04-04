@@ -12,7 +12,8 @@ from fastapi import APIRouter, Query
 from app.api.deps import SettingsDep, SupabaseDep
 from app.models.microlog import MicrologCreate, MicrologInDB, MicrologRead
 from app.repositories.microlog_repo import MicrologRepository
-from app.services.embedding import EmbeddingService
+from app.services.embedding_service import EmbeddingService
+from app.workers.agent_tasks import agent_thinking_task
 
 router = APIRouter(prefix="/micrologs", tags=["micrologs"])
 

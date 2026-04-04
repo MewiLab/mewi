@@ -12,7 +12,9 @@ import redis.asyncio as aioredis
 from supabase import Client
 
 from app.core.config import Settings
-from app.services.agent import AgentService
+from app.models.microlog import MicrologUpdate
+from app.repositories.microlog_repo import MicrologRepository
+from app.services.agent_service import AgentService
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ async def agent_thinking_task(
         await agent_svc.set_status(creature_id, "thinking")
 
         # ── Replace this block with LangGraph / LLM call ─────
+        #TODO
         await asyncio.sleep(3)
         # ──────────────────────────────────────────────────────
 

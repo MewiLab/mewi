@@ -1,7 +1,7 @@
 import os
 import logging
 from openai import OpenAI
-from backend.app.models.microlog import Microlog
+from app.models.microlog import Microlog
 
 logger = logging.getLogger(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))

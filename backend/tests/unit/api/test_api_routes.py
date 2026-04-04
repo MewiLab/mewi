@@ -7,6 +7,7 @@ No real Supabase, Redis, or OpenAI calls happen.
 
 from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
+from app.api.deps import get_graph
 
 import pytest
 from fastapi.testclient import TestClient
@@ -93,7 +94,7 @@ class TestMicrologRoutes:
         resp = client.get("/api/v1/micrologs/not-a-uuid")
         assert resp.status_code == 422
 
-    @patch("app.services.embedding.EmbeddingService.embed_text", return_value=[0.1] * 1536)
+    @patch("app.services.embedding_service.EmbeddingService.embed_text", return_value=[0.1] * 1536)
     def test_create_log_returns_201(self, mock_embed, client):
         payload = {
             "user_id": FAKE_USER_ID,
@@ -133,26 +134,49 @@ class TestAgentRoutes:
         assert data["status"] == "thinking"
         assert data["is_thinking"] is True
 
-    @patch("app.workers.agent_tasks.agent_thinking_task", new_callable=AsyncMock)
-    def test_trigger_think_returns_202(self, mock_task, client):
-        payload = {"creature_id": FAKE_CREATURE_ID, "snapshot": FAKE_SNAPSHOT}
-        resp = client.post("/api/v1/agent/think", json=payload)
-        assert resp.status_code == 202
-        assert resp.json() == {"queued": True}
+    def test_agent_tick_returns_200_with_action(self, client):
+        # 1. Create a mock graph object with our fake ainvoke response
+        mock_graph = AsyncMock()
+        mock_graph.ainvoke.return_value = {
+            "tick": 1,
+            "action_result": {"success": True, "action": "move", "detail": "moving to target"},
+            "reasoning": "I saw a mouse.",
+        }
 
-    def test_trigger_think_missing_snapshot_returns_422(self, client):
-        resp = client.post("/api/v1/agent/think", json={"creature_id": FAKE_CREATURE_ID})
-        assert resp.status_code == 422
+        # 2. Tell FastAPI to use our mock graph instead of the real one
+        client.app.dependency_overrides[get_graph] = lambda: mock_graph
 
-    def test_trigger_think_missing_creature_id_returns_422(self, client):
-        resp = client.post("/api/v1/agent/think", json={"snapshot": FAKE_SNAPSHOT})
+        # 3. Send the payload
+        payload = {
+            "environment_snapshot": {},
+            "creature_snapshot": {}
+        }
+        resp = client.post("/api/v1/agent/tick", json=payload)
+
+        # 4. Clean up the override so it doesn't affect other tests
+        client.app.dependency_overrides.pop(get_graph, None)
+
+        # 5. Assert the response
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["tick"] == 1
+        assert data["action"]["action"] == "move"
+        assert data["reasoning"] == "I saw a mouse."
+
+    def test_agent_tick_invalid_payload_returns_422(self, client):
+        # Sending a string instead of a JSON dictionary to trigger Pydantic validation
+        resp = client.post(
+            "/api/v1/agent/tick", 
+            headers={"Content-Type": "application/json"},
+            content='"not a dictionary"'
+        )
         assert resp.status_code == 422
 
 
 # ── /api/v1/assets ────────────────────────────────────────────
 
 class TestAssetRoutes:
-    @patch("app.services.storage.StorageService.upload", return_value="https://cdn.example.com/cat.png")
+    @patch("app.services.storage_service.StorageService.upload", return_value="https://cdn.example.com/cat.png")
     def test_upload_returns_url(self, mock_upload, client):
         resp = client.post(
             "/api/v1/assets/upload",
