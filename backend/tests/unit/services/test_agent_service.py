@@ -6,7 +6,7 @@ Async Redis is fully mocked — no real Redis server needed.
 
 import pytest
 
-from app.services.agent import AgentService
+from app.services.agent_service import AgentService
 
 
 class TestSetStatus:

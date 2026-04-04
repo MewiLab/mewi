@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.exceptions import AppError
 from app.core.lifespan import lifespan
-from app.api.routes import agent
+from app.api.routes import agent_router, micrologs_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,11 +39,11 @@ def create_app() -> FastAPI:
         )
 
     # ── Register routers ──────────────────────────────────────
-    from app.api.routes import assets, micrologs
+    from app.api.routes import assets_router
 
-    app.include_router(micrologs.router, prefix="/api/v1")
-    app.include_router(assets.router, prefix="/api/v1")
-    app.include_router(agent.router, prefix="/api/v1")
+    app.include_router(micrologs_router.router, prefix="/api/v1")
+    app.include_router(assets_router.router, prefix="/api/v1")
+    app.include_router(agent_router.router, prefix="/api/v1")
 
     # ── Health check ──────────────────────────────────────────
     @app.get("/health", tags=["infra"])

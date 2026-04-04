@@ -5,9 +5,9 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, END
 
-from app.agent.schemas.state import AgentGraphState
-from app.agent.agent import CreatureAgent
-from app.agent.schemas.perception import PerceptionError
+from app.agent.schemas.state_schema import AgentGraphState
+from app.agent.creature_agent import CreatureAgent
+from app.agent.schemas.perception_schema import PerceptionError
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)

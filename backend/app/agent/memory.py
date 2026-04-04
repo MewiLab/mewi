@@ -2,8 +2,8 @@ import logging
 from collections import deque
 from typing import Any
 
-from app.agent.schemas.perception import PerceptionSummary
-from app.agent.schemas.memory import(
+from app.agent.schemas.perception_schema import PerceptionSummary
+from app.agent.schemas.memory_schema import(
     MemoryRecall,
     SpatialRecord,
 )

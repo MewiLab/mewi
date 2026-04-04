@@ -22,7 +22,7 @@ Design decisions:
 import logging
 import httpx
 from typing import Any, Protocol, runtime_checkable
-from app.agent.schemas.action import ActionSchema
+from app.agent.schemas.action_schema import ActionSchema
 
 
 logger = logging.getLogger(__name__)

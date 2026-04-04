@@ -104,7 +104,7 @@ class TestMicrologRoutes:
         resp = client.get("/api/v1/micrologs/not-a-uuid")
         assert resp.status_code == 422
 
-    @patch("app.services.embedding.EmbeddingService.embed_text", return_value=[0.1] * 1536)
+    @patch("app.services.embedding_service.EmbeddingService.embed_text", return_value=[0.1] * 1536)
     def test_create_log_returns_201(self, mock_embed, client):
         payload = {
             "user_id": FAKE_USER_ID,
@@ -144,7 +144,7 @@ class TestAgentRoutes:
 # ── /api/v1/assets ────────────────────────────────────────────
 
 class TestAssetRoutes:
-    @patch("app.services.storage.StorageService.upload", return_value="https://cdn.example.com/cat.png")
+    @patch("app.services.storage_service.StorageService.upload", return_value="https://cdn.example.com/cat.png")
     def test_upload_returns_url(self, mock_upload, client):
         resp = client.post(
             "/api/v1/assets/upload",

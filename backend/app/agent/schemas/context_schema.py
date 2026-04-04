@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 
-from app.agent.schemas.perception import PerceptionSummary
-from app.agent.schemas.memory import MemoryRecall
+from app.agent.schemas.perception_schema import PerceptionSummary
+from app.agent.schemas.memory_schema import MemoryRecall
 
 
 # ─── Agent state snapshot (for graph consumption) ────────────────────────────

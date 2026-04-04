@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from app.agent.schemas.perception import (
+from app.agent.schemas.perception_schema import (
     PerceptionSummary,
     ThreatLevel
 )

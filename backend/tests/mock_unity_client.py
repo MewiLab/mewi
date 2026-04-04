@@ -18,7 +18,7 @@ Usage:
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.agent.schemas.action import ActionSchema
+from app.agent.schemas.action_schema import ActionSchema
 
 
 class MockUnityClient:

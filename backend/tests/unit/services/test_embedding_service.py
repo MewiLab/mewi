@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.core.exceptions import EmbeddingError
-from app.services.embedding import EmbeddingService
+from app.services.embedding_service import EmbeddingService
 
 
 FAKE_VECTOR = [0.1] * 1536

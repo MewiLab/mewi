@@ -17,7 +17,7 @@ from fastapi import Depends, Request
 from supabase import Client
 
 from app.core.config import Settings, get_settings
-
+from app.agent.creature_agent import CreatureAgent
 
 # ── Settings ──────────────────────────────────────────────────
 SettingsDep: TypeAlias = Annotated[Settings, Depends(get_settings)]
@@ -38,3 +38,17 @@ def get_redis(request: Request, settings: SettingsDep) -> aioredis.Redis:
 
 RedisDep: TypeAlias = Annotated[aioredis.Redis, Depends(get_redis)]
 
+# ── Agent (the creature — eye + memory + body) ────────────────
+def get_agent(request: Request) -> CreatureAgent:
+    return request.app.state.agent
+ 
+ 
+AgentDep: TypeAlias = Annotated[CreatureAgent, Depends(get_agent)]
+ 
+ 
+# ── Graph (compiled once at startup, reused per tick) ─────────
+def get_graph(request: Request):
+    return request.app.state.graph
+ 
+ 
+GraphDep: TypeAlias = Annotated[object, Depends(get_graph)]

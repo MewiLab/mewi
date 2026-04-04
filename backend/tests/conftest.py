@@ -74,7 +74,7 @@ Test for agent grpah
 Every fixture builds from the bottom up:
   mock client → action manager → creature agent
 """
-from app.agent.schemas.perception import (
+from app.agent.schemas.perception_schema import (
     Vector3,
     EntityObservation,
     CreatureSnapshot,
@@ -82,11 +82,11 @@ from app.agent.schemas.perception import (
     PerceptionSummary,
     ThreatLevel,
 )
-from app.agent.schemas.action import ActionSchema
+from app.agent.schemas.action_schema import ActionSchema
 from app.agent.perception import SnapshotManager
 from app.agent.memory import MemoryManager
 from app.agent.action import ActionManager
-from app.agent.agent import CreatureAgent
+from app.agent.creature_agent import CreatureAgent
 
 from tests.mock_unity_client import MockUnityClient
 

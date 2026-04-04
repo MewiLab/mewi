@@ -8,7 +8,7 @@ Only runs with `make test-all CONFIRM_PAID=1`.
 import pytest
 import redis.asyncio as aioredis
 
-from app.services.agent import AgentService
+from app.services.agent_service import AgentService
 
 
 @pytest.fixture

@@ -14,7 +14,7 @@ from supabase import Client
 from app.core.config import Settings
 from app.models.microlog import MicrologUpdate
 from app.repositories.microlog_repo import MicrologRepository
-from app.services.agent import AgentService
+from app.services.agent_service import AgentService
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,5 @@
 """
-action.py — The creature's body.  Pure action logic, no HTTP.
+The creature's body.  Pure action logic, no HTTP.
 
 This class depends on UnityClientProtocol, never on httpx, URLs, or
 JSON wire format.  The transport is injected.
@@ -13,7 +13,7 @@ import logging
 from typing import Any
 
 from app.agent.unity_client import UnityClientProtocol
-from app.agent.schemas.action import ActionResult, ActionSchema
+from app.agent.schemas.action_schema import ActionResult, ActionSchema
 
 logger = logging.getLogger(__name__)
 

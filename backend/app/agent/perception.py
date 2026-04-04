@@ -4,7 +4,7 @@ from typing import Any
  
 from pydantic import ValidationError
  
-from app.agent.schemas.perception import (
+from app.agent.schemas.perception_schema import (
     # Raw from unity
     EnvironmentSnapshot,
     EntityObservation,

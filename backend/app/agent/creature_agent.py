@@ -1,5 +1,5 @@
 """
-agent.py — CreatureAgent: the DI container that wires Eye, Memory, Body.
+The DI container that wires Eye, Memory, Body.
 
 Design decisions:
 - The agent is NOT the brain.  It's the creature — a body with senses
@@ -23,8 +23,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.agent.schemas.context import AgentContext
-from app.agent.schemas.perception import PerceptionSummary, PerceptionError
+from app.agent.schemas.context_schema import AgentContext
+from app.agent.schemas.perception_schema import PerceptionSummary, PerceptionError
 from app.agent.perception import SnapshotManager
 from app.agent.memory import MemoryManager, MemoryRecall
 from app.agent.action import ActionManager, ActionResult

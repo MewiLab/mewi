@@ -14,7 +14,7 @@ was sent without inspecting HTTP traffic.
 
 import pytest
 
-from app.agent.schemas.perception import (
+from app.agent.schemas.perception_schema import (
     PerceptionSummary,
     PerceptionError,
     ThreatLevel,
@@ -22,7 +22,7 @@ from app.agent.schemas.perception import (
 from app.agent.perception import SnapshotManager
 from app.agent.memory import MemoryManager
 from app.agent.action import ActionManager
-from app.agent.agent import CreatureAgent
+from app.agent.creature_agent import CreatureAgent
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -126,7 +126,7 @@ class TestMemoryManager:
 
     def _make_summary(self, tick: int, x: float = 0, z: float = 0) -> PerceptionSummary:
         """Helper to build a minimal PerceptionSummary for testing."""
-        from app.agent.schemas.perception import (
+        from app.agent.schemas.perception_schema import (
             CreatureSnapshot, EnvironmentSnapshot, Vector3,
         )
         return PerceptionSummary(
@@ -176,7 +176,7 @@ class TestMemoryManager:
         assert memory.has_visited_near(100, 100, radius=5.0) is False
 
     def test_last_seen_entity(self, memory):
-        from app.agent.schemas.perception import (
+        from app.agent.schemas.perception_schema import (
             CreatureSnapshot, EnvironmentSnapshot, EntityObservation, Vector3,
         )
         summary = PerceptionSummary(
