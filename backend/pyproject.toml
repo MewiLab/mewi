@@ -28,8 +28,11 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
-env = [
-    "SUPABASE_URL=http://fake-supabase",
-    "SUPABASE_KEY=fake-key",
-    "OPENAI_API_KEY=fake-openai-key",
-]
+markers = ["paid: marks tests that call paid external APIs"]
+# no env here — pytest-env handles it below
+
+[tool.pytest_env]
+SUPABASE_URL = "http://fake-supabase"
+SUPABASE_PUBLISHABLE_KEY = "fake-anon-key"
+SUPABASE_SECRET_KEY = "fake-service-role-key"
+OPENAI_API_KEY = "fake-openai-key"

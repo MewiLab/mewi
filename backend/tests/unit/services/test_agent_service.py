@@ -22,7 +22,8 @@ class TestSetStatus:
 
         custom = Settings(
             supabase_url="http://fake",
-            supabase_key="k",
+            supabase_publishable_key="k",
+            supabase_secret_key="k",
             openai_api_key="k",
             agent_status_ttl=999,
         )

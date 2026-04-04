@@ -12,42 +12,41 @@ import redis.asyncio as aioredis
 from supabase import Client
 
 from app.core.config import Settings
+<<<<<<< HEAD
 from app.models.microlog import MicrologUpdate
 from app.repositories.microlog_repo import MicrologRepository
 from app.services.agent_service import AgentService
+=======
+from app.services.agent import AgentService
+>>>>>>> 5a0f84cc493d8c08943f63b3d19c1e0f40140405
 
 logger = logging.getLogger(__name__)
 
 
 async def agent_thinking_task(
     *,
-    log_id: str,
-    user_id: str,
-    content: str,
+    creature_id: str,
+    snapshot: dict,
     supabase: Client,
     redis: aioredis.Redis,
     settings: Settings,
 ) -> None:
     """
-    Simulates the agent thinking about a new microlog entry.
+    Agent thinking pipeline triggered by a Unity game-world snapshot.
 
-    TODO: Replace the dummy reply with a real LLM call via LangGraph.
+    TODO: Replace the stub with a real LLM / LangGraph call using snapshot.
     """
     agent_svc = AgentService(redis, settings)
-    repo = MicrologRepository(supabase)
 
     try:
-        await agent_svc.set_status(user_id, "thinking")
+        await agent_svc.set_status(creature_id, "thinking")
 
         # ── Replace this block with LangGraph / LLM call ─────
         await asyncio.sleep(3)
-        reply = f"喵～聽起來你今天過得不錯：{content[:20]}…"
         # ──────────────────────────────────────────────────────
 
-        repo.update(log_id, MicrologUpdate(reply=reply))
-
     except Exception:
-        logger.exception("Agent thinking failed for log %s", log_id)
+        logger.exception("Agent thinking failed for creature %s", creature_id)
     finally:
         # Always restore idle — prevents Unity cat from being stuck in "thinking"
-        await agent_svc.set_status(user_id, "idle")
+        await agent_svc.set_status(creature_id, "idle")

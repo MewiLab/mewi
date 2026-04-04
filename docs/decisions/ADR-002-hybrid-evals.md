@@ -23,6 +23,7 @@ A hybrid split between the two planes solves all four.
 
 
 ## Decision
+<img width="1050" height="429" alt="aws" src="../../assets/images/eval_aws_hybrid.jpg" />
 
 We adopt a **two-plane hybrid architecture**:
 

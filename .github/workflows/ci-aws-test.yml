@@ -22,9 +22,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v3
 
-      ## Unit test for basic 
-      - name: Run local make test
-
       ## If need edit agents/ got revise then need to run evals
       - name: Download dataset from S3
         run: aws s3 cp s3://mewi-eval-dataset-v0/smoke.json ./backend/evals/backend/datasets/smoke.json

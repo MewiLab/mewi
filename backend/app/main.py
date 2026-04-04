@@ -14,7 +14,11 @@ from fastapi.responses import JSONResponse
 
 from app.core.exceptions import AppError
 from app.core.lifespan import lifespan
+<<<<<<< HEAD
 from app.api.routes import agent_router, micrologs_router
+=======
+from app.api.routes import agent
+>>>>>>> 5a0f84cc493d8c08943f63b3d19c1e0f40140405
 
 logging.basicConfig(
     level=logging.INFO,

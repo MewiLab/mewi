@@ -1,69 +1,74 @@
 """
-Root conftest — shared fixtures for ALL tests.
+Shared test fixtures.
 
-Markers:
-  - @pytest.mark.paid   → calls real APIs (OpenAI, Supabase). Excluded by default.
-  - (no marker)         → unit tests using mocks. Always safe to run.
+- Unit fixtures (settings, mock_redis, mock_supabase): no real connections.
+- Integration fixtures (real_*): loads real credentials from .env.
+  Only used when running `make test-integration CONFIRM_PAID=1`.
 """
 
-import pytest
+import os
 from unittest.mock import AsyncMock, MagicMock
+from httpx import AsyncClient, ASGITransport
+
+import pytest
+import redis.asyncio as aioredis
+from dotenv import load_dotenv
 
 from app.core.config import Settings
+from app.api.deps import get_supabase, get_redis, get_settings
+from app.core.supabase import create_supabase
+from app.main import create_app
+
+load_dotenv(override=True)  # .env values win over pytest-env fakes
 
 
-# ── Fake Settings (no real credentials) ───────────────────────
+# ── Unit fixtures (no real connections) ───────────────────────────────────────
 
 @pytest.fixture
-def settings():
-    """Settings with dummy values — no .env file needed."""
+def mock_settings():
     return Settings(
-        supabase_url="http://fake-supabase.local",
-        supabase_key="fake-key",
-        openai_api_key="fake-openai-key",
-        redis_host="localhost",
-        redis_port=6379,
-        agent_status_ttl=300,
+        supabase_url="http://fake-supabase",
+        supabase_publishable_key="fake-anon-key",
+        supabase_secret_key="fake-secret-key",
+        openai_api_key="fake-openai-key"
     )
 
 
-# ── Mock DB clients ──────────────────────────────────────────
+@pytest.fixture
+def settings(mock_settings):
+    return mock_settings
+
+
+@pytest.fixture
+def fake_settings(mock_settings):
+    return mock_settings
+
 
 @pytest.fixture
 def mock_redis():
-    """Async Redis mock — all methods return coroutines."""
-    r = AsyncMock()
-    r.get.return_value = None  # default: no key → idle
-    return r
+    client = AsyncMock()
+    client.set = AsyncMock()
+    client.get = AsyncMock(return_value=None)
+    return client
 
 
 @pytest.fixture
 def mock_supabase():
-    """
-    Supabase client mock with a chainable query builder.
-
-    Usage in tests:
-        mock_supabase.table("micrologs").insert(...).execute.return_value = ...
-    """
-    client = MagicMock()
-
-    # Build a chainable query builder mock
     builder = MagicMock()
     builder.insert.return_value = builder
     builder.update.return_value = builder
     builder.select.return_value = builder
     builder.eq.return_value = builder
     builder.order.return_value = builder
-    builder.range.return_value = builder
     builder.limit.return_value = builder
+    builder.range.return_value = builder
+    builder.single.return_value = builder
     builder.maybe_single.return_value = builder
-
-    # Default execute returns empty data
     builder.execute.return_value = MagicMock(data=[])
 
+    client = MagicMock()
     client.table.return_value = builder
-    client._builder = builder  # expose for easy assertion in tests
-
+    client._builder = builder
     return client
 
 
