@@ -1,7 +1,8 @@
 # ADR-004: Creature Agent Architecture — Eye / Memory / Body with External LangGraph Brain
 
 **Status:** Accepted
-**Date:** 2026-04-04
+**Date:** 2026-04-04  
+**Revised:** 2026-04-04 (added route wiring, graph lifecycle, deferred persistence)  
 **Deciders:** vanillasky
 
 
@@ -39,18 +40,29 @@ Several problems emerged:
 ## Decision
 
 We decompose the agent into three subsystems using a biological metaphor, compose
-them via dependency injection, and keep the LangGraph brain external to the creature.
+them via dependency injection, keep the LangGraph brain external to the creature,
+and wire everything through FastAPI's lifespan and dependency system.
 
 ### Architecture
 
 ```
-LangGraph (brain, external)
+FastAPI lifespan
+    │  creates + compiles once at startup
+    ▼
+┌─────────────────────────────────────────────────┐
+│  app.state.graph   (compiled, reused per tick)  │
+│  app.state.agent   (injected into routes)       │
+└─────────────────────────────────────────────────┘
     │
     ▼
+LangGraph (brain, external)
+    │  calls agent methods via closure
+    ▼
 CreatureAgent (DI container)
-    ├── SnapshotManager  (eye)   — perception, read-only
-    ├── MemoryManager    (memory)— temporal + spatial history
-    └── ActionManager    (body)  — writes to Unity, reads schema
+    ├── SnapshotManager  (eye)     — perception, read-only
+    ├── MemoryManager    (memory)  — in-process ring buffer (DB deferred)
+    └── ActionManager    (body)    — delegates to UnityClientProtocol
+         └── HttpUnityClient       — the only file that imports httpx
 ```
 
 **The creature is the body; the graph is the mind.  Different minds, same body.**
@@ -78,16 +90,30 @@ calls an LLM.  It answers: "what do I see right now?"
 
 **Rule:** Memory accumulates but never acts.  It answers: "what have I experienced?"
 
+**Persistence status:** Currently in-process only.  See "Deferred: Memory Persistence"
+section below for the planned wiring through `agent_repo.py` → Supabase.
+
 ### Component: Body — `ActionManager` (`action.py`)
 
 | Responsibility | Implementation |
 |----------------|----------------|
 | Discover capabilities | Reads `/schema` (new) or `/actions` (legacy) at connect time |
-| Execute actions | `execute(name, **kwargs) → ActionResult` via HTTP POST |
+| Execute actions | `execute(name, **kwargs) → ActionResult` via injected `UnityClientProtocol` |
 | Query world state | `get_state()`, `get_world(name)`, `get_nav(tx, tz)` |
 | Expose action list for LLM | `get_actions_for_prompt()` formats registry for system prompt |
 
 **Rule:** Body never decides.  It answers: "what can I do?" and does what it's told.
+
+### Component: Transport — `HttpUnityClient` (`unity_client.py`)
+
+| Responsibility | Implementation |
+|----------------|----------------|
+| HTTP transport to Unity | `httpx.AsyncClient` with connect/close lifecycle |
+| Schema discovery | Loads `/schema` at connect, falls back to `/actions` |
+| Protocol interface | `UnityClientProtocol` — swappable for mock, WebSocket, MCP |
+
+**Rule:** The only file that imports `httpx`.  ActionManager depends on the protocol,
+never on the concrete class.
 
 ### Component: DI Container — `CreatureAgent` (`agent.py`)
 
@@ -122,12 +148,26 @@ perceive → remember → reason → act → reflect → END
 via closure.  The agent instance is never stored in graph state (state must be
 serializable).  Only the `reason` node calls an LLM; every other node is deterministic.
 
-### State Contract — `AgentGraphState` (`state.py`)
+### Graph Lifecycle
 
-A `TypedDict` with explicit channels per node.  Each node reads its input channels
-and writes its output channels.  No node reaches into another node's concerns.  The
-`messages` channel uses `Annotated[list, operator.add]` so nodes append rather than
-overwrite.
+The graph is compiled **once** at startup in `lifespan.py` and stored on
+`app.state.graph`.  Routes inject it via `GraphDep = Depends(get_graph)`.
+Each `POST /tick` call invokes the pre-compiled graph with fresh state — no
+per-request compilation overhead.
+
+### Route Layer (`app/api/routes/agent.py`)
+
+| Endpoint | Method | Injects | Purpose |
+|----------|--------|---------|---------|
+| `/agent/tick` | POST | `AgentDep` + `GraphDep` | Run one brain cycle, return action + reasoning |
+| `/agent/status/{user_id}` | GET | `RedisDep` | Unity animation polling (unchanged) |
+| `/agent/context` | GET | `AgentDep` | Debug: full agent context |
+| `/agent/actions` | GET | `AgentDep` | Debug: list available actions |
+| `/agent/memory` | GET | `AgentDep` | Debug: recent perception history |
+
+The tick endpoint is the hot path.  Debug endpoints access subsystems directly
+without running the graph.  This is why routes inject `AgentDep` (the creature)
+rather than only `GraphDep` (the brain).
 
 ### Schema-Driven Action Discovery
 
@@ -149,14 +189,39 @@ zero logic changes.
 
 | Test file | What it covers | Mock strategy |
 |-----------|---------------|---------------|
-| `test_perception.py` | Validation, filtering, threat assessment | Synthetic JSON payloads |
-| `test_memory.py` | Ring buffer, spatial logging, entity recall | Synthetic `PerceptionSummary` objects |
-| `test_action.py` | Schema loading, execute routing, move/stop | `httpx.MockTransport` |
-| `test_agent.py` | Coordination: perceive→memorize, get_context | Mock eye + memory + body |
-| `test_graph.py` | Node outputs, conditional routing, end-to-end | Mock agent + mock LLM |
+| `test_agent.py::TestSnapshotManager` | Validation, filtering, threat assessment | Synthetic JSON payloads |
+| `test_agent.py::TestMemoryManager` | Ring buffer, spatial logging, entity recall | Synthetic `PerceptionSummary` objects |
+| `test_agent.py::TestActionManager` | Schema loading, execute routing, move/stop | `MockUnityClient` (in-memory) |
+| `test_agent.py::TestCreatureAgent` | Coordination: perceive→memorize, get_context, full tick | Mock eye + memory + body |
+| `tests/conftest.py` | Shared fixtures: mock_client, agent, payload factories | No external deps |
+| `tests/mock_unity_client.py` | `UnityClientProtocol` test double | Records actions in `action_log` |
 
 Every subsystem is testable in isolation because every dependency is injected.
 No test requires a running Unity instance or real API keys.
+
+
+
+## Deferred: Memory Persistence
+
+Memory is currently in-process `deque`.  The planned wiring (next PR):
+
+```
+POST /tick  →  graph runs  →  background_tasks.add_task(persist_tick)
+                                      │
+                                      ▼
+                            app/services/agent.py
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    ▼                 ▼                 ▼
+          agent_cache.py      agent_repo.py       MemoryManager
+          (Redis, hot)       (Supabase, cold)    (in-process, fast)
+```
+
+On startup, `lifespan.py` hydrates memory from `agent_repo.load_recent_ticks()`.
+On each tick, a FastAPI `BackgroundTask` persists the latest summary to Supabase
+without blocking the response to Unity.  On shutdown, remaining buffer is flushed.
+
+No agent code changes — persistence is wired at the service/route layer only.
 
 
 
@@ -172,14 +237,15 @@ No test requires a running Unity instance or real API keys.
 - Memory gives the LLM temporal context ("I tried jumping there and failed") which
   the previous stateless design could not provide.
 - Schema discovery makes the Python ↔ Unity contract self-maintaining.
+- Graph compiled once at startup — zero overhead on the hot path.
+- Debug endpoints access subsystems directly — no graph invocation required.
 
 **Negative / trade-offs:**
-- More files than the monolithic prototype (6 agent files vs 2).
+- More files than the monolithic prototype (6 agent files + 5 schema files vs 2).
 - The `PerceptionSummary → dict → state channel → LLM prompt` serialization chain
   has multiple conversion steps.  Each step is explicit and typed, but it is more
   code than passing raw dicts.
-- Memory is in-process only.  If the FastAPI server restarts, memory is lost.
-  Future work: persist to Redis for cross-session memory.
+- Memory is in-process only until persistence PR lands.  Server restart loses state.
 - The LLM sees a text-formatted action list, not structured tool definitions.
   Future work: use LangChain tool binding once the action schema is stable.
 
@@ -211,4 +277,16 @@ logic changes.
 ### E. Persist memory to database from day one
 **Deferred.** In-memory `deque` is sufficient for the current single-session use case.
 Adding Redis or Supabase persistence is a `MemoryManager` implementation swap — the
-interface and all callers remain unchanged.
+interface and all callers remain unchanged.  Planned for next PR.
+
+### F. Compile the graph per request
+**Rejected.** `build_creature_graph(agent).compile()` validates edges and builds the
+state machine — identical work every time since graph structure is static.  Compile
+once in `lifespan.py`, reuse via `GraphDep`.  Each `ainvoke()` is stateless — fresh
+input, no carryover between requests.
+
+### G. Inject only the compiled graph into routes (not the agent)
+**Rejected.** Debug endpoints (`/context`, `/actions`, `/memory`) need direct access
+to agent subsystems without running the graph.  Injecting the agent gives routes
+access to both the creature and the brain.  The graph is an additional dependency
+for the tick endpoint only.
