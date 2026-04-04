@@ -1,8 +1,8 @@
 # ADR-003: FastAPI Layered Architecture with Dependency Injection
 
-**Status:** Accepted
-**Date:** 2026-03-25
-**Deciders:** vanillasky
+**Status:** Accepted <br>
+**Date:** 2026-03-25 <br>
+**Deciders:** vanillasky <br>
 
 
 

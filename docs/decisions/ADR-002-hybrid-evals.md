@@ -1,8 +1,8 @@
 # ADR-002: Hybrid Eval CI/CD (GitHub Actions + AWS)
 
-**Status:** Accepted
-**Date:** 2026-03-11
-**Deciders:** vanillasky
+**Status:** Accepted <br>
+**Date:** 2026-03-11 <br>
+**Deciders:** vanillasky <br>
 
 
 

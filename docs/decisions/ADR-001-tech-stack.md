@@ -1,8 +1,8 @@
 # ADR-001: Project Technology Stack — Mobile 3D Agent App
 
-**Status:** Accepted 
-**Date:** 2026-03-08
-**Deciders:** vanillasky
+**Status:** Accepted <br>
+**Date:** 2026-03-08 <br>
+**Deciders:** vanillasky <br>
 
 
 

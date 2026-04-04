@@ -1,9 +1,9 @@
 # ADR-004: Creature Agent Architecture — Eye / Memory / Body with External LangGraph Brain
 
-**Status:** Accepted
-**Date:** 2026-04-04  
-**Revised:** 2026-04-04 (added route wiring, graph lifecycle, deferred persistence)  
-**Deciders:** vanillasky
+**Status:** Accepted <br>
+**Date:** 2026-04-04 <br> 
+**Revised:** 2026-04-04 (added route wiring, graph lifecycle, deferred persistence) <br>  
+**Deciders:** vanillasky <br>
 
 
 
