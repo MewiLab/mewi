@@ -9,7 +9,7 @@ The `real_redis` fixture is provided by conftest.py (shared with E2E tests).
 
 import pytest
 
-from app.services.agent import AgentService
+from app.services.agent_service import AgentService
 
 
 @pytest.mark.paid
