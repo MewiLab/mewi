@@ -1,33 +1,5 @@
-"""
-graph.py — LangGraph definition for the creature agent.
-
-Design decisions:
-- The graph does NOT own the agent.  It receives a CreatureAgent reference
-  and calls its coordination API.  This means:
-    * The same agent can be driven by different graphs (reactive, planning)
-    * The graph can be tested with a mock agent
-    * The agent can be used without a graph (e.g., scripted behavior)
-
-- Each node is a plain function that takes state and returns a partial
-  state update.  Nodes are thin — they call agent methods and format
-  the results into state channels.  No business logic in nodes.
-
-- The graph is built by a factory function (build_creature_graph) that
-  takes a CreatureAgent.  The agent is captured in closures, not stored
-  in state (state must be serializable; the agent is not).
-
-- The reason node is where the LLM lives.  It's the only node that
-  calls an LLM.  Every other node is deterministic.  This makes the
-  system debuggable: if the agent does something wrong, you check the
-  reason node's output, not the entire pipeline.
-
-- Conditional edges handle two branch points:
-    * After perceive: did perception succeed or fail?
-    * After reason: did the LLM choose an action or decide to wait?
-"""
-
 import logging
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -35,7 +7,7 @@ from langgraph.graph import StateGraph, END
 
 from app.agent.schemas.state import AgentGraphState
 from app.agent.agent import CreatureAgent
-from app.agent.perception import PerceptionSummary, PerceptionError
+from app.agent.schemas.perception import PerceptionError
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -80,7 +52,7 @@ def make_remember_node(agent: CreatureAgent):
     return remember
 
 
-def make_reason_node(agent: CreatureAgent, model: Optional[ChatOpenAI] = None):
+def make_reason_node(agent: CreatureAgent, model: ChatOpenAI | None = None):
     """
     The LLM decision node — the only node that calls an LLM.
 
@@ -192,8 +164,6 @@ def make_reflect_node(agent: CreatureAgent):
     return reflect
 
 
-# ─── Routing functions ───────────────────────────────────────────────────────
-
 def route_after_perceive(state: AgentGraphState) -> Literal["remember", "act"]:
     """If perception failed, skip reasoning and just wait."""
     if state.get("perception_error"):
@@ -209,17 +179,14 @@ def route_after_reason(state: AgentGraphState) -> Literal["act", "__end__"]:
     return "act"
 
 
-# ─── Graph factory ───────────────────────────────────────────────────────────
-
 def build_creature_graph(
     agent: CreatureAgent,
-    model: Optional[ChatOpenAI] = None,
+    model: ChatOpenAI | None = None,
 ) -> StateGraph:
     """
     Build the LangGraph for one tick of creature behavior.
-
-    The graph is:
-        perceive → remember → reason → act → reflect
+    perceive -> remember -> reason -> act -> reflect
+             -> act                -> end
     
     With conditional branches:
         perceive --[error]--> act (wait)
@@ -231,14 +198,13 @@ def build_creature_graph(
 
     graph = StateGraph(AgentGraphState)
 
-    # Add nodes (each factory closes over the agent)
     graph.add_node("perceive", make_perceive_node(agent))
     graph.add_node("remember", make_remember_node(agent))
-    graph.add_node("reason", make_reason_node(agent, model))
-    graph.add_node("act", make_act_node(agent))
-    graph.add_node("reflect", make_reflect_node(agent))
+    graph.add_node("reason"  , make_reason_node(agent, model))
+    graph.add_node("act"     , make_act_node(agent))
+    graph.add_node("reflect" , make_reflect_node(agent))
 
-    # Edges
+
     graph.set_entry_point("perceive")
     graph.add_conditional_edges("perceive", route_after_perceive)
     graph.add_edge("remember", "reason")

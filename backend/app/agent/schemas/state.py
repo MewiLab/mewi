@@ -19,7 +19,7 @@ Design decisions:
   it and writes the result.
 """
 
-from typing import TypedDict, Annotated, Any, Optional
+from typing import TypedDict, Annotated, Any
 import operator
 
 
@@ -31,31 +31,31 @@ class AgentGraphState(TypedDict):
       perceive → writes perception, raw_payload
       remember → writes memory_context
       reason   → reads perception + memory, writes chosen_action, messages
-      act      → reads chosen_action, writes action_result
+      act      → reads chosen_action, writes action_xqresult
       reflect  → reads action_result, writes messages
 
     Each node only touches its own channels.  No node reaches into
     another node's concerns.
     """
 
-    # ─── Perception channel (written by perceive node) ───────────────
-    raw_payload: dict[str, Any]                  # Raw JSON from Unity
-    perception: Optional[dict[str, Any]]         # PerceptionSummary.to_prompt_context()
-    perception_error: Optional[str]              # Non-None if eye failed
+    # Perception
+    raw_payload: dict[str, Any]               # Raw JSON from Unity
+    perception: dict[str, Any] | None         # PerceptionSummary.to_prompt_context()
+    perception_error: str | None              # Non-None if eye failed
 
-    # ─── Memory channel (written by remember node) ───────────────────
-    memory_context: Optional[dict[str, Any]]     # MemoryRecall.to_prompt_context()
+    # Memory
+    memory_context: dict[str, Any] | None     # MemoryRecall.to_prompt_context()
 
-    # ─── Reasoning channel (written by reason node) ──────────────────
-    chosen_action: Optional[dict[str, Any]]      # {"action": "Jump", "kwargs": {"hold": 0.3}}
-    reasoning: Optional[str]                     # LLM's chain-of-thought (for debugging)
+    # Reasoning
+    chosen_action: dict[str, Any] | None      # {"action": "Jump", "kwargs": {"hold": 0.3}}
+    reasoning: str | None                     # LLM's chain-of-thought (for debugging)
 
-    # ─── Action channel (written by act node) ────────────────────────
-    action_result: Optional[dict[str, Any]]      # {"success": bool, "action": str, "detail": str}
+    # Action
+    action_result: dict[str, Any] | None      # {"success": bool, "action": str, "detail": str}
 
-    # ─── Message history (appended by reason + reflect nodes) ────────
+    # Message history (appended by reason + reflect)
     messages: Annotated[list, operator.add]
 
-    # ─── Metadata ────────────────────────────────────────────────────
+    # Metadata 
     tick: int
     available_actions: list[str]

@@ -1,26 +1,6 @@
-"""
-memory.py — Short-term and episodic memory for the creature agent.
-
-Design decisions:
-- Memory is a bounded ring buffer of PerceptionSummary objects, not an
-  unbounded list.  LLM context windows are finite; memory should be too.
-  The `max_ticks` parameter controls how many ticks we keep.
-
-- Spatial memory (visited locations) is separate from perception history.
-  Perception history answers "what did I see recently?"  Spatial memory
-  answers "where have I been?"  Different consumers, different data shapes.
-
-- All retrieval methods return copies or immutable views.  No caller can
-  accidentally mutate the memory store.
-
-- The class has no dependency on Unity, HTTP, or LLM.  It receives typed
-  PerceptionSummary objects and returns typed results.  Pure Python, fully
-  testable with synthetic data.
-"""
-
 import logging
 from collections import deque
-from typing import Any, Optional
+from typing import Any
 
 from app.agent.schemas.perception import PerceptionSummary
 from app.agent.schemas.memory import(
@@ -98,7 +78,7 @@ class MemoryManager:
 
     # ─── Read API ────────────────────────────────────────────────────────
 
-    def recall(self, last_n: Optional[int] = None) -> MemoryRecall:
+    def recall(self, last_n: int | None = None) -> MemoryRecall:
         """
         Retrieve recent memory as a structured object.
 
@@ -134,7 +114,7 @@ class MemoryManager:
                 return True
         return False
 
-    def last_seen_entity(self, entity_name: str) -> Optional[dict[str, Any]]:
+    def last_seen_entity(self, entity_name: str) -> dict[str, Any] | None:
         """
         Search backward through perception history for the most recent
         sighting of a named entity.  Returns its position and tick, or

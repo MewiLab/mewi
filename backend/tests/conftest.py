@@ -65,3 +65,122 @@ def mock_supabase():
     client._builder = builder  # expose for easy assertion in tests
 
     return client
+
+
+
+
+
+
+"""
+conftest.py — Shared fixtures for agent tests.
+
+Every fixture builds from the bottom up:
+  mock client → action manager → creature agent
+
+No fixture requires a running Unity instance, real API keys, or network.
+"""
+from app.agent.schemas.perception import (
+    Vector3,
+    EntityObservation,
+    CreatureSnapshot,
+    EnvironmentSnapshot,
+    PerceptionSummary,
+    ThreatLevel,
+)
+from app.agent.schemas.action import ActionSchema
+from app.agent.perception import SnapshotManager
+from app.agent.memory import MemoryManager
+from app.agent.action import ActionManager
+from app.agent.agent import CreatureAgent
+
+from tests.mock_unity_client import MockUnityClient
+
+
+# ─── Unity client ────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def mock_client() -> MockUnityClient:
+    """A fresh mock client with default actions registered."""
+    client = MockUnityClient()
+    client.add_action("Sprint", "toggle", "Hold to run faster")
+    client.add_action("Jump", "press", "Jump or climb surface")
+    client.add_action("Attack1", "press", "Primary attack")
+    return client
+
+
+# ─── Subsystems ──────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def eye() -> SnapshotManager:
+    return SnapshotManager(relevance_radius=30.0, threat_radius=10.0)
+
+
+@pytest.fixture
+def memory() -> MemoryManager:
+    return MemoryManager(max_ticks=20)
+
+
+@pytest.fixture
+def body(mock_client) -> ActionManager:
+    return ActionManager(client=mock_client)
+
+
+# ─── Agent ───────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def agent(eye, memory, body) -> CreatureAgent:
+    return CreatureAgent(eye=eye, memory=memory, body=body)
+
+
+# ─── Sample data builders ───────────────────────────────────────────────────
+
+@pytest.fixture
+def make_unity_payload():
+    """Factory fixture — call with overrides to build a Unity JSON payload."""
+
+    def _build(
+        creature_pos: tuple[float, float, float] = (10, 0, 5),
+        creature_state: str = "Locomotion",
+        entities: list[dict] | None = None,
+        time_of_day: float = 12.0,
+    ) -> dict:
+        if entities is None:
+            entities = []
+
+        return {
+            "environment_snapshot": {
+                "time_of_day": time_of_day,
+                "weather": "clear",
+                "entities": entities,
+            },
+            "creature_snapshot": {
+                "position": {"x": creature_pos[0], "y": creature_pos[1], "z": creature_pos[2]},
+                "rotation_y": 0.0,
+                "active_state": creature_state,
+                "active_stance": "Default",
+                "grounded": True,
+                "speed": 1.0,
+                "sprint": False,
+            },
+        }
+
+    return _build
+
+
+@pytest.fixture
+def make_entity():
+    """Factory fixture — build an entity dict for inclusion in payloads."""
+
+    def _build(
+        name: str = "Dog",
+        tag: str = "neutral",
+        pos: tuple[float, float, float] = (15, 0, 5),
+    ) -> dict:
+        return {
+            "name": name,
+            "tag": tag,
+            "position": {"x": pos[0], "y": pos[1], "z": pos[2]},
+            "distance": 0.0,
+        }
+
+    return _build

@@ -18,7 +18,7 @@ class AgentContext:
     (LangGraph checkpoints it).  This is a clean serialization boundary.
     """
     perception: PerceptionSummary | None
-    memory: MemoryRecall 
+    memory: MemoryRecall
     available_actions: list[str]
     tick: int
     is_connected: bool

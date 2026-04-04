@@ -19,15 +19,12 @@ Design decisions:
   This is what FastAPI's dependency injection calls.  The constructor
   stays clean and test-friendly.
 """
-
+from __future__ import annotations
 import logging
 from typing import Any
 
 from app.agent.schemas.context import AgentContext
-from app.agent.schemas.perception import (
-    PerceptionSummary,
-    PerceptionError,
-)
+from app.agent.schemas.perception import PerceptionSummary, PerceptionError
 from app.agent.perception import SnapshotManager
 from app.agent.memory import MemoryManager, MemoryRecall
 from app.agent.action import ActionManager, ActionResult
@@ -39,12 +36,20 @@ class CreatureAgent:
     """
     A creature with an eye, memory, and body.
     The LangGraph is the brain — it lives outside this class.
-    
+
     Usage by graph nodes:
-        # Perceive node: perception = agent.perceive(raw_unity_payload)
-        # Memory node:   recall = agent.remember(last_n=5)
-        # Action node:   result = await agent.act("Jump", hold=0.3)
-        # Or get everything at once for the reasoning node: context = agent.get_context()
+
+        # Perceive node
+        perception = agent.perceive(raw_unity_payload)
+
+        # Memory node
+        recall = agent.remember(last_n=5)
+
+        # Action node
+        result = await agent.act("Jump", hold=0.3)
+
+        # Or get everything at once for the reasoning node
+        context = agent.get_context()
     """
 
     def __init__(
@@ -125,6 +130,7 @@ def create_creature_agent(
     relevance_radius: float = 30.0,
     threat_radius: float = 10.0,
     memory_ticks: int = 50,
+    unity_client: "UnityClientProtocol | None" = None,
 ) -> CreatureAgent:
     """
     Factory function for production use.  FastAPI's dependency system
@@ -136,12 +142,19 @@ def create_creature_agent(
             return create_creature_agent(
                 unity_url=settings.unity_bridge_url,
             )
+
+    Tests can inject a mock client:
+
+        agent = create_creature_agent(unity_client=MockUnityClient())
     """
+    from app.agent.unity_client import HttpUnityClient
+
     eye = SnapshotManager(
         relevance_radius=relevance_radius,
         threat_radius=threat_radius,
     )
     memory = MemoryManager(max_ticks=memory_ticks)
-    body = ActionManager(base_url=unity_url)
+    client = unity_client or HttpUnityClient(base_url=unity_url)
+    body = ActionManager(client=client)
 
     return CreatureAgent(eye=eye, memory=memory, body=body)
