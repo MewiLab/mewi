@@ -61,8 +61,4 @@ class TestAgentPipelineE2E:
         data = resp.json()
         assert isinstance(data, list)
         assert len(data) >= 1
-<<<<<<< HEAD
         assert data[0]["user_id"] == TEST_USER_ID
-=======
-        assert data[0]["user_id"] == TEST_USER_ID
->>>>>>> 02c28f2ae67c28e318cae31e2027ef626160c933
