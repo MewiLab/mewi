@@ -12,13 +12,9 @@ import redis.asyncio as aioredis
 from supabase import Client
 
 from app.core.config import Settings
-<<<<<<< HEAD
 from app.models.microlog import MicrologUpdate
 from app.repositories.microlog_repo import MicrologRepository
 from app.services.agent_service import AgentService
-=======
-from app.services.agent import AgentService
->>>>>>> 5a0f84cc493d8c08943f63b3d19c1e0f40140405
 
 logger = logging.getLogger(__name__)
 
