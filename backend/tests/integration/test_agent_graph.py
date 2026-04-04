@@ -43,7 +43,15 @@ class TestSnapshotManager:
         assert result.tick == 2
 
     def test_invalid_payload_returns_error(self, eye):
-        result = eye.process({"garbage": True})
+        # Pass an invalid data type (e.g., string instead of float/dict)
+        # to explicitly trigger a Pydantic ValidationError
+        bad_payload = {
+            "environment_snapshot": {
+                "time_of_day": "this_should_be_a_number_not_a_string"
+            }
+        }
+        result = eye.process(bad_payload)
+        
         assert isinstance(result, PerceptionError)
         assert "validation" in result.message.lower()
 

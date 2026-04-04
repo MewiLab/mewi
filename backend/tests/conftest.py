@@ -68,16 +68,11 @@ def mock_supabase():
 
 
 
-
-
-
 """
-conftest.py — Shared fixtures for agent tests.
+Test for agent grpah
 
 Every fixture builds from the bottom up:
   mock client → action manager → creature agent
-
-No fixture requires a running Unity instance, real API keys, or network.
 """
 from app.agent.schemas.perception import (
     Vector3,
