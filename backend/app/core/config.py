@@ -29,6 +29,8 @@ class Settings(BaseSettings):
 
     # ── OpenAI ────────────────────────────────────────────────
     openai_api_key: str
+    ollama_base_url: str = "https://primehub.aic.ncku.edu.tw/..." 
+    ollama_model: str = "gemma3:27b"
 
     # ── App ───────────────────────────────────────────────────
     debug: bool = False

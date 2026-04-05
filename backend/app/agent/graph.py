@@ -1,14 +1,17 @@
 import logging
+import json
 from typing import Any, Literal
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, END
+from langchain_ollama import ChatOllama
 
 from app.agent.schemas.state_schema import AgentGraphState
 from app.agent.creature_agent import CreatureAgent
 from app.agent.schemas.perception_schema import PerceptionError
 from app.core.config import get_settings
+from app.agent.prompts import STRATEGIC_COMMANDER_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -52,18 +55,13 @@ def make_remember_node(agent: CreatureAgent):
     return remember
 
 
-def make_reason_node(agent: CreatureAgent, model: ChatOpenAI | None = None):
-    """
-    The LLM decision node — the only node that calls an LLM.
-
-    Reads perception + memory, produces a chosen_action.
-    """
+def make_reason_node(agent: CreatureAgent, model: Any | None = None):
     if model is None:
         settings = get_settings()
-        model = ChatOpenAI(
-            api_key=settings.openai_api_key,
-            model="gpt-4.1",
-            temperature=0,
+        model = ChatOllama(
+            base_url=settings.ollama_base_url, 
+            model=settings.ollama_model,
+            temperature=0.2,
         )
 
     def reason(state: AgentGraphState) -> dict[str, Any]:
@@ -71,16 +69,24 @@ def make_reason_node(agent: CreatureAgent, model: ChatOpenAI | None = None):
         memory_ctx = state.get("memory_context", {})
         actions = state.get("available_actions", [])
 
-        system_prompt = (
-            "You are the brain of a cat navigating a 3D environment. "
-            "Based on what you perceive and remember, choose ONE action to take. "
-            "Respond with JSON only: {\"action\": \"<name>\", \"kwargs\": {}, \"reasoning\": \"<why>\"}\n\n"
-            f"Available actions: {actions}\n"
+        # define by docs/ADR5 environmental differentiation logic
+        entities = perception.get("nearby_entities", [])
+        entity_narrative = ""
+        for ent in entities:
+            zone = "Interaction Zone" if ent['distance'] < 2.0 else "Observation Zone"
+            entity_narrative += f"- {ent['tag']} '{ent['name']}' is {ent['distance']:.1f}m away ({zone}).\n"
+
+        system_prompt = STRATEGIC_COMMANDER_PROMPT.format(
+            temperament="neutral", 
+            trust="0.5"
         )
 
         user_content = (
-            f"Current perception:\n{perception}\n\n"
-            f"Recent memory:\n{memory_ctx}\n"
+            f"--- Current Environment ---\n"
+            f"Nearby Entities:\n{entity_narrative if entity_narrative else 'None'}\n"
+            f"Available Affordances: {actions}\n\n"
+            f"--- Recent Memory ---\n"
+            f"{memory_ctx}"
         )
 
         response = model.invoke([
@@ -88,24 +94,29 @@ def make_reason_node(agent: CreatureAgent, model: ChatOpenAI | None = None):
             HumanMessage(content=user_content),
         ])
 
-        # Parse the LLM's response
         try:
-            import json
             text = response.content.strip()
-            # Strip markdown fences if present
             if text.startswith("```"):
                 text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+            
             decision = json.loads(text)
-        except (json.JSONDecodeError, IndexError):
-            logger.warning("LLM returned unparseable response: %s", response.content)
-            decision = {"action": "wait", "kwargs": {}, "reasoning": "Failed to parse LLM output"}
+            
+            final_action = decision.get("final_action", "wait")
+            target_id = decision.get("target_id")
+            thought = decision.get("thought", "Planning next steps...")
+            
+        except (json.JSONDecodeError, KeyError, IndexError):
+            logger.warning("Gemma 3 returned unparseable JSON: %s", response.content)
+            final_action = "wait"
+            target_id = None
+            thought = "Failed to parse tactical plan."
 
         return {
             "chosen_action": {
-                "action": decision.get("action", "wait"),
-                "kwargs": decision.get("kwargs", {}),
+                "action": final_action,
+                "kwargs": {"target": target_id} if target_id else {},
             },
-            "reasoning": decision.get("reasoning", ""),
+            "reasoning": thought,
             "messages": [
                 HumanMessage(content=user_content),
                 response,

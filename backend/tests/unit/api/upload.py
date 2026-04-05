@@ -29,14 +29,13 @@ def run_integration_test():
         payload = {
             "user_id": TEST_USER_ID,
             "content": "今天完成了一次完美的整合測試，架構看起來非常穩固！",
-            "image_url": TEST_IMAGE_URL,
             "valence": 0.95,
             "arousal": 0.7
         }
         
         post_resp = requests.post(f"{BASE_URL}/micrologs/", json=payload)
         
-        if post_resp.status_code == 200:
+        if post_resp.status_code in [200, 201]:
             print("✅ 日記發送成功！後端已啟動背景任務。")
         else:
             print(f"❌ 發送失敗: {post_resp.text}")

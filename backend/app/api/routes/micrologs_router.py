@@ -13,6 +13,8 @@ from app.api.deps import SettingsDep, SupabaseDep
 from app.models.microlog import MicrologCreate, MicrologInDB, MicrologRead
 from app.repositories.microlog_repo import MicrologRepository
 from app.services.embedding_service import EmbeddingService
+from app.api.deps import SettingsDep, SupabaseDep, RedisDep
+from fastapi import APIRouter, Query, BackgroundTasks
 from app.workers.agent_tasks import agent_thinking_task
 
 router = APIRouter(prefix="/micrologs", tags=["micrologs"])
@@ -35,6 +37,8 @@ async def create_log(
     body: MicrologCreate,
     db: SupabaseDep,
     settings: SettingsDep,
+    redis: RedisDep,
+    background_tasks: BackgroundTasks,
 ):
     """Create a microlog entry and embed its content."""
     embedding_svc = EmbeddingService(settings)
@@ -42,4 +46,15 @@ async def create_log(
 
     enriched = MicrologInDB(**body.model_dump(), embedding=vector or None)
     repo = MicrologRepository(db)
-    return repo.create(enriched)
+    new_log = repo.create(enriched)
+
+    background_tasks.add_task(
+        agent_thinking_task,
+        creature_id=str(new_log['user_id']),
+        snapshot={"type": "microlog", "content": body.content}, # fake snapshot
+        supabase=db, # 從 SupabaseDep 拿 client
+        redis=redis,      
+        settings=settings
+    )
+
+    return new_log
