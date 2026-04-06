@@ -85,7 +85,7 @@ class ActionManager:
         if action == "move":
             return await self._execute_move(
                 x=kwargs.get("x", 0.0),
-                y=kwargs.get("y", kwargs.get("z", 0.0)),  # LLM sends "y"; "z" kept as alias
+                y=kwargs.get("y", 0.0),
                 hold=kwargs.get("hold", 0.3),
             )
 
@@ -201,8 +201,8 @@ class ActionManager:
     async def get_world(self, name: str | None = None, tag: str | None = None) -> dict:
         return await self._client.get_world(name=name, tag=tag)
 
-    async def get_nav(self, target_x: float, target_z: float) -> dict:
-        return await self._client.get_nav(target_x, target_z)
+    async def get_nav(self, target_x: float, target_y: float) -> dict:
+        return await self._client.get_nav(target_x, target_y)
 
     # ─── Schema introspection ─────────────────────────────────────────────
 

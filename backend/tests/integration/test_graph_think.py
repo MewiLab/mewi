@@ -446,7 +446,7 @@ class TestFullGraphThink:
 
     @pytest.mark.asyncio
     async def test_graph_move_forward_reaches_unity(self):
-        llm   = MockLLMProvider(action="move", kwargs={"x": 0.0, "z": 1.0, "hold": 0.4})
+        llm   = MockLLMProvider(action="move", kwargs={"x": 0.0, "y": 1.0, "hold": 0.4})
         final, client = await self._run_graph(llm, _unity_payload())
 
         assert client.last_action["action"] == "move"
@@ -577,14 +577,21 @@ async def _unity_is_live(url: str = "http://localhost:8080") -> bool:
 
 
 @pytest.mark.live
+@pytest.mark.paid
 class TestLiveGraphThink:
     """
-    Full graph tick against a running Unity game.
+    Full graph tick against a running Unity game with a real LLM.
 
     Auto-skips if Unity is not reachable.  Each test:
-      1. Connects to AgentBridge and fetches real game state.
-      2. Runs the full graph with a MockLLM so we pick the action deterministically.
-      3. Asserts Unity acknowledged the action.
+      1. Connects to AgentBridge and discovers all available actions and game state.
+      2. Runs the full cognitive graph with the real LLM to think.
+      3. Asserts perception succeeds, reasoning is non-empty, and the chosen action
+         belongs to the discovered action set.
+
+    'stop' is never tested — use game controls to halt the creature manually.
+
+    Run manually:
+        pytest -m "live and paid" backend/tests/integration/test_graph_think.py -v -s
     """
 
     UNITY_URL = "http://localhost:8080"
@@ -594,36 +601,54 @@ class TestLiveGraphThink:
         if not await _unity_is_live(self.UNITY_URL):
             pytest.skip("Unity AgentBridge not reachable — open the game first.")
 
-    async def _run_live_graph(self, action: str, kwargs: dict | None = None) -> tuple[dict, HttpUnityClient]:
+    async def _connect_agent(self) -> tuple[CreatureAgent, HttpUnityClient]:
+        """Create and connect a fresh agent to the live AgentBridge."""
         client = HttpUnityClient(base_url=self.UNITY_URL, timeout=3.0)
         eye    = SnapshotManager(relevance_radius=30.0, threat_radius=10.0)
         memory = MemoryManager(max_ticks=50)
         body   = ActionManager(client=client)
         agent  = CreatureAgent(eye=eye, memory=memory, body=body)
-
         connected = await agent.connect()
         assert connected, "AgentBridge connected but agent.connect() returned False"
+        return agent, client
 
-        # Get real game state to build a realistic payload
-        raw_state = await client.get_state()
-        payload = {
+    async def _build_live_payload(
+        self,
+        client: HttpUnityClient,
+        entities: list[dict] | None = None,
+    ) -> dict:
+        """Build a perception payload from the current live game state."""
+        raw = await client.get_state()
+        return {
             "creature_snapshot": {
-                "position":      {"x": raw_state.get("posX", 0), "y": raw_state.get("posY", 0), "z": raw_state.get("posZ", 0)},
-                "rotation_y":    raw_state.get("rotY", 0),
-                "active_state":  raw_state.get("activeState", "none"),
-                "active_stance": raw_state.get("activeStance", "none"),
-                "grounded":      raw_state.get("grounded", True),
-                "speed":         raw_state.get("speed", 0),
-                "sprint":        raw_state.get("sprint", False),
+                "position":      {"x": raw.get("posX", 0), "y": raw.get("posY", 0), "z": raw.get("posZ", 0)},
+                "rotation_y":    raw.get("rotY", 0),
+                "active_state":  raw.get("activeState", "none"),
+                "active_stance": raw.get("activeStance", "none"),
+                "grounded":      raw.get("grounded", True),
+                "speed":         raw.get("speed", 0),
+                "sprint":        raw.get("sprint", False),
             },
             "environment_snapshot": {
                 "time_of_day": 12.0,
                 "weather":     "clear",
-                "entities":    [],
+                "entities":    entities or [],
             },
         }
 
-        llm   = MockLLMProvider(action=action, kwargs=kwargs or {}, reasoning="live test")
+    async def _run_live_think(
+        self,
+        entities: list[dict] | None = None,
+    ) -> tuple[dict, list[str]]:
+        """
+        Connect to AgentBridge, discover all available action structures,
+        build a live payload, and run the real LLM for one full graph tick.
+        Returns (final_state, discovered_actions).
+        """
+        agent, client = await self._connect_agent()
+        discovered = list(agent.body.available_actions)
+        payload    = await self._build_live_payload(client, entities=entities)
+
         state: AgentGraphState = {
             "raw_payload":       payload,
             "perception":        None,
@@ -634,69 +659,105 @@ class TestLiveGraphThink:
             "action_result":     None,
             "messages":          [],
             "tick":              0,
-            "available_actions": list(agent.body.available_actions),
+            "available_actions": discovered,
         }
-        compiled = build_creature_graph(agent, llm).compile()
+        compiled = build_creature_graph(agent, _real_llm()).compile()
         final    = await compiled.ainvoke(state)
         await agent.disconnect()
-        return final, client
+        return final, discovered
 
     @pytest.mark.asyncio
     async def test_live_graph_perceives_real_snapshot(self):
-        """
-        Graph successfully perceives real Unity state (no perception_error).
-        """
-        final, _ = await self._run_live_graph("wait")
+        """Graph successfully perceives real Unity state — no perception_error."""
+        final, _ = await self._run_live_think()
         assert final.get("perception_error") is None, (
             f"Perception failed on real state: {final.get('perception_error')}"
         )
         assert final["perception"] is not None
-        # Creature snapshot must have position keys
         assert "creature" in final["perception"]
 
     @pytest.mark.asyncio
-    async def test_live_graph_sends_move_to_unity(self):
+    async def test_live_graph_discovers_available_actions(self):
         """
-        Graph sends a move-forward action to the live game and Unity confirms it.
+        Available actions discovered from the live AgentBridge include 'move'.
+        The LLM must not hallucinate an action outside the discovered set.
         """
-        final, _ = await self._run_live_graph("move", {"x": 0.0, "z": 1.0, "hold": 0.3})
+        final, discovered = await self._run_live_think()
+        assert "move" in discovered, (
+            f"'move' not found in discovered actions: {discovered}"
+        )
+        action = (final.get("chosen_action") or {}).get("action", "")
+        valid  = set(discovered) | {"wait"}
+        assert action in valid, (
+            f"LLM hallucinated '{action}'. Discovered: {sorted(valid)}"
+        )
 
+    @pytest.mark.asyncio
+    async def test_live_graph_llm_thinks_and_acts(self):
+        """
+        End-to-end: discover real structures → real LLM thinks → action acknowledged.
+        If LLM picks 'wait' the test still passes (LLM is non-deterministic).
+        'stop' must never be chosen.
+        """
+        final, _ = await self._run_live_think()
         result = final.get("action_result", {})
         assert result.get("success") is True, (
-            f"Move action failed: {result.get('detail')}"
+            f"Action '{result.get('action')}' failed: {result.get('detail')}\n"
+            f"Reasoning: {final.get('reasoning')}"
+        )
+        assert result.get("action") != "stop", "Agent must not send 'stop'"
+
+    @pytest.mark.asyncio
+    async def test_live_graph_reasoning_is_non_empty(self):
+        """LLM must produce non-empty reasoning — proves it actually ran."""
+        final, _ = await self._run_live_think()
+        assert final.get("reasoning"), (
+            "LLM returned empty reasoning — check LLM_* env vars and API connectivity"
         )
 
     @pytest.mark.asyncio
-    async def test_live_graph_sends_stop_to_unity(self):
-        """Graph can halt the creature via the full cognitive loop."""
-        final, _ = await self._run_live_graph("stop")
-
-        result = final.get("action_result", {})
-        assert result.get("success") is True
-
-    @pytest.mark.asyncio
-    async def test_live_graph_available_actions_from_bridge(self):
+    async def test_live_graph_thinks_for_each_discovered_action(self):
         """
-        Actions registered in AgentBridge.cs are visible in graph state.
-        At minimum 'move', 'stop', 'wait' must be present.
+        Discovers all available actions from AgentBridge (excluding 'stop' and 'wait').
+        For each action, presents a scenario that hints at it and lets the real LLM
+        think. Verifies the LLM always returns a valid action from the discovered set.
         """
-        final, _ = await self._run_live_graph("wait")
-        actions = set(final["available_actions"])
-        assert "move" in actions
-        assert "stop" in actions
+        # Discovery pass — connect once to get the full action list
+        agent, _ = await self._connect_agent()
+        actions_to_test = [
+            a for a in agent.body.available_actions
+            if a not in ("stop", "wait")
+        ]
+        await agent.disconnect()
 
-    @pytest.mark.asyncio
-    async def test_live_graph_full_tick_jump(self):
-        """
-        End-to-end: perceive real snapshot → reason(mock→Jump) → send Jump to Unity.
-        """
-        final, _ = await self._run_live_graph("Jump", {"hold": 0.2})
-
-        result = final.get("action_result", {})
-        assert result.get("action") == "Jump", (
-            f"Expected Jump, got: {result.get('action')}"
+        assert len(actions_to_test) > 0, (
+            "No testable actions discovered from AgentBridge"
         )
-        assert result.get("success") is True
+
+        for action_name in actions_to_test:
+            # Build a scenario that hints at this action
+            if "jump" in action_name.lower():
+                entities = [_entity("Platform", "obstacle", (3, 2, 0))]
+            elif "sprint" in action_name.lower():
+                entities = [_entity("Wolf", "predator", (8, 0, 0))]
+            elif "attack" in action_name.lower():
+                entities = [_entity("Rat", "prey", (2, 0, 0))]
+            else:
+                entities = []
+
+            final, discovered = await self._run_live_think(entities=entities)
+
+            chosen = (final.get("chosen_action") or {}).get("action", "")
+            valid  = set(discovered) | {"wait"}
+            assert chosen in valid, (
+                f"Scenario for '{action_name}': LLM hallucinated '{chosen}'. "
+                f"Discovered: {sorted(valid)}"
+            )
+            assert chosen != "stop", (
+                f"Scenario for '{action_name}': LLM chose 'stop' — not allowed"
+            )
+
+            await asyncio.sleep(0.5)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -805,9 +866,8 @@ class TestPaidLLMThink:
             # x/y must be floats in [-1, 1], hold must be positive
             if "x" in kwargs:
                 assert -1.0 <= float(kwargs["x"]) <= 1.0, f"move.x out of range: {kwargs['x']}"
-            if "z" in kwargs or "y" in kwargs:
-                forward = kwargs.get("z", kwargs.get("y", 0))
-                assert -1.0 <= float(forward) <= 1.0, f"move forward axis out of range: {forward}"
+            if "y" in kwargs:
+                assert -1.0 <= float(kwargs["y"]) <= 1.0, f"move.y fout of range: {kwargs['y']}"
             if "hold" in kwargs:
                 assert float(kwargs["hold"]) > 0, f"move hold must be > 0: {kwargs['hold']}"
 
