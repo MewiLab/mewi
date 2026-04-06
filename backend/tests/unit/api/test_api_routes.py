@@ -128,7 +128,7 @@ class TestAgentRoutes:
         assert data["is_thinking"] is False
 
     def test_get_status_returns_thinking(self, client, mock_redis_dep):
-        mock_redis_dep.get.return_value = "thinking"
+        mock_redis_dep.get.return_value = b"thinking"
         resp = client.get(f"/api/v1/agent/status/{FAKE_USER_ID}")
         data = resp.json()
         assert data["status"] == "thinking"
