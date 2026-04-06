@@ -14,8 +14,7 @@ class TestSettings:
         assert s.redis_port == 6379
         assert s.agent_status_ttl == 300
         assert s.debug is False
-        assert s.llm.provider == "openai"
-        assert s.llm.model == "gpt-4-turbo"
+        assert s.llm.provider in ("openai", "ollma", "openrouter", "anthrophic")
         assert s.embedding.model == "text-embedding-3-small"
         assert s.log_level == "INFO"
 

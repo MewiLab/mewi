@@ -66,8 +66,15 @@ def make_reason_node(agent: CreatureAgent, llm: LLMProvider):
         system_prompt = (
             "You are the brain of a cat navigating a 3D environment. "
             "Based on what you perceive and remember, choose ONE action to take. "
-            "Respond with JSON only: {\"action\": \"<name>\", \"kwargs\": {}, \"reasoning\": \"<why>\"}\n\n"
-            f"Available actions: {actions}\n"
+            "Respond with ONLY a JSON object — no extra text:\n"
+            "  {\"action\": \"<name>\", \"kwargs\": {}, \"reasoning\": \"<why>\"}\n\n"
+            f"Available actions: {actions}\n\n"
+            "For the 'move' action kwargs must be:\n"
+            "  x: float  (-1 = strafe left,  0 = straight,  1 = strafe right)\n"
+            "  y: float  (-1 = backward,      0 = stop,      1 = forward)\n"
+            "  hold: float  (seconds to keep moving, default 0.3)\n"
+            "Example move: {\"action\": \"move\", \"kwargs\": {\"x\": 0, \"y\": 1, \"hold\": 0.4}, \"reasoning\": \"...\"}\n"
+            "For button actions (Sprint, Jump, Attack1 …) kwargs may include hold: float.\n"
         )
         user_content = (
             f"Current perception:\n{perception}\n\n"

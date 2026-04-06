@@ -67,16 +67,23 @@ class Settings(BaseSettings):
 
     # System
     debug: bool = False
-    agent_status_ttl: int = 300
-    unity_bridge_url: str = "http://localhost:8080"
+    agent_status_ttl: int = 300  
     log_level: str = "INFO"
     log_file_path: str | None = "app.log"  # Set to empty string in .env to disable file logging
     log_max_bytes: int = 5_000_000         # 5 MB
     log_backup_count: int = 3
     
+    # unity
+    unity_bridge_url: str = "http://localhost:8080"
+    unity_transport: Literal["http", "proxy"] = "http" 
+    
     # Nested LLM Config
     llm: LLMSettings = LLMSettings()
     embedding: EmbeddingSettings = EmbeddingSettings()
+    
+    # Workers
+    agent_worker_interval: float = 10.0       # seconds between agent ticks
+    microlog_worker_interval: float = 30.0    # seconds between embedding batches
 
 
 @lru_cache
