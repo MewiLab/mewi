@@ -1,9 +1,10 @@
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks
 
-from app.api.deps import RedisDep, SettingsDep, AgentDep, GraphDep
+from app.api.deps import RedisDep, SettingsDep, AgentDep, GraphDep, SupabaseDep
 from app.services.agent_service import AgentService
+from app.services.memory_service import persist_tick
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -29,6 +30,9 @@ async def agent_tick(
     payload: dict[str, Any],
     agent: AgentDep,
     graph: GraphDep,
+    supabase: SupabaseDep,
+    redis: RedisDep,
+    background_tasks: BackgroundTasks,
 ):
     """
     One tick of the agent's brain.
@@ -39,6 +43,7 @@ async def agent_tick(
 
     This is the hot path — called every N seconds by Unity during gameplay.
     The graph was compiled once at startup (in lifespan.py), not per request.
+    Persistence is non-blocking: written after the response via BackgroundTasks.
     """
     result = await graph.ainvoke({
         "raw_payload": payload,
@@ -52,6 +57,9 @@ async def agent_tick(
         "reasoning": None,
         "action_result": None,
     })
+
+    # Non-blocking write — doesn't slow down the Unity response
+    background_tasks.add_task(persist_tick, agent, supabase, redis)
 
     return {
         "tick": result.get("tick"),
