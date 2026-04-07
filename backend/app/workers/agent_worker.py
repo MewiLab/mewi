@@ -42,8 +42,9 @@ class AgentWorker(BaseWorker):
     async def _run_once(self) -> None:
         await self._agent_svc._set_status(self._creature_id, "thinking")
         try:
+            raw_payload = await self._agent.body.get_state()
             result = await self._graph.ainvoke({
-                "raw_payload":       {},   # worker pulls its own snapshot — TODO
+                "raw_payload":       raw_payload,
                 "messages":          [],
                 "tick":              self._agent.memory.tick_count,
                 "available_actions": self._agent.body.available_actions,

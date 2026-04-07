@@ -25,7 +25,7 @@ def create_llm_provider(settings=None) -> LLMProvider:
     provider = settings.provider
     logger.info("Creating LLM provider: %s / %s", provider, settings.model)
     
-    if provider in ("openai", "anthrophic"):
+    if provider in ("openai", "anthropic"):
         return _make_langchain_provider(settings)
     
     if provider == "ollama":
@@ -50,7 +50,7 @@ def _make_langchain_provider(settings) -> LLMProvider:
             kwargs["base_url"] = settings.base_url
         return ChatOpenAI(**kwargs)
     
-    if settings.provider == "anthrophic":
+    if settings.provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
         return ChatAnthropic(
             api_key=settings.api_key,

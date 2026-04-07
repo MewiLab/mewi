@@ -60,10 +60,10 @@ async def lifespan(app: FastAPI):
         settings=settings,
     )
 
-    # worker_tasks = [
-    #     # asyncio.create_task(agent_worker.start()), # for now we havent need self-driven task for agent
-    #     asyncio.create_task(microlog_worker.start()),
-    # ]
+    worker_tasks = [
+        asyncio.create_task(agent_worker.start()),
+        asyncio.create_task(microlog_worker.start()),
+    ]
     logger.info("Workers started")
 
     logger.info("All clients ready")
@@ -71,6 +71,10 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
+    logger.info("Stopping workers…")
+    for task in worker_tasks:
+        task.cancel()
+    await asyncio.gather(*worker_tasks, return_exceptions=True)
     logger.info("Shutting down agent…")
     await app.state.agent.disconnect()
     logger.info("Closing Redis pool…")

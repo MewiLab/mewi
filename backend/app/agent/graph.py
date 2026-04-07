@@ -57,7 +57,7 @@ def make_reason_node(agent: CreatureAgent, llm: LLMProvider):
     Receives an LLMProvider — doesn't know or care which backend it is.
     Reads perception + memory, produces a chosen_action.
     """
-    def reason(state: AgentGraphState) -> dict[str, Any]:
+    async def reason(state: AgentGraphState) -> dict[str, Any]:
         perception = state.get("perception", {})
         memory_ctx = state.get("memory_context", {})
         actions    = state.get("available_actions", [])
@@ -80,7 +80,7 @@ def make_reason_node(agent: CreatureAgent, llm: LLMProvider):
             f"Recent memory:\n{memory_ctx}\n"
         )
 
-        response = llm.invoke([
+        response = await llm.ainvoke([
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_content),
         ])
