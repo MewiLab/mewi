@@ -24,6 +24,17 @@ public class CreatureController : MonoBehaviour
         _mind       = GetComponent<PeriodicMind>();
         _motor      = GetComponent<CreatureMotor>();
 
+            // ─── ADD THIS RIGHT AFTER ALL THE GetComponent CALLS IN CreatureController.Awake() ───
+    // (after _motor = GetComponent<CreatureMotor>(); and before the config null check)
+    Debug.Log("[CC] GameObject=" + gameObject.name + " Root=" + transform.root.name);
+    Debug.Log("[CC] _board="      + (_board      != null));
+    Debug.Log("[CC] _perception=" + (_perception != null));
+    Debug.Log("[CC] _reflex="     + (_reflex     != null));
+    Debug.Log("[CC] _brain="      + (_brain      != null));
+    Debug.Log("[CC] _mind="       + (_mind       != null));
+    Debug.Log("[CC] _motor="      + (_motor      != null));
+ 
+
         if (config == null)
         {
             Debug.LogError("[CreatureController] No CreatureConfig assigned! " +
@@ -61,9 +72,9 @@ public class CreatureController : MonoBehaviour
         _board.ScoreDrives();
 
         if (_perception != null) _perception.Tick();
-        if (_reflex != null)     _reflex.Tick();
-        if (_brain != null)      _brain.Tick();
-        if (_motor != null)      _motor.Tick();
+        // if (_reflex != null)     _reflex.Tick();
+        // if (_brain != null)      _brain.Tick();
+        // if (_motor != null)      _motor.Tick();
         _board.UpdateDebugDisplay();
     }
 

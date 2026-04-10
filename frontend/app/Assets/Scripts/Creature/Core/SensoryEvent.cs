@@ -12,6 +12,7 @@ public struct SensoryEvent
     public float     intensity;   // 0–1, how strong/close/loud
     public float     timestamp;
     public Transform source;      // nullable — not every event has a transform
+    public string    label;        // GameObject.name — meaningful when type == NearbyObject
 
     public enum SenseType
     {
@@ -20,10 +21,11 @@ public struct SensoryEvent
         SoundHeard,
         FoodSpotted,
         ObstacleClose,
-        TouchedByPlayer
+        TouchedByPlayer,
+        NearbyObject       // generic — differentiated by label (GameObject name)
     }
 
-    public static SensoryEvent Create(SenseType t, Vector3 pos, float intensity, Transform src = null)
+    public static SensoryEvent Create(SenseType t, Vector3 pos, float intensity, Transform src = null, string label = null)
     {
         return new SensoryEvent
         {
@@ -31,7 +33,19 @@ public struct SensoryEvent
             position  = pos,
             intensity = intensity,
             timestamp = Time.time,
-            source    = src
+            source    = src,
+            label     = label ?? src?.name
         };
+    }
+
+    public override string ToString()
+    {
+        // Using @ string literal to allow for easy multi-line formatting
+        return $"--- EVENT: {type} ---\n" +
+            $"Label:     {label}\n" +
+            $"Intensity: {intensity:P0} ({intensity:F2})\n" +
+            $"Position:  {position}\n" +
+            $"Source:    {(source != null ? source.name : "None")}\n" +
+            $"Time:      {timestamp:F2}s\n";
     }
 }

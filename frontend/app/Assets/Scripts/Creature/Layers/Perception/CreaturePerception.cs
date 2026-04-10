@@ -1,11 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Sense layer — runs every frame, writes perception data to the blackboard.
-/// All other layers read from the blackboard, never do their own raycasts.
-///
-/// For MVP: simple distance + angle checks. No raycasts yet.
-/// Upgrade path: add OverlapSphere, line-of-sight raycasts, sound propagation.
+/// Sense layer — writes perception data to the blackboard at a configurable tick rate.
+/// All other layers read from the blackboard, never do their own physics queries.
 /// </summary>
 public class CreaturePerception : MonoBehaviour
 {
@@ -13,7 +10,20 @@ public class CreaturePerception : MonoBehaviour
     CreatureConfig     _config;
     Transform          _self;
 
-    // cache for player tracking
+    [Header("Tick Rate")]
+    [Tooltip("Perception refreshes per second. Lower = cheaper. 0 = every frame.")]
+    public float ticksPerSecond = 10f;
+    float _elapsed;
+
+    // Computed from ticksPerSecond each tick so Inspector changes take effect live.
+    float TickInterval => ticksPerSecond > 0f ? 1f / ticksPerSecond : 0f;
+
+    [Header("Nearby Scan")]
+    public LayerMask nearbyLayers;         // assign Animal + Enemy + Item in Inspector
+    public float     nearbyRadius = 6f;
+    readonly Collider[] _nearbyBuffer = new Collider[32];
+
+    // state for approach speed estimation
     Vector3 _prevPlayerPos;
     float   _playerSpeedEstimate;
 
@@ -24,73 +34,99 @@ public class CreaturePerception : MonoBehaviour
         _self   = transform;
     }
 
+    // Called every frame by CreatureController — throttled internally.
     public void Tick()
     {
-        ScanForPlayers();
+        _elapsed += Time.deltaTime;
+        float interval = TickInterval;
+        if (interval > 0f && _elapsed < interval) return;
+        _elapsed = 0f;
+
+        ScanForPlayer();
+        ScanNearby();
     }
 
-    void ScanForPlayers()
-    {
-        // MVP: find closest GameObject tagged "Player"
-        // Upgrade: use OverlapSphere + layer mask for efficiency
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-        if (playerObj == null)
-        {
-            _board.closestPlayer     = null;
-            _board.closestPlayerDist = Mathf.Infinity;
-            _board.playerInSight     = false;
-            return;
-        }
+    // ── Player ────────────────────────────────────────────────────────────────
 
-        Transform playerT = playerObj.transform;
-        Vector3 toPlayer   = playerT.position - _self.position;
-        float dist         = toPlayer.magnitude;
+    void ScanForPlayer()
+    {
+        var playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj == null) { ClearPlayer(); return; }
+
+        var     playerT  = playerObj.transform;
+        Vector3 toPlayer = playerT.position - _self.position;
+        float   dist     = toPlayer.magnitude;
 
         _board.closestPlayer     = playerT;
         _board.closestPlayerDist = dist;
+        _board.playerInSight     = IsInSight(toPlayer, dist);
 
-        // Sight check: within range and field of view
-        bool inRange = dist <= _config.sightRange;
-        bool inFOV   = Vector3.Angle(_self.forward, toPlayer.normalized) 
-                        <= _config.fieldOfViewDeg * 0.5f;
-        _board.playerInSight = inRange && inFOV;
+        UpdateApproachSpeed(playerT.position, dist);
 
-        // Estimate player approach speed
+        if (dist <= _config.sightRange)
+            EmitPlayer(SensoryEvent.SenseType.PlayerNearby, playerT,
+                       1f - dist / _config.sightRange);
+
+        if (_board.playerApproachingFast && dist < _config.personalSpaceRadius * 3f)
+            EmitPlayer(SensoryEvent.SenseType.PlayerApproachFast, playerT,
+                       Mathf.Clamp01(_playerSpeedEstimate / 6f));
+    }
+
+    void ClearPlayer()
+    {
+        _board.closestPlayer     = null;
+        _board.closestPlayerDist = Mathf.Infinity;
+        _board.playerInSight     = false;
+    }
+
+    bool IsInSight(Vector3 toPlayer, float dist)
+        => dist <= _config.sightRange
+        && Vector3.Angle(_self.forward, toPlayer.normalized) <= _config.fieldOfViewDeg * 0.5f;
+
+    void UpdateApproachSpeed(Vector3 playerPos, float dist)
+    {
         if (_prevPlayerPos != Vector3.zero)
         {
             float prevDist = (_prevPlayerPos - _self.position).magnitude;
-            float closing  = (prevDist - dist) / Time.deltaTime; // positive = getting closer
+            float closing  = (prevDist - dist) / Time.deltaTime;
             _playerSpeedEstimate = Mathf.Lerp(_playerSpeedEstimate, closing, 0.3f);
         }
-        _prevPlayerPos = playerT.position;
-
+        _prevPlayerPos               = playerPos;
         _board.playerApproachingFast = _playerSpeedEstimate > _config.fastApproachSpeed;
+    }
 
-        // Emit sensory events for this frame
-        if (inRange)
-        {
-            _board.sensorEvents.Add(SensoryEvent.Create(
-                SensoryEvent.SenseType.PlayerNearby,
-                playerT.position,
-                1f - (dist / _config.sightRange), // closer = higher intensity
-                playerT
-            ));
-        }
+    void EmitPlayer(SensoryEvent.SenseType type, Transform src, float intensity)
+        => _board.sensorEvents.Add(SensoryEvent.Create(type, src.position, intensity, src));
 
-        if (_board.playerApproachingFast && dist < _config.personalSpaceRadius * 3f)
+    // ── Nearby ────────────────────────────────────────────────────────────────
+
+    void ScanNearby()
+    {
+        // One OverlapSphere covers all nearby layers (cats, items, enemies, etc.).
+        // Consumers tell objects apart via SensoryEvent.label (= GameObject.name).
+        // No type-switch here — renaming prefabs requires zero changes to this code.
+        int n = Physics.OverlapSphereNonAlloc(_self.position, nearbyRadius, _nearbyBuffer, nearbyLayers);
+        for (int i = 0; i < n; i++)
         {
+            Collider col = _nearbyBuffer[i];
+            if (col.transform == _self) continue;
+
+            float dist      = Vector3.Distance(_self.position, col.transform.position);
+            float intensity = 1f - Mathf.Clamp01(dist / nearbyRadius);
+
             _board.sensorEvents.Add(SensoryEvent.Create(
-                SensoryEvent.SenseType.PlayerApproachFast,
-                playerT.position,
-                Mathf.Clamp01(_playerSpeedEstimate / 6f),
-                playerT
+                SensoryEvent.SenseType.NearbyObject,
+                col.transform.position,
+                intensity,
+                col.transform,
+                col.gameObject.name
             ));
         }
     }
 
-    /// <summary>
-    /// Call from external systems (e.g., a sound emitter) to inject a heard event.
-    /// </summary>
+    // ── External injection ────────────────────────────────────────────────────
+
+    /// <summary>Call from sound emitters to inject a heard event.</summary>
     public void OnSoundHeard(Vector3 soundPos, float loudness)
     {
         float dist = Vector3.Distance(_self.position, soundPos);

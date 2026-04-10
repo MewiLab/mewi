@@ -1,6 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using Newtonsoft.Json;
 /// <summary>
 /// The "slow mind" — runs on a timer (every few seconds), not every frame.
 /// Reads recent events and perception from blackboard, updates mood, produces intent.
@@ -16,17 +15,19 @@ public class PeriodicMind : MonoBehaviour
 {
     CreatureBlackboard _board;
     CreatureConfig     _config;
+    CreatureAgent      _creatureAgent;
     
     [Header("Mind Mode")]
     public MindMode mode = MindMode.Simulated;
 
     bool _running;
-    bool _waitingForLLM;
+    bool _waitingForLLM;  // guard against re-entrant calls while tick is in-flight
 
     public void Init(CreatureBlackboard board, CreatureConfig config)
     {
         _board = board;
         _config = config;
+        _creatureAgent = GetComponent<CreatureAgent>();
     }
 
     public void StartThinking()
@@ -140,98 +141,27 @@ public class PeriodicMind : MonoBehaviour
         return "wander";
     }
 
-    async void RequestLLMIntent()
+    void RequestLLMIntent()
     {
         if (_waitingForLLM) return;
-        _waitingForLLM = true;
 
-        string snapshot = BuildSnapshot();
-        string response = await CreatureAgent.PostAsync(snapshot);
-        _waitingForLLM = false;
-
-        if (response == null)
+        if (_creatureAgent == null)
         {
-            Debug.LogWarning("[Mind/LLM] Backend failed, falling back to local");
+            Debug.LogWarning("[Mind/LLM] No CreatureAgent found — falling back to local");
             UpdateMoodLocal();
             _board.SetMindIntent(SelectIntentLocal(_board.mood));
             return;
         }
 
-        var parsed = Newtonsoft.Json.JsonConvert.DeserializeObject<LLMResponse>(response);
-        ExecuteLLMActions(parsed);
+        // CreatureAgent sends the full perception snapshot to /agent/tick.
+        // The backend runs LangGraph and calls back to AgentBridge to execute the action.
+        // No response parsing needed here.
+        _waitingForLLM = true;
+        _creatureAgent.TriggerTick();
+        _waitingForLLM = false;
+
+        // Run local mood decay while waiting for backend to respond.
+        UpdateMoodDecayOnly();
     }
 
-    void ExecuteLLMActions(LLMResponse response)
-    {
-        ApplyLLMMood(response.mood);
-
-        if (response.actions == null || response.actions.Count == 0)
-        {
-            Debug.LogWarning("[Mind/LLM] No actions returned, falling back to local");
-            _board.SetMindIntent(SelectIntentLocal(_board.mood));
-            return;
-        }
-
-        foreach (var action in response.actions)
-        {
-            switch (action.function)
-            {
-                case "set_intent":
-                    if (action.args.TryGetValue("intent", out var intent))
-                        _board.SetMindIntent(intent);
-                    break;
-
-                case "play_action":
-                    if (action.args.TryGetValue("action_id", out var idStr) && int.TryParse(idStr, out var id))
-                        _board.pendingActionId = id; // add this field to blackboard
-                    break;
-
-                case "log_event":
-                    if (action.args.TryGetValue("message", out var msg))
-                        _board.LogEvent(msg);
-                    break;
-
-                default:
-                    Debug.LogWarning($"[Mind/LLM] Unknown function: {action.function}");
-                    break;
-            }
-        }
-
-        if (response.reasoning != null)
-            Debug.Log($"[Mind/LLM] reasoning: {response.reasoning}");
-    }
-
-    [System.Serializable]
-    public class MindSnapshot
-    {
-        public MoodModel mood;
-        public float hunger;
-        public string events;
-        public bool playerInSight;
-        public float playerDist;
-    }
-
-    string BuildSnapshot()
-    {
-        var snapshot = new MindSnapshot
-        {
-            mood = _board.mood,
-            hunger = _board.GetCurrentHunger(),
-            events = _board.GetRecentEventsSummary(),
-            playerInSight = _board.playerInSight,
-            playerDist = _board.closestPlayerDist
-        };
-        return Newtonsoft.Json.JsonConvert.SerializeObject(snapshot);
-    }
-
-    void ApplyLLMMood(MoodUpdate moodUpdate)
-    {
-        if (moodUpdate == null) return;
-        MoodModel mood = _board.mood;
-        mood.fear      = Mathf.Clamp01(moodUpdate.fear);
-        mood.trust     = Mathf.Clamp01(moodUpdate.trust);
-        mood.curiosity = Mathf.Clamp01(moodUpdate.curiosity);
-        mood.social    = Mathf.Clamp01(moodUpdate.social);
-        mood.energy    = Mathf.Clamp01(moodUpdate.energy);
-    }
 }
