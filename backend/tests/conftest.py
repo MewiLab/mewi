@@ -25,6 +25,22 @@ load_dotenv(override=True)  # .env values win over pytest-env fakes
 # ── Integration fixtures (real connections — needs .env + CONFIRM_PAID=1) ─────
 
 @pytest.fixture
+async def real_redis(real_settings):
+    """
+    Real async Redis client for integration tests.
+    Connects using credentials from .env via real_settings.
+    Closes the connection after the test completes.
+    """
+    client = aioredis.from_url(
+        f"redis://{real_settings.redis_host}:{real_settings.redis_port}",
+        db=real_settings.redis_db,
+        decode_responses=False,
+    )
+    yield client
+    await client.aclose()
+
+
+@pytest.fixture
 def real_settings():
     """
     Load real credentials from .env for integration / paid tests.

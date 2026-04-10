@@ -2,247 +2,171 @@
 
 ## Overview
 
-This fix involves three main aspects (along with additional minor fixes):
+This document tracks a series of fixes related to Database/Redis connections, memory hydration, and testing infrastructure robustness. The fixes resolve functional gaps, isolate tests from real environments, and stabilize the integration testing suite.
 
+Key areas addressed:
 1. Functional gap in Agent memory hydration via DB.
 2. Incomplete unit test mocks causing DB operations to hit real connections.
-3. Unimplemented `real_settings` fixture causing all integration tests to ERROR.
+3. Unimplemented fixtures and test environment pollution (e.g., `.env` leaking into tests).
+4. Redis decoding crashes and incorrect method calls in tests.
 
 ---
 
 ## Issue 1: Agent memory is empty on the first tick, not hydrated from DB
 
 ### Source of Issue
-
 Although `AgentService.run_tick()` receives `creature_id`, it does not pass it to the graph state, nor does it attempt to restore the previous session's memory from DB/Redis before execution.
 
 ### Root Cause
-
-`MemoryManager` is an in-memory ring buffer, which is empty every time the app restarts. While `hydrate_agent()` is implemented (in `memory_service.py`), it is only called once in the startup hook of `lifespan.py` with a hardcoded `creature_id="cat_01"`. The actual `creature_id` passed from Unity is received in `run_tick` but is never used to trigger hydration.
+`MemoryManager` is an in-memory ring buffer, which is empty every time the app restarts. While `hydrate_agent()` is implemented, it is only called once in the startup hook with a hardcoded ID. The actual `creature_id` is never used to trigger hydration.
 
 ### Impact
-
-- The Agent's memory is always empty during the first tick inference after a restart, meaning the LLM context lacks historical data.
-- There is no `creature_id` in the graph state, making it impossible to query the DB later within graph nodes.
+The Agent's memory is always empty during the first tick inference after a restart. The graph state lacks `creature_id`, making DB queries impossible within graph nodes.
 
 ### Fix Details
-
-| File | Modification |
-|---|---|
-| `app/agent/schemas/state_schema.py` | Added `creature_id: str` field. |
-| `app/services/agent_service.py` | Added `_hydrate_if_empty(creature_id)`; triggered hydration before calling the graph in `run_tick`; added `creature_id` to graph state. |
-| `app/workers/agent_worker.py` | Added `creature_id` to graph state for consistency. |
-
-### `_hydrate_if_empty` Logic
-
-```text
-_hydrate_if_empty(creature_id):
-  tick_count > 0  →  Return directly (memory exists, running normally)
-  supabase = None →  Return directly (no DB, start with empty memory)
-  Otherwise       →  Call hydrate_agent(agent, supabase, redis, creature_id)
-                     ├─ Cache in Redis → Use directly
-                     └─ No cache in Redis → Read from Supabase and backfill Redis
-```
+Added `_hydrate_if_empty(creature_id)` to `AgentService`. Triggered hydration before calling the graph in `run_tick`, and added `creature_id` to the graph state schema.
 
 ---
 
 ## Issue 2: `mock_redis` in unit tests did not cover commands used by MemoryCache
 
 ### Source of Issue
-
-The `mock_redis` fixture in `tests/conftest.py` only mocked `set` and `get`, completely missing the four Redis commands actually used by `MemoryCache`.
+The `mock_redis` fixture in `tests/conftest.py` only mocked `set` and `get`, completely missing the four Redis list commands actually used by `MemoryCache`.
 
 ### Root Cause
-
-`MemoryCache` (`repositories/memory_cache.py`) uses:
-
-| Method | Corresponding Command |
-|---|---|
-| `push_tick` | `rpush`, `ltrim` |
-| `load_ticks` | `lrange` |
-| `clear` | `delete` |
-
-When mocked via `AsyncMock()`, these automatically return another `MagicMock`, causing unpredictable behavior during iteration or `await`.
+`MemoryCache` uses `push_tick` (`rpush`, `ltrim`), `load_ticks` (`lrange`), and `clear` (`delete`). When mocked via `AsyncMock()`, these return `MagicMock`, causing unpredictable behavior.
 
 ### Impact
-
-When `_hydrate_if_empty` → `hydrate_agent` → `MemoryCache.load_ticks` calls `lrange`, because the mock isn't set up, `lrange` returns a `MagicMock` object. Subsequent calls to `json.loads(entry)` crash or return garbage data.
+When `MemoryCache.load_ticks` calls `lrange`, it returns a `MagicMock` object, causing subsequent JSON parsing to crash.
 
 ### Fix Details
-
-Added the following to `mock_redis` in `tests/conftest.py`:
-
-```python
-client.lrange = AsyncMock(return_value=[])   # load_ticks: cache miss → return empty
-client.rpush  = AsyncMock(return_value=1)    # push_tick
-client.ltrim  = AsyncMock()                  # push_tick (trim to max size)
-client.delete = AsyncMock()                  # clear
-```
+Added `lrange`, `rpush`, `ltrim`, and `delete` as `AsyncMock` to `mock_redis` in `tests/conftest.py`.
 
 ---
 
 ## Issue 3: `test_agent_tick_returns_200_with_action` triggered a real DB query
 
 ### Source of Issue
-
 The agent tick test in `tests/unit/api/test_api_routes.py` only overridden `get_graph`, but not `get_agent`.
 
 ### Root Cause
-
-The condition for `_hydrate_if_empty` is `tick_count == 0` → execute DB hydration. The FastAPI TestClient's lifespan creates a real `CreatureAgent` (`tick_count = 0`), and the `mock_db` in tests shares the same builder for all tables, where `execute()` always returns:
-
-```python
-MagicMock(data=[FAKE_ROW])
-```
-
-`FAKE_ROW` is the row schema for microlog, which lacks the `"perception"` field. When `hydrate_agent` reaches:
-
-```python
-await cache.push_tick(creature_id=creature_id, perception=row["perception"])
-```
-
-It throws `KeyError: 'perception'`, causing the entire tick to fail with a 500 error.
+The condition for `_hydrate_if_empty` is `tick_count == 0` → execute DB hydration. The test client creates a real `CreatureAgent` (`tick_count = 0`), which triggered a DB query. The mock DB returned a row without the `"perception"` field.
 
 ### Impact
-
-The `POST /api/v1/agent/tick` test expects a 200 but actually receives a 500.
+Throws `KeyError: 'perception'`, causing the HTTP test to fail with a 500 error instead of the expected 200.
 
 ### Fix Details
-
-Added a `get_agent` override in the test, providing `tick_count = 1` so `_hydrate_if_empty` returns directly:
-
-```python
-mock_agent = MagicMock()
-mock_agent.memory.tick_count = 1          # Force _hydrate_if_empty to skip DB
-mock_agent.body.available_actions = ["wait", "move"]
-client.app.dependency_overrides[get_agent] = lambda: mock_agent
-```
-
-The purpose of this test is to verify that graph results can be correctly returned in the HTTP response, not to test the hydration process. Therefore, skipping hydration is semantically correct here.
+Added a `get_agent` dependency override in the test, providing an agent with `tick_count = 1` to bypass DB hydration entirely.
 
 ---
 
 ## Issue 4: `real_settings` fixture was never implemented
 
 ### Source of Issue
-
-Line 6 of the docstring in `tests/conftest.py` clearly states:
-
-> Integration fixtures (`real_*`): loads real credentials from `.env`. Only used when running `make test-integration CONFIRM_PAID=1`.
-
-However, the `real_settings` fixture itself was never implemented.
+The docstring in `tests/conftest.py` clearly states that integration tests use `real_*` fixtures loading credentials from `.env`, but `real_settings` was never implemented.
 
 ### Root Cause
+Oversight during initial test setup.
 
-Pure oversight. All tests (covering unit and integration directories) that rely on `real_settings` immediately ERROR out during pytest collection:
-
-```text
-fixture 'real_settings' not found
-```
-
-Affected test files:
-
-- `tests/unit/core/test_supabase_connection.py`
-- `tests/unit/core/test_redis_real.py`
-- `tests/unit/services/test_embedding_real.py`
-- `tests/integration/test_supabase_connection.py`
-- `tests/integration/test_redis_real.py`
-- `tests/integration/test_fullstack_e2e.py`
+### Impact
+All tests relying on `real_settings` (unit and integration) instantly ERROR out with `fixture 'real_settings' not found`.
 
 ### Fix Details
-
-Added the following to `tests/conftest.py`:
-
-```python
-@pytest.fixture
-def real_settings():
-    url    = os.environ.get("SUPABASE_URL", "")
-    anon   = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
-    secret = os.environ.get("SUPABASE_SECRET_KEY", "")
-    openai_key = os.environ.get("OPENAI_API_KEY", "")
-    if not all([url, anon, secret]):
-        pytest.skip("real_settings requires SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY / SUPABASE_SECRET_KEY in .env")
-    return Settings(
-        supabase_url=url,
-        supabase_publishable_key=anon,
-        supabase_secret_key=secret,
-        openai_api_key=openai_key or "sk-fake",
-    )
-```
-
-- If `.env` exists and credentials are complete → Create a real `Settings` object.
-- If missing any credential → `pytest.skip`, which avoids red failures and doesn't block `make test`.
+Implemented the `real_settings` fixture in `tests/conftest.py` to load `.env` credentials dynamically, or `pytest.skip()` if credentials are missing to avoid blocking `make test`.
 
 ---
 
-## Issue 5: `test_redis_real` called a non-existent public method `set_status`
+## Issue 5: `test_redis_real` (Unit) called a non-existent public method `set_status`
 
 ### Source of Issue
-
-`tests/unit/core/test_redis_real.py` called `svc.set_status(...)`, but the corresponding method in `AgentService` is the private `_set_status` (with an underscore prefix).
+`tests/unit/core/test_redis_real.py` called `svc.set_status(...)`, but the corresponding method in `AgentService` is private (`_set_status`).
 
 ### Root Cause
-
-The test was written using a public API naming convention, but the implementation intentionally kept it private (CLAUDE.md design principle: status writing should only be triggered via `run_tick` and never called externally). The naming was never aligned.
+The test used a public API naming convention, but the implementation intentionally kept it private.
 
 ### Impact
-
-```text
-AttributeError: 'AgentService' object has no attribute 'set_status'.
-Did you mean: '_set_status'?
-```
+`AttributeError: 'AgentService' object has no attribute 'set_status'.`
 
 ### Fix Details
-
-Changed all instances of `svc.set_status(` to `svc._set_status(` in `test_redis_real.py`. Since integration tests evaluate internal behavior, directly calling a private method is acceptable here.
+Changed `svc.set_status(` to `svc._set_status(` in `test_redis_real.py`.
 
 ---
 
 ## Issue 6: `get_status` crashed on Redis client with `decode_responses=True`
 
 ### Source of Issue
-
-The return logic of `get_status`:
-
-```python
-return value.decode() if value else "idle"
-```
-
-`.decode()` is a method for `bytes` types. When the Redis client is instantiated with `decode_responses=True`, `get()` returns a `str` directly, and calling `.decode()` on a `str` causes a crash.
+The return logic of `get_status` assumed the Redis response was always `bytes` and called `.decode()`.
 
 ### Root Cause
-
-The client creation in `test_redis_real.py` sets `decode_responses=True` (line 19):
-
-```python
-pool = aioredis.ConnectionPool.from_url(
-    f"redis://{real_settings.redis_host}:{real_settings.redis_port}/0",
-    decode_responses=True,
-)
-```
-
-However, the Redis client created by the production lifespan does not have this option set, so `get()` returns `bytes`. The two scenarios behaved differently, and `get_status` only accounted for one of them.
+Tests instantiated Redis with `decode_responses=True`, making `get()` return a `str`. Calling `.decode()` on a `str` causes a crash.
 
 ### Impact
-
-```text
-AttributeError: 'str' object has no attribute 'decode'. Did you mean: 'encode'?
-```
-`test_set_and_get_status` succeeded on write but crashed on read.
+`AttributeError: 'str' object has no attribute 'decode'.`
 
 ### Fix Details
+Modified `get_status` to handle both `bytes` (production) and `str` (test) environments gracefully.
 
-Modified `get_status` in `app/services/agent_service.py` to handle both return types gracefully:
+---
 
+## Issue 7: Missing `real_redis` fixture (`tests/conftest.py`)
+
+### Source of Issue
+All tests in `tests/integration/test_redis_real.py` depend on the `real_redis` fixture, but it was never defined in `conftest.py`.
+
+### Root Cause
+The test file's docstring explicitly stated "the fixture is provided by conftest.py", but the implementation was missing.
+
+### Impact
+All three integration tests failed with `fixture 'real_redis' not found`.
+
+### Fix Details
+Added the `real_redis` fixture to `tests/conftest.py`:
 ```python
-if not value:
-    return "idle"
-return value.decode() if isinstance(value, bytes) else value
+@pytest.fixture
+async def real_redis(real_settings):
+    client = aioredis.from_url(
+        f"redis://{real_settings.redis_host}:{real_settings.redis_port}",
+        db=real_settings.redis_db,
+        decode_responses=False,
+    )
+    yield client
+    await client.aclose()
 ```
 
-- `bytes` (production, `decode_responses` not set) → `.decode()`
-- `str` (client with `decode_responses=True`) → return directly
-- `None` (key does not exist) → `"idle"`
+---
+
+## Issue 8: Integration test calling non-existent `set_status` (`tests/integration/test_redis_real.py`)
+
+### Source of Issue
+Similar to Issue 5, two tests in the integration suite called `svc.set_status(...)`, which does not exist on `AgentService`.
+
+### Root Cause
+The method is intentionally private (`_set_status`) — it is only called internally by `run_tick`. The integration test was written with the wrong method name.
+
+### Impact
+`AttributeError: 'AgentService' object has no attribute 'set_status'.`
+
+### Fix Details
+Changed `svc.set_status(...)` → `svc._set_status(...)` in `test_set_and_get_status` and `test_ttl_is_set` (consistent with how unit tests call the same method).
+
+---
+
+## Issue 9: `test_valid_settings` polluted by `.env` `REDIS_HOST` (`tests/unit/core/test_config.py`)
+
+### Source of Issue
+`test_valid_settings` creates `Settings(...)` without passing `redis_host`, expecting Pydantic's model default `"localhost"`, but instead received `"127.0.0.1"` and failed.
+
+### Root Cause
+There are two sources feeding `REDIS_HOST=127.0.0.1` into Pydantic:
+1. `conftest.py` calls `load_dotenv(override=True)` at module load time, injecting it into `os.environ`.
+2. Pydantic `BaseSettings` reads the `.env` file directly.
+`monkeypatch.delenv` only clears `os.environ`, so Pydantic's direct `.env` read still prevailed.
+
+### Impact
+Test assertions fail due to environment variable pollution.
+
+### Fix Details
+Used both `monkeypatch.delenv("REDIS_HOST", raising=False)` to clear `os.environ` and `_env_file=None` in the `Settings` instantiation to force Pydantic to skip reading `.env` for this specific test.
 
 ---
 
@@ -253,8 +177,10 @@ return value.decode() if isinstance(value, bytes) else value
 | `app/agent/schemas/state_schema.py` | Logic | Added `creature_id` field |
 | `app/services/agent_service.py` | Logic | Added `_hydrate_if_empty`; `run_tick` hydrates and passes `creature_id`; `get_status` handles both `str`/`bytes` Redis return types |
 | `app/workers/agent_worker.py` | Logic | Added `creature_id` to graph state |
-| `tests/conftest.py` | Test Infrastructure | Added `real_settings` fixture; filled out Redis commands for `mock_redis` |
+| `tests/conftest.py` | Test Infra | Added `real_settings` and `real_redis` fixtures; filled out Redis commands for `mock_redis` |
 | `tests/unit/api/test_api_routes.py` | Test Fix | Added `get_agent` override to `test_agent_tick` to avoid hitting real DB |
 | `tests/unit/workers/test_agent_worker.py` | Test Fix | Changed `mock_agent.body.get_state` to `AsyncMock` |
-| `tests/unit/services/test_agent_service.py` | Test Addition | Added 4 new tests to verify hydration behavior |
-| `tests/unit/core/test_redis_real.py` | Test Fix | Renamed `set_status` → `_set_status` to align with actual method name |
+| `tests/unit/services/test_agent_service.py` | Test Addition| Added 4 new tests to verify hydration behavior |
+| `tests/unit/core/test_config.py` | Test Fix | Prevented `.env` pollution in `test_valid_settings` using `monkeypatch` and `_env_file=None` |
+| `tests/unit/core/test_redis_real.py` | Test Fix | Renamed `set_status` → `_set_status` |
+| `tests/integration/test_redis_real.py` | Test Fix | Renamed `set_status` → `_set_status` to align with the private method |
