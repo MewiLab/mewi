@@ -12,9 +12,8 @@ public class CreatureController : MonoBehaviour
     PeriodicMind           _mind;
     CreatureMotor          _motor;
 
-    // We use dependency injections for more explicit initialzation setup
-    // Rather then the magic hood under unity monobehavior framework
-    // Which help use get to know the order each line is executed
+    // Explicit dependency injection — we wire everything here so
+    // initialization order is clear and testable without Unity magic.
     void Awake()
     {
         _board      = GetComponent<CreatureBlackboard>();
@@ -24,28 +23,16 @@ public class CreatureController : MonoBehaviour
         _mind       = GetComponent<PeriodicMind>();
         _motor      = GetComponent<CreatureMotor>();
 
-            // ─── ADD THIS RIGHT AFTER ALL THE GetComponent CALLS IN CreatureController.Awake() ───
-    // (after _motor = GetComponent<CreatureMotor>(); and before the config null check)
-    Debug.Log("[CC] GameObject=" + gameObject.name + " Root=" + transform.root.name);
-    Debug.Log("[CC] _board="      + (_board      != null));
-    Debug.Log("[CC] _perception=" + (_perception != null));
-    Debug.Log("[CC] _reflex="     + (_reflex     != null));
-    Debug.Log("[CC] _brain="      + (_brain      != null));
-    Debug.Log("[CC] _mind="       + (_mind       != null));
-    Debug.Log("[CC] _motor="      + (_motor      != null));
- 
-
         if (config == null)
         {
-            Debug.LogError("[CreatureController] No CreatureConfig assigned! " +
-                           "Create one via Assets > Create > Creature > Config");
+            Debug.LogError("[CreatureController] No CreatureConfig assigned!");
             enabled = false;
             return;
         }
 
         if (_board == null)
         {
-            Debug.LogError("[CreatureController] Missing CreatureBlackBoard component!");
+            Debug.LogError("[CreatureController] Missing CreatureBlackboard component!");
             enabled = false;
             return;            
         }
@@ -56,25 +43,22 @@ public class CreatureController : MonoBehaviour
         if (_mind != null)       _mind.Init(_board, config);
         if (_motor != null)      _motor.Init(_board, config);
     }
+
     void Start()
     {
         if (_mind != null) _mind.StartThinking();
     }
 
-    // Human threshold 100ms feel instantaneous
-    // 30 FPS: requires each frame in completed in 33.33 ms (milliseconds).
-    // 60 FPS: 16.67 ms.
-    // 90 FPS (common for VR): 11.11 ms.
     void Update()
-    // TODO: concurrency task
     {
-        _board.ClearFrameFlags(); // Clear previous frame perception flag for reflex
+        _board.ClearFrameFlags();
         _board.ScoreDrives();
 
         if (_perception != null) _perception.Tick();
-        // if (_reflex != null)     _reflex.Tick();
-        // if (_brain != null)      _brain.Tick();
-        // if (_motor != null)      _motor.Tick();
+        if (_reflex != null)     _reflex.Tick();
+        if (_brain != null)      _brain.Tick();
+        if (_motor != null)      _motor.Tick();
+
         _board.UpdateDebugDisplay();
     }
 
@@ -83,8 +67,5 @@ public class CreatureController : MonoBehaviour
         if (_mind != null) _mind.StopThinking();
     }
 
-    void OnDrawGizmosSelected()
-    {
-        
-    }
+    void OnDrawGizmosSelected() { }
 }

@@ -11,12 +11,9 @@ public class CreaturePerception : MonoBehaviour
     Transform          _self;
 
     [Header("Tick Rate")]
-    [Tooltip("Perception refreshes per second. Lower = cheaper. 0 = every frame.")]
-    public float ticksPerSecond = 10f;
+    [Tooltip("Seconds between each perception scan. 10 = once every 10s. 0 = every frame.")]
+    public float tickInterval = 10f;
     float _elapsed;
-
-    // Computed from ticksPerSecond each tick so Inspector changes take effect live.
-    float TickInterval => ticksPerSecond > 0f ? 1f / ticksPerSecond : 0f;
 
     [Header("Nearby Scan")]
     public LayerMask nearbyLayers;         // assign Animal + Enemy + Item in Inspector
@@ -38,8 +35,7 @@ public class CreaturePerception : MonoBehaviour
     public void Tick()
     {
         _elapsed += Time.deltaTime;
-        float interval = TickInterval;
-        if (interval > 0f && _elapsed < interval) return;
+        if (tickInterval > 0f && _elapsed < tickInterval) return;
         _elapsed = 0f;
 
         ScanForPlayer();
