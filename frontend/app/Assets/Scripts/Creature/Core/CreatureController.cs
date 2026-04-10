@@ -11,6 +11,7 @@ public class CreatureController : MonoBehaviour
     CreatureBrain          _brain;
     PeriodicMind           _mind;
     CreatureMotor          _motor;
+    CreatureAgent          _agent;
 
     // Explicit dependency injection — we wire everything here so
     // initialization order is clear and testable without Unity magic.
@@ -22,10 +23,18 @@ public class CreatureController : MonoBehaviour
         _brain      = GetComponent<CreatureBrain>();
         _mind       = GetComponent<PeriodicMind>();
         _motor      = GetComponent<CreatureMotor>();
+        _agent      = GetComponent<CreatureAgent>();
 
         if (config == null)
         {
             Debug.LogError("[CreatureController] No CreatureConfig assigned!");
+            enabled = false;
+            return;
+        }
+
+        if (_agent == null)
+        {
+            Debug.LogError("[CreatureAgent] No CreatureConfig assigned!");
             enabled = false;
             return;
         }
@@ -42,6 +51,7 @@ public class CreatureController : MonoBehaviour
         if (_brain != null)      _brain.Init(_board, config);
         if (_mind != null)       _mind.Init(_board, config);
         if (_motor != null)      _motor.Init(_board, config);
+        if (_agent != null)      _agent.Init(_board);
     }
 
     void Start()

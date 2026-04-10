@@ -157,6 +157,7 @@ public class PeriodicMind : MonoBehaviour
         // The backend runs LangGraph and calls back to AgentBridge to execute the action.
         // No response parsing needed here.
         _waitingForLLM = true;
+        Debug.Log("send via periodic mind");
         _creatureAgent.TriggerTick();
         _waitingForLLM = false;
 
