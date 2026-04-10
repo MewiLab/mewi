@@ -135,7 +135,9 @@ class AgentService:
         Returns "idle" if no key exists (TTL expired or first poll).
         """
         value = await self._redis.get(_STATUS_KEY.format(creature_id=creature_id))
-        return value.decode() if value else "idle"
+        if not value:
+            return "idle"
+        return value.decode() if isinstance(value, bytes) else value
 
     async def _set_status(self, creature_id: str, status: str) -> None:
         """Write status to Redis with TTL. Private — callers use run_tick()."""

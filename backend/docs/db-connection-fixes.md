@@ -175,14 +175,89 @@ def real_settings():
 
 ---
 
+---
+
+## 問題五：`test_redis_real` 呼叫不存在的公開方法 `set_status`
+
+### 問題來源
+
+`tests/unit/core/test_redis_real.py` 呼叫 `svc.set_status(...)`，但 `AgentService` 的對應方法是私有的 `_set_status`（底線前綴）。
+
+### 根本原因
+
+測試寫作時用了公開 API 的命名，但實作刻意將其設為私有（CLAUDE.md 設計原則：status 寫入只透過 `run_tick` 觸發，外部不應直接呼叫）。兩者命名從未對齊過。
+
+### 影響
+
+```
+AttributeError: 'AgentService' object has no attribute 'set_status'.
+Did you mean: '_set_status'?
+```
+
+### 修復內容
+
+`test_redis_real.py` 中所有 `svc.set_status(` 改為 `svc._set_status(`。
+Integration test 測試內部行為，直接呼叫私有方法是合理的。
+
+---
+
+## 問題六：`get_status` 對 `decode_responses=True` 的 Redis client 炸掉
+
+### 問題來源
+
+`get_status` 的回傳邏輯：
+
+```python
+return value.decode() if value else "idle"
+```
+
+`.decode()` 是 `bytes` 型別的方法。當 Redis client 建立時帶了 `decode_responses=True`，`get()` 直接回傳 `str`，對 `str` 呼叫 `.decode()` 就炸。
+
+### 根本原因
+
+`test_redis_real.py` 建立 client 時設了 `decode_responses=True`（第 19 行）：
+
+```python
+pool = aioredis.ConnectionPool.from_url(
+    f"redis://{real_settings.redis_host}:{real_settings.redis_port}/0",
+    decode_responses=True,
+)
+```
+
+而 production lifespan 建立的 Redis client 沒有設此選項，所以 `get()` 回傳 `bytes`。兩種情境行為不同，`get_status` 只處理了其中一種。
+
+### 影響
+
+```
+AttributeError: 'str' object has no attribute 'decode'. Did you mean: 'encode'?
+```
+`test_set_and_get_status` 寫入成功、讀取時炸掉。
+
+### 修復內容
+
+`app/services/agent_service.py` 的 `get_status` 改為同時處理兩種回傳型別：
+
+```python
+if not value:
+    return "idle"
+return value.decode() if isinstance(value, bytes) else value
+```
+
+- `bytes`（production，`decode_responses` 未設）→ `.decode()`
+- `str`（`decode_responses=True` 的 client）→ 直接回傳
+- `None`（key 不存在）→ `"idle"`
+
+---
+
 ## 修改檔案總覽
 
 | 檔案 | 類型 | 修改說明 |
 |---|---|---|
 | `app/agent/schemas/state_schema.py` | 功能 | 新增 `creature_id` 欄位 |
-| `app/services/agent_service.py` | 功能 | 新增 `_hydrate_if_empty`；`run_tick` 補水並傳入 `creature_id` |
+| `app/services/agent_service.py` | 功能 | 新增 `_hydrate_if_empty`；`run_tick` 補水並傳入 `creature_id`；`get_status` 相容 `str`/`bytes` 兩種 Redis 回傳型別 |
 | `app/workers/agent_worker.py` | 功能 | graph state 補上 `creature_id` |
 | `tests/conftest.py` | 測試基礎建設 | 新增 `real_settings` fixture；補全 `mock_redis` 的 Redis 指令 |
 | `tests/unit/api/test_api_routes.py` | 測試修復 | `test_agent_tick` 補 `get_agent` override，避免觸碰真實 DB |
 | `tests/unit/workers/test_agent_worker.py` | 測試修復 | `mock_agent.body.get_state` 改為 `AsyncMock` |
 | `tests/unit/services/test_agent_service.py` | 測試新增 | 新增 4 個測試驗證補水行為 |
+| `tests/unit/core/test_redis_real.py` | 測試修復 | `set_status` → `_set_status`，對齊實際方法名稱 |
