@@ -25,7 +25,7 @@ from supabase import Client
 
 from app.core.config import Settings
 from app.agent.creature_agent import CreatureAgent
-from app.services.memory_service import persist_tick
+from app.services.memory_service import persist_tick, hydrate_agent
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,9 @@ class AgentService:
 
         await self._set_status(creature_id, "thinking")
         try:
+            await self._hydrate_if_empty(creature_id)
             result = await self._graph.ainvoke({
+                "creature_id":    creature_id,
                 "raw_payload":    payload,
                 "messages":       [],
                 "tick":           self._agent.memory.tick_count,
@@ -105,13 +107,37 @@ class AgentService:
 
         return result
 
+    async def _hydrate_if_empty(self, creature_id: str) -> None:
+        """
+        Restore agent memory from DB/cache before the first tick of a session.
+
+        Called at the top of run_tick.  When the in-memory buffer already has
+        ticks (normal running state), this is a no-op — no DB round-trip.
+        On a cold start (empty buffer), it calls hydrate_agent() which reads
+        Redis first, then falls back to Supabase.
+
+        Why here and not in lifespan.py only?
+          lifespan.py hydrates at startup against a known creature_id.
+          run_tick receives the actual creature_id from Unity, so if the
+          agent hasn't been hydrated for this creature yet, we catch it here.
+        """
+        if self._agent.memory.tick_count > 0:
+            return  # Buffer already populated; nothing to do
+        if self._supabase is None:
+            return  # No DB configured; start with empty memory
+        await hydrate_agent(
+            self._agent, self._supabase, self._redis, creature_id=creature_id
+        )
+
     async def get_status(self, creature_id: str) -> str:
         """
         Read the creature's current status from Redis.
         Returns "idle" if no key exists (TTL expired or first poll).
         """
         value = await self._redis.get(_STATUS_KEY.format(creature_id=creature_id))
-        return value.decode() if value else "idle"
+        if not value:
+            return "idle"
+        return value.decode() if isinstance(value, bytes) else value
 
     async def _set_status(self, creature_id: str, status: str) -> None:
         """Write status to Redis with TTL. Private — callers use run_tick()."""

@@ -24,6 +24,7 @@ def mock_agent():
     agent = MagicMock()
     agent.memory.tick_count = 1
     agent.body.available_actions = ["wait", "move", "stop"]
+    agent.body.get_state = AsyncMock(return_value={})
     return agent
 
 

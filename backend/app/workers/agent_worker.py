@@ -44,6 +44,7 @@ class AgentWorker(BaseWorker):
         try:
             raw_payload = await self._agent.body.get_state()
             result = await self._graph.ainvoke({
+                "creature_id":       self._creature_id,
                 "raw_payload":       raw_payload,
                 "messages":          [],
                 "tick":              self._agent.memory.tick_count,

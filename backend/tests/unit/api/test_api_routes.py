@@ -13,7 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.api.deps import get_supabase, get_redis, get_settings
+from app.api.deps import get_supabase, get_redis, get_settings, get_agent
 
 
 FAKE_USER_ID = str(uuid4())
@@ -143,8 +143,17 @@ class TestAgentRoutes:
             "reasoning": "I saw a mouse.",
         }
 
-        # 2. Tell FastAPI to use our mock graph instead of the real one
+        # Mock the agent with tick_count > 0 so _hydrate_if_empty is skipped.
+        # Without this, the real agent (tick_count=0) would trigger hydrate_agent,
+        # which would call mock_db on agent_tick_history and hit a KeyError since
+        # mock_db returns FAKE_ROW (a microlog row without a "perception" key).
+        mock_agent = MagicMock()
+        mock_agent.memory.tick_count = 1
+        mock_agent.body.available_actions = ["wait", "move"]
+
+        # 2. Tell FastAPI to use our mock graph / agent instead of the real ones
         client.app.dependency_overrides[get_graph] = lambda: mock_graph
+        client.app.dependency_overrides[get_agent] = lambda: mock_agent
 
         # 3. Send the payload
         payload = {
@@ -153,8 +162,9 @@ class TestAgentRoutes:
         }
         resp = client.post("/api/v1/agent/tick", json=payload)
 
-        # 4. Clean up the override so it doesn't affect other tests
+        # 4. Clean up the overrides so they don't affect other tests
         client.app.dependency_overrides.pop(get_graph, None)
+        client.app.dependency_overrides.pop(get_agent, None)
 
         # 5. Assert the response
         assert resp.status_code == 200

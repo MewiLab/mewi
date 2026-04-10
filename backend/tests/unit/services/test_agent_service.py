@@ -172,6 +172,78 @@ class TestRunTick:
                 background_tasks=MagicMock(),
             )
 
+    async def test_passes_creature_id_in_graph_state(self, svc, mock_graph):
+        """creature_id must be forwarded into the graph state so nodes can do DB recall."""
+        await svc.run_tick(
+            creature_id=FAKE_CREATURE_ID,
+            payload={},
+            background_tasks=MagicMock(),
+        )
+        payload = mock_graph.ainvoke.call_args.args[0]
+        assert payload["creature_id"] == FAKE_CREATURE_ID
+
+    async def test_hydrates_from_db_when_memory_empty(
+        self, settings, mock_redis, mock_graph, mock_supabase
+    ):
+        """Cold start (tick_count == 0) with supabase available → hydrate_agent called."""
+        empty_agent = MagicMock()
+        empty_agent.memory.tick_count = 0
+        empty_agent.body.available_actions = ["wait"]
+        svc = AgentService(
+            redis=mock_redis,
+            settings=settings,
+            agent=empty_agent,
+            graph=mock_graph,
+            supabase=mock_supabase,
+        )
+        with patch(
+            "app.services.agent_service.hydrate_agent", new_callable=AsyncMock
+        ) as mock_hydrate:
+            await svc.run_tick(
+                creature_id=FAKE_CREATURE_ID,
+                payload={},
+                background_tasks=MagicMock(),
+            )
+        mock_hydrate.assert_called_once_with(
+            empty_agent, mock_supabase, mock_redis, creature_id=FAKE_CREATURE_ID
+        )
+
+    async def test_skips_hydration_when_memory_populated(self, svc):
+        """tick_count > 0 → no DB round-trip, no matter what."""
+        with patch(
+            "app.services.agent_service.hydrate_agent", new_callable=AsyncMock
+        ) as mock_hydrate:
+            await svc.run_tick(
+                creature_id=FAKE_CREATURE_ID,
+                payload={},
+                background_tasks=MagicMock(),
+            )
+        mock_hydrate.assert_not_called()
+
+    async def test_skips_hydration_without_supabase(
+        self, settings, mock_redis, mock_graph
+    ):
+        """No supabase configured → hydrate_agent must never be called."""
+        empty_agent = MagicMock()
+        empty_agent.memory.tick_count = 0
+        empty_agent.body.available_actions = ["wait"]
+        svc = AgentService(
+            redis=mock_redis,
+            settings=settings,
+            agent=empty_agent,
+            graph=mock_graph,
+            supabase=None,
+        )
+        with patch(
+            "app.services.agent_service.hydrate_agent", new_callable=AsyncMock
+        ) as mock_hydrate:
+            await svc.run_tick(
+                creature_id=FAKE_CREATURE_ID,
+                payload={},
+                background_tasks=MagicMock(),
+            )
+        mock_hydrate.assert_not_called()
+
     async def test_skips_persist_when_no_supabase(
         self, settings, mock_redis, mock_agent, mock_graph, mock_background_tasks
     ):
