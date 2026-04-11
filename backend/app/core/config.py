@@ -18,7 +18,8 @@ class Settings(BaseSettings):
 
     # ── Supabase ──────────────────────────────────────────────
     supabase_url: str
-    supabase_key: str
+    supabase_publishable_key: str
+    supabase_secret_key: str
     supabase_timeout: float = 10.0  # seconds
     
     # ── Redis ─────────────────────────────────────────────────
@@ -32,6 +33,9 @@ class Settings(BaseSettings):
     # ── App ───────────────────────────────────────────────────
     debug: bool = False
     agent_status_ttl: int = 300  # seconds
+    
+    # ── App ───────────────────────────────────────────────────
+    unity_bridge_url: str = "http://localhost:8080"
     
 
 

@@ -18,9 +18,13 @@ logger = logging.getLogger(__name__)
 
 def create_supabase(settings: Settings) -> Client:
     options = ClientOptions(
-        headers={"apikey": settings.supabase_key},
         postgrest_client_timeout=settings.supabase_timeout,
+        storage_client_timeout=settings.supabase_timeout,
     )
-    client = create_client(settings.supabase_url, settings.supabase_key, options=options)
-    logger.info("Supabase client created")
+    client = create_client(
+        settings.supabase_url, 
+        settings.supabase_secret_key, 
+        options=options
+    )
+    logger.info("Supabase client created with Service Role privileges")
     return client

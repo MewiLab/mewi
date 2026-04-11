@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "text": "光復聖誕樹下的燈光閃爍，但我只感到一片冷漠。",
+    "lbs_context": "光復聖誕樹",
+    "ground_truth": {
+      "valence": -0.5,
+      "arousal": 0.6
+    },
+    "routing_label": "Cloud"
+  }
+]

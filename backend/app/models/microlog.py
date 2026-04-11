@@ -26,7 +26,6 @@ class MicrologCreate(BaseModel):
 # ── Internal (enriched before DB write) ──────────────────────
 class MicrologInDB(MicrologCreate):
     embedding: list[float] | None = None
-    reply: str | None = None
 
 
 # ── Outgoing (returned to client) ────────────────────────────
@@ -39,7 +38,6 @@ class MicrologRead(BaseModel):
     image_url: str | None = None
     video_url: str | None = None
     voice_url: str | None = None
-    reply: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -47,6 +45,5 @@ class MicrologRead(BaseModel):
 
 # ── Partial update ───────────────────────────────────────────
 class MicrologUpdate(BaseModel):
-    reply: str | None = None
     valence: float | None = None
     arousal: float | None = None

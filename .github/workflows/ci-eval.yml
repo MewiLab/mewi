@@ -1,0 +1,62 @@
+# .github/workflows/ci-eval.yml
+# ──────────────────────────────────────────────────────────────
+# Runs ONLY when files in agents/ change AND land on main.
+# Needs AWS credentials (S3 dataset download + result upload).
+# Costs money (OpenAI calls inside eval).
+# ──────────────────────────────────────────────────────────────
+name: Agent Eval
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/agents/**"
+      - "backend/evals/**"
+      - "backend/app/services/agent*.py"
+      - "backend/app/workers/**"
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ap-southeast-2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: uv sync --frozen
+
+      - name: Download eval dataset from S3
+        run: |
+          aws s3 cp \
+            s3://mewi-eval-dataset-v0/smoke.json \
+            ./backend/evals/backend/datasets/smoke.json
+
+      - name: Run agent eval
+        working-directory: ./backend
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: uv run python evals/run_eval.py --eval_type backend
+
+      - name: Upload results to S3
+        if: always()
+        run: |
+          aws s3 cp \
+            ./backend/evals/backend/results/ \
+            s3://mewi-eval-result-v0/runs/${{ github.sha }}/ \
+            --recursive

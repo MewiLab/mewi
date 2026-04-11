@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Any
 from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
@@ -68,3 +69,8 @@ last_interaction
 territory_id
 -  Cats in the same zone meet more often?
 """
+
+
+class CreatureThinkRequest(BaseModel):
+    creature_id: str
+    snapshot: dict[str, Any]
