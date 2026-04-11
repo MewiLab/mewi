@@ -1,38 +1,109 @@
 using UnityEngine;
 
+/// <summary>
+/// Manual keyboard driver for all CreatureMotor intents.
+/// Attach to the same GameObject as CreatureBlackboard (AI Core).
+///
+/// ── Key Map ──────────────────────────────────────────────
+///  Locomotion
+///    I  →  idle
+///    W  →  wander
+///    F  →  flee        (threat simulated 5 m in front)
+///    N  →  investigate (uses closestPlayer if assigned)
+///
+///  Reflex (timed — auto-expires after 1 s)
+///    Space  →  flinch
+///
+///  Scripted actions (one-shot, motor clears on Mode end)
+///    E  →  eat
+///    R  →  drink
+///    T  →  sit
+///    L  →  lie
+///    Z  →  sleep
+///    G  →  groom
+///    S  →  smell
+///    A  →  alert
+///    V  →  vocalize
+///
+///  Terminal
+///    Backspace  →  die
+/// ──────────────────────────────────────────────────────────
+/// </summary>
 public class AnimalControllerTest : MonoBehaviour
 {
     [Header("References")]
-    private CreatureBlackboard _board;
-    public Transform testTarget;
+    public Transform testTarget;          // optional: used as closestPlayer for 'investigate'
+
+    [Header("Flee Sim")]
+    [Tooltip("Distance in front of the creature to place the fake threat")]
+    public float fakeTheatDistance = 5f;
+
+    CreatureBlackboard _board;
 
     void Start()
     {
         _board = GetComponent<CreatureBlackboard>();
+        if (_board == null)
+            Debug.LogError("[MotorTest] No CreatureBlackboard on this GameObject.");
+
+        Debug.Log("[MotorTest] Ready. See key map in AnimalControllerTest header comment.");
     }
 
     void Update()
     {
-        // Press 'T' to test moving to a specific target
-        if (Input.GetKeyDown(KeyCode.Z))
+        if (_board == null) return;
+
+        // ── Locomotion ──────────────────────────────────────────────
+        if (Input.GetKeyDown(KeyCode.I))
+            Send("idle");
+
+        if (Input.GetKeyDown(KeyCode.W))
+            Send("wander");
+
+        if (Input.GetKeyDown(KeyCode.F))
         {
-            Debug.Log("[Tester] Sending 'go_to' intent to Blackboard...");
-            // We pass the target's position as the DirectionHint
-            _board.SetTacticalCurrent("go_to", testTarget.position);
+            // Simulate a threat directly in front of the creature
+            Vector3 fakeThreat = transform.position + transform.forward * fakeTheatDistance;
+            Debug.Log($"[MotorTest] flee ← fake threat at {fakeThreat}");
+            _board.SetTacticalCurrent("flee", fakeThreat);
         }
 
-        // Press 'W' to test the random wander logic
-        if (Input.GetKeyDown(KeyCode.X))
+        if (Input.GetKeyDown(KeyCode.N))
         {
-            Debug.Log("[Tester] Sending 'wander' intent to Blackboard...");
-            _board.SetTacticalCurrent("wander");
+            if (testTarget != null)
+                _board.closestPlayer = testTarget;
+            Send("investigate");
         }
-        
-        // Press 'S' to test stopping
-        if (Input.GetKeyDown(KeyCode.C))
+
+        // ── Reflex (auto-expires 1 s) ────────────────────────────────
+        if (Input.GetKeyDown(KeyCode.Space))
         {
-            Debug.Log("[Tester] Sending 'idle' intent to Blackboard...");
-            _board.SetTacticalCurrent("idle");
+            Debug.Log("[MotorTest] REFLEX → flinch (1 s)");
+            _board.SetReflexIntent("flinch", 1f);
         }
+
+        // ── Scripted actions ─────────────────────────────────────────
+        if (Input.GetKeyDown(KeyCode.E))  Send("eat");
+        if (Input.GetKeyDown(KeyCode.R))  Send("drink");
+        if (Input.GetKeyDown(KeyCode.T))  Send("sit");
+        if (Input.GetKeyDown(KeyCode.L))  Send("lie");
+        if (Input.GetKeyDown(KeyCode.Z))  Send("sleep");
+        if (Input.GetKeyDown(KeyCode.G))  Send("groom");
+        if (Input.GetKeyDown(KeyCode.S))  Send("smell");
+        if (Input.GetKeyDown(KeyCode.A))  Send("alert");
+        if (Input.GetKeyDown(KeyCode.V))  Send("vocalize");
+
+        // ── Terminal ─────────────────────────────────────────────────
+        if (Input.GetKeyDown(KeyCode.Backspace))
+        {
+            Debug.Log("[MotorTest] TERMINAL → die");
+            _board.SetTacticalCurrent("die");
+        }
+    }
+
+    void Send(string intent)
+    {
+        Debug.Log($"[MotorTest] tactical → {intent}");
+        _board.SetTacticalCurrent(intent);
     }
 }

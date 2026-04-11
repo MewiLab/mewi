@@ -159,7 +159,7 @@ public class CreatureBlackboard : MonoBehaviour
     /// </summary>
     public void ClearFrameFlags()
     {
-        sensorEvents.Clear();
+        //sensorEvents.Clear(); this will have bug move to perception layer for its own maintain
         hasGazeOverride       = false;
         playerApproachingFast = false;
     }

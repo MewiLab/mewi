@@ -52,6 +52,8 @@ public class CreaturePerception : MonoBehaviour
 
     void ScanEnvironment()
     {
+        _board.sensorEvents.Clear();
+
         int n = Physics.OverlapSphereNonAlloc(_self.position, scanRadius, _scanBuffer, scanLayers);
 
         Transform closestCreature = null;
