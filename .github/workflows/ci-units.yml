@@ -1,0 +1,31 @@
+# .github/workflows/ci-unit.yml
+# ──────────────────────────────────────────────────────────────
+# Runs on EVERY push & PR. Free, fast, no cloud credentials.
+# Tests only use mocks — no Supabase, no OpenAI, no AWS.
+# ──────────────────────────────────────────────────────────────
+name: Unit Tests
+
+on:
+  push:
+    branches: ["*"]       # every branch
+  pull_request:
+    branches: [main]      # PRs targeting main
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: uv sync --frozen
+
+      - name: Run unit tests
+        working-directory: ./backend
+        run: uv run pytest tests/unit -m "not paid" --tb=short -q

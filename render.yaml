@@ -1,0 +1,49 @@
+# render.yaml — Render Blueprint (Infrastructure as Code)
+# Docs: https://render.com/docs/blueprint-spec
+#
+# This deploys the backend in MINIMAL MODE:
+#   - No Supabase / Redis / LangGraph at startup
+#   - Only /health and POST /api/v1/intake are active
+#   - Perfect for Unity payload testing at zero cost
+#
+# To activate: push to GitHub, then connect this repo in the Render dashboard
+# (New → Blueprint → select repo → render.yaml is detected automatically).
+
+services:
+  - type: web
+    name: mewi-backend
+    runtime: docker
+    # Path is relative to the repo root where this file lives
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free           # Free tier: 750 hrs/month, spins down after 15 min idle
+    region: oregon       # or frankfurt — pick closest to your Unity dev machine
+    branch: main         # auto-deploy on every push to main
+
+    healthCheckPath: /health
+
+    envVars:
+      # ── Minimal mode: skip Supabase / Redis / agent startup ────────────────
+      - key: MINIMAL_MODE
+        value: "true"
+
+      # ── Logging: disable file logging (cloud reads stdout) ─────────────────
+      - key: LOG_FILE_PATH
+        value: ""
+      - key: LOG_LEVEL
+        value: "INFO"
+
+      # ── Supabase: required by Pydantic model; unused in minimal mode ────────
+      # Leave as placeholder strings — no real credentials needed here.
+      - key: SUPABASE_URL
+        value: "https://placeholder.supabase.co"
+      - key: SUPABASE_PUBLISHABLE_KEY
+        value: "placeholder-anon-key"
+      - key: SUPABASE_SECRET_KEY
+        value: "placeholder-secret-key"
+
+      # ── Optional: override if you want a specific LLM provider later ────────
+      # - key: LLM_PROVIDER
+      #   value: openai
+      # - key: LLM_API_KEY
+      #   sync: false   # set via Render dashboard → "Secret" env vars

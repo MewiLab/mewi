@@ -1,0 +1,42 @@
+# ──────────────────────────────────────────────────────────────
+# docker-compose.yml
+#
+# Two modes:
+#   Local dev:  `make dev`  → starts Redis here, app runs natively
+#   Deploy test: `make docker-up` → builds image + runs everything
+# ──────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Infrastructure (always needed) ──────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: mewi_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+  # ── Application Runtime ─────────────────────────────────────
+  mewi_agent_runtime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mewi_agent_runtime
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      # It's best practice to load environment variables this way
+      - .env 
+    depends_on:
+      redis:
+        # Ensures the backend doesn't try to connect before Redis is ready
+        condition: service_healthy
+volumes:
+  redis_data:

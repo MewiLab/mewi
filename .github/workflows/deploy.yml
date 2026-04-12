@@ -1,0 +1,60 @@
+# .github/workflows/deploy.yml
+# ──────────────────────────────────────────────────────────────────────────────
+# CI + Deploy pipeline
+#
+# Trigger: every push to `main`
+#
+# Jobs:
+#   1. test  — run unit tests (fast, no credentials, always free)
+#   2. deploy — if tests pass, trigger a Render deploy via deploy hook URL
+#
+# Setup required (one-time, in GitHub → Settings → Secrets and variables → Actions):
+#   Secret name : RENDER_DEPLOY_HOOK_URL
+#   Value       : the Deploy Hook URL from Render dashboard
+#                 (Service → Settings → Deploy Hook → copy URL)
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: CI / Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ── Job 1: Unit tests ───────────────────────────────────────────────────────
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: uv sync --frozen
+
+      - name: Run unit tests
+        working-directory: ./backend
+        run: uv run pytest tests/unit -m "not paid" --tb=short -q
+
+  # ── Job 2: Deploy to Render ─────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Render
+    needs: test          # only runs when tests pass
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Trigger Render deploy hook
+        # The deploy hook is a pre-authenticated POST URL — no body needed.
+        # Render will pull the latest main, rebuild the Docker image, and swap
+        # the running container with zero downtime.
+        run: |
+          curl --silent --fail --show-error \
+            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+        # curl exits non-zero on HTTP error (--fail), which fails the step
+        # and shows the response body (--show-error) for debugging.
