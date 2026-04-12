@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     unity_bridge_url: str = "http://localhost:8080"
     unity_transport: Literal["http", "proxy"] = "http" 
     
+    # AI provider keys — optional in minimal mode
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
+
     # Nested LLM Config
     llm: LLMSettings = LLMSettings()
     embedding: EmbeddingSettings = EmbeddingSettings()
