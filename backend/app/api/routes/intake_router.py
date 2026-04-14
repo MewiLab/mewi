@@ -4,13 +4,13 @@ Intake endpoint — receives Unity (UnityWebRequest) payloads for testing.
 Contract:
   POST /api/v1/intake
   Content-Type: application/json
-  Body: any JSON object
+  Body: { "test_string": "hello", "payload_data": { ... } }
 
-Response: 200 {"status": "received"}
+Response: 200 {"status": "success", "received_data": { ... }}
 
-The handler does NO business logic. It formats and logs the full request
-(headers, query-params, body) in a readable block so the cloud console
-(Render, Fly.io, etc.) shows exactly what Unity sent.
+The handler does NO business logic. It parses the body into IntakeTestPayload,
+logs the parsed contents, and echoes the data back so results are immediately
+visible in cURL / Postman and on the Render console.
 """
 
 import json
@@ -18,6 +18,7 @@ import logging
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["intake"])
@@ -30,6 +31,13 @@ _SKIP_HEADERS = {
 }
 
 
+class IntakeTestPayload(BaseModel):
+    """Flexible test payload for manual ingestion testing."""
+
+    test_string: str | None = None
+    payload_data: dict | None = None
+
+
 def _fmt_json(value: object) -> str:
     """Pretty-print any JSON-serialisable value; fall back to repr."""
     try:
@@ -39,16 +47,14 @@ def _fmt_json(value: object) -> str:
 
 
 @router.post("/intake")
-async def intake(request: Request) -> JSONResponse:
+async def intake(request: Request, payload: IntakeTestPayload) -> JSONResponse:
     """
-    Receive a Unity payload, log it verbosely, and return 200 OK.
+    Receive a test payload, log it verbosely, and echo it back.
 
-    Unity side (C#):
-        var req = new UnityWebRequest(url, "POST");
-        req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(jsonBody));
-        req.downloadHandler = new DownloadHandlerBuffer();
-        req.SetRequestHeader("Content-Type", "application/json");
-        await req.SendWebRequest();
+    Example cURL:
+        curl -X POST https://<host>/api/v1/intake \\
+             -H "Content-Type: application/json" \\
+             -d '{"test_string": "hello", "payload_data": {"key": "value"}}'
     """
     # ── Collect headers (skip low-value noise) ────────────────────────────────
     headers = {
@@ -60,12 +66,7 @@ async def intake(request: Request) -> JSONResponse:
     # ── Query params ──────────────────────────────────────────────────────────
     params = dict(request.query_params)
 
-    # ── Body — try JSON first, fall back to raw text ──────────────────────────
-    raw_bytes = await request.body()
-    try:
-        body: object = await request.json()
-    except Exception:
-        body = raw_bytes.decode("utf-8", errors="replace") or "<empty body>"
+    parsed = payload.model_dump()
 
     # ── Emit one readable log block ───────────────────────────────────────────
     logger.info(
@@ -78,13 +79,13 @@ async def intake(request: Request) -> JSONResponse:
         "╠══════════════════════════════════════════════════════\n"
         "║  QUERY PARAMS\n%s\n"
         "╠══════════════════════════════════════════════════════\n"
-        "║  BODY\n%s\n"
+        "║  PARSED PAYLOAD\n%s\n"
         "╚══════════════════════════════════════════════════════╝",
         request.method,
         request.url.path,
         _fmt_json(headers),
         _fmt_json(params) if params else "  (none)",
-        _fmt_json(body),
+        _fmt_json(parsed),
     )
 
-    return JSONResponse(content={"status": "received"})
+    return JSONResponse(content={"status": "success", "received_data": parsed})
