@@ -22,6 +22,45 @@ from app.main import create_app
 load_dotenv(override=True)  # .env values win over pytest-env fakes
 
 
+# ── Integration fixtures (real connections — needs .env + CONFIRM_PAID=1) ─────
+
+@pytest.fixture
+async def real_redis(real_settings):
+    """
+    Real async Redis client for integration tests.
+    Connects using credentials from .env via real_settings.
+    Closes the connection after the test completes.
+    """
+    client = aioredis.from_url(
+        f"redis://{real_settings.redis_host}:{real_settings.redis_port}",
+        db=real_settings.redis_db,
+        decode_responses=False,
+    )
+    yield client
+    await client.aclose()
+
+
+@pytest.fixture
+def real_settings():
+    """
+    Load real credentials from .env for integration / paid tests.
+    Only used when running `make test-integration CONFIRM_PAID=1`.
+    Skips automatically if any required env var is missing.
+    """
+    url = os.environ.get("SUPABASE_URL", "")
+    anon = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
+    secret = os.environ.get("SUPABASE_SECRET_KEY", "")
+    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    if not all([url, anon, secret]):
+        pytest.skip("real_settings requires SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY / SUPABASE_SECRET_KEY in .env")
+    return Settings(
+        supabase_url=url,
+        supabase_publishable_key=anon,
+        supabase_secret_key=secret,
+        openai_api_key=openai_key or "sk-fake",
+    )
+
+
 # ── Unit fixtures (no real connections) ───────────────────────────────────────
 
 @pytest.fixture
@@ -49,6 +88,11 @@ def mock_redis():
     client = AsyncMock()
     client.set = AsyncMock()
     client.get = AsyncMock(return_value=None)
+    # MemoryCache operations (load_ticks / push_tick / clear)
+    client.lrange = AsyncMock(return_value=[])
+    client.rpush = AsyncMock(return_value=1)
+    client.ltrim = AsyncMock()
+    client.delete = AsyncMock()
     return client
 
 
