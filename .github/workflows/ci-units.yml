@@ -7,9 +7,13 @@ name: Unit Tests
 
 on:
   push:
-    branches: ["*"]       # every branch
+    branches: ["*"]
+    paths:
+      - "backend/**"
   pull_request:
-    branches: [main]      # PRs targeting main
+    branches: [main]
+    paths:
+      - "backend/**"
 
 jobs:
   unit:
