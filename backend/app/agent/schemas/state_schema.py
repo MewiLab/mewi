@@ -59,5 +59,3 @@ class AgentGraphState(TypedDict):
     # Metadata 
     tick: int
     available_actions: list[str]
-    creature_id: str  # Passed from run_tick; available to graph nodes for DB recall
-    
