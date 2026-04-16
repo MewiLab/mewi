@@ -61,7 +61,8 @@ public class PeriodicMind : MonoBehaviour
     {
         while (_running)
         {
-            //yield return new WaitForSecondsRealtime(_config.mindTickInterval);
+            // we can cache the obejct
+            yield return new WaitForSecondsRealtime(_config.mindTickInterval);
             Think();
         }
     }
