@@ -47,7 +47,8 @@ class UnityClientProtocol(Protocol):
     async def close(self) -> None: ...
 
     async def send_action(self, action: str, hold: float = 0.3,
-                          x: float = 0, y: float = 0) -> dict[str, Any]: ...
+                          x: float = 0, y: float = 0,
+                          z: float = 0, target: str = "") -> dict[str, Any]: ...
 
     async def get_state(self) -> dict[str, Any]: ...
     async def get_world(self, name: str | None = None,
@@ -136,11 +137,24 @@ class HttpUnityClient:
         hold: float = 0.3,
         x: float = 0,
         y: float = 0,
+        z: float = 0,
+        target: str = "",
     ) -> dict[str, Any]:
-        payload: dict[str, Any] = {"action": action, "hold": hold}
+        payload: dict[str, Any] = {"action": action}
+
         if action == "move":
+            payload["hold"] = hold
             payload["x"] = x
             payload["y"] = y
+        elif action == "go_to":
+            payload["x"] = x
+            payload["y"] = y
+            payload["z"] = z
+        elif action == "follow":
+            payload["target"] = target
+        elif action not in ("wander", "stop", "wait"):
+            # Button action — needs hold duration
+            payload["hold"] = hold
 
         try:
             resp = await self._client.post(

@@ -301,6 +301,23 @@ public class CreatureMotor : MonoBehaviour
                     aiControl.SetTarget(_board.closestPlayer);
                 break;
 
+            // ── LLM-driven navigation (written by AgentMindBridge) ───────────
+
+            case "go_to":
+                if (defaultStance != null) animal.Stance = defaultStance;
+                SetSpeed(trotSpeedIndex);
+                aiControl.SetDestination(intent.DirectionHint);
+                break;
+
+            case "follow":
+                if (defaultStance != null) animal.Stance = defaultStance;
+                SetSpeed(trotSpeedIndex);
+                if (_board.followTarget != null)
+                    aiControl.SetTarget(_board.followTarget, true);
+                else
+                    Debug.LogWarning("[CreatureMotor] 'follow' intent fired but followTarget is null on blackboard.");
+                break;
+
             // ── Reflex ───────────────────────────────────────────────────────
 
             case "flinch":
@@ -385,6 +402,12 @@ public class CreatureMotor : MonoBehaviour
             case "investigate":
                 if (_board.closestPlayer != null)
                     aiControl.SetTarget(_board.closestPlayer);
+                break;
+
+            case "go_to":
+                // Once arrived, hand control back to Brain/Mind — don't stay frozen.
+                if (_hasArrived)
+                    _board.SetTacticalCurrent("idle");
                 break;
 
             // All action intents are one-shot — nothing to poll per frame.

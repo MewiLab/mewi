@@ -34,9 +34,9 @@ public class CreatureBlackboard : MonoBehaviour
         _tacticalIntent = IntentMessage.Create(intent, LayerSource.Tactical, -1f, directionHint);
     }
 
-    public void SetMindIntent(string intent)
+    public void SetMindIntent(string intent, Vector3 directionHint = default)
     {
-        _mindIntent = IntentMessage.Create(intent, LayerSource.Mind, -1f);
+        _mindIntent = IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint);
         LogEvent($"mind suggests: {intent}");
     }
 
@@ -121,6 +121,9 @@ public class CreatureBlackboard : MonoBehaviour
 
     [HideInInspector] public Transform closestPlayer;
     [HideInInspector] public float     closestPlayerDist = Mathf.Infinity;
+
+    /// <summary>Named target for the "follow" mind intent. Set by AgentMindBridge.</summary>
+    [HideInInspector] public Transform followTarget;
     [HideInInspector] public Vector3   lastHeardSoundDir;
     [HideInInspector] public float     lastHeardSoundTime = -999f;
     [HideInInspector] public bool      playerInSight;

@@ -12,6 +12,7 @@ public class CreatureController : MonoBehaviour
     PeriodicMind           _mind;
     CreatureMotor          _motor;
     CreatureAgent          _agent;
+    AgentMindBridge        _mindBridge;
 
     // Explicit dependency injection — we wire everything here so
     // initialization order is clear and testable without Unity magic.
@@ -24,17 +25,11 @@ public class CreatureController : MonoBehaviour
         _mind       = GetComponent<PeriodicMind>();
         _motor      = GetComponent<CreatureMotor>();
         _agent      = GetComponent<CreatureAgent>();
+        _mindBridge = GetComponent<AgentMindBridge>();
 
         if (config == null)
         {
             Debug.LogError("[CreatureController] No CreatureConfig assigned!");
-            enabled = false;
-            return;
-        }
-
-        if (_agent == null)
-        {
-            Debug.LogError("[CreatureAgent] No CreatureConfig assigned!");
             enabled = false;
             return;
         }
@@ -46,12 +41,13 @@ public class CreatureController : MonoBehaviour
             return;            
         }
 
-        if (_perception != null) _perception.Init(_board, config);
-        if (_reflex != null)     _reflex.Init(_board, config);
-        if (_brain != null)      _brain.Init(_board, config);
-        if (_mind != null)       _mind.Init(_board, config);
-        if (_motor != null)      _motor.Init(_board, config);
-        if (_agent != null)      _agent.Init(_board);
+        if (_perception != null)  _perception.Init(_board, config);
+        if (_reflex != null)      _reflex.Init(_board, config);
+        if (_brain != null)       _brain.Init(_board, config);
+        if (_mind != null)        _mind.Init(_board, config);
+        if (_motor != null)       _motor.Init(_board, config);
+        if (_agent != null)       _agent.Init(_board);
+        if (_mindBridge != null)  _mindBridge.Init();
     }
 
     void Start()
@@ -64,6 +60,7 @@ public class CreatureController : MonoBehaviour
         _board.ClearFrameFlags();
         _board.ScoreDrives();
 
+        if (_mindBridge != null) _mindBridge.Tick();
         if (_perception != null) _perception.Tick();
         if (_reflex != null)     _reflex.Tick();
         if (_brain != null)      _brain.Tick();

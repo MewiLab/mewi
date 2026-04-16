@@ -1,13 +1,16 @@
 // AgentBridge.cs — Attach to your cat GameObject in Unity
-// Receives HTTP commands from Python and fires them through the Malbers
-// MInputLink event system — exactly as if the player pressed a key.
+// Receives HTTP commands from the Python backend and routes them to either:
+//   • MAnimalAIControl + NavMesh  (go_to, follow, wander, stop)
+//   • MInputLink / MAnimal        (button presses, legacy axis)
 //
-// Python sends POST /action  {"action":"Sprint","hold":0.2}
-//                  GET /state  → JSON with current animal state
-//                  GET /actions → list of valid action names
-//
-// Movement is a special case: POST /action {"action":"move","x":0,"y":1}
-// sets MoveAxis directly on MInputLink so the animal walks/runs.
+// Endpoints:
+//   POST /action  {"action":"go_to","x":10,"y":0,"z":5}
+//   POST /action  {"action":"follow","target":"Player"}
+//   POST /action  {"action":"wander"}
+//   POST /action  {"action":"Sit","hold":2.0}        ← button, unchanged
+//   GET  /state   → JSON with animal + AI nav state
+//   GET  /actions → list of valid action names
+//   GET  /ping    → {"status":"ok"}
 
 using UnityEngine;
 using System.Net;
@@ -17,30 +20,47 @@ using System.IO;
 using System.Collections.Generic;
 using MalbersAnimations;
 using MalbersAnimations.Controller;
+using MalbersAnimations.Controller.AI;
 using MalbersAnimations.InputSystem;
 
 public class AgentBridge : MonoBehaviour
 {
     [Header("Settings")]
-    public int port = 8080;
+    public int  port       = 8080;
     public bool logActions = true;
 
     [Header("References (auto-found if empty)")]
-    public MAnimal   animal;
-    public MInputLink inputLink;
+    public MAnimal         animal;
+    public MInputLink      inputLink;
 
-    // ─── HTTP Listener ───────────────────────────────────────────────────────
-    private HttpListener  _listener;
-    private readonly object _lock = new object();
-    private Queue<string>  _pending = new Queue<string>();
+    [Header("AI Control (auto-found if empty)")]
+    public MAnimalAIControl aiControl;
 
-    // ─── State + actions list cached on the main thread ─────────────────────
+    [Header("Named Targets")]
+    public List<NamedTarget> namedTargets = new List<NamedTarget>();
+
+    [System.Serializable]
+    public class NamedTarget
+    {
+        public string    key;      // e.g. "Player", "FoodBowl", "HomeArea"
+        public Transform target;
+    }
+
+    // ─── Internal ─────────────────────────────────────────────────────────────
+    private Dictionary<string, Transform> _targetMap;
+
+    // ─── HTTP listener ────────────────────────────────────────────────────────
+    private HttpListener    _listener;
+    private readonly object _lock    = new object();
+    private Queue<string>   _pending = new Queue<string>();
+
+    // ─── State / actions JSON cached on main thread ───────────────────────────
     private volatile string _stateJson   = "{}";
-    private volatile string _actionsJson = "{\"actions\":[\"move\",\"stop\",\"wait\"]}";
+    private volatile string _actionsJson = "{\"actions\":[\"go_to\",\"follow\",\"wander\",\"stop\",\"wait\"]}";
 
-    // ─── Active move axis (persists until a stop/move overrides it) ──────────
+    // ─── Legacy move axis (persists until stop/move overrides it) ─────────────
     private Vector2 _moveAxis  = Vector2.zero;
-    private float   _moveTimer = 0f;     // seconds remaining for timed moves
+    private float   _moveTimer = 0f;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  DATA CLASSES
@@ -49,23 +69,34 @@ public class AgentBridge : MonoBehaviour
     [System.Serializable]
     private class ActionRequest
     {
-        public string action  = "";
-        public float  hold    = 0.3f;   // seconds to hold button (button actions)
-        public float  x       = 0f;     // horizontal axis  (move action)
-        public float  y       = 0f;     // forward/back axis (move action)
+        public string action = "";
+        public float  hold   = 0.3f;   // button hold duration
+        public float  x      = 0f;     // go_to world X  /  move axis X
+        public float  y      = 0f;     // go_to world Y  /  move axis forward
+        public float  z      = 0f;     // go_to world Z
+        public string target = "";     // follow: named target key
     }
 
     [System.Serializable]
     private class GameState
     {
+        // Position / orientation
         public float  posX, posY, posZ;
         public float  rotY;
+
+        // Malbers animal state
         public string activeState;
         public string activeStance;
         public bool   grounded;
         public float  speed;
         public bool   sprint;
         public float  moveX, moveY;
+
+        // AI navigation state (populated when MAnimalAIControl is present)
+        public bool   aiActive;
+        public bool   hasArrived;
+        public float  remainingDist;
+        public string currentTarget;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -74,15 +105,21 @@ public class AgentBridge : MonoBehaviour
 
     void Start()
     {
+        // Auto-find references if not wired in Inspector
         if (animal    == null) animal    = GetComponentInParent<MAnimal>();
-        if (inputLink == null) inputLink = GetComponentInParent<MInputLink>();
-        if (inputLink == null) inputLink = GetComponent<MInputLink>();
+        if (inputLink == null) inputLink = GetComponentInParent<MInputLink>() ?? GetComponent<MInputLink>();
+        if (aiControl == null) aiControl = GetComponentInParent<MAnimalAIControl>() ?? GetComponent<MAnimalAIControl>();
 
-        if (animal    == null) Debug.LogError("[AgentBridge] MAnimal not found!");
+        if (animal    == null) Debug.LogError  ("[AgentBridge] MAnimal not found!");
         if (inputLink == null) Debug.LogWarning("[AgentBridge] MInputLink not found — button actions disabled.");
+        if (aiControl == null) Debug.LogWarning("[AgentBridge] MAnimalAIControl not found — nav actions (go_to/follow/wander) disabled.");
 
-        // Allow Unity to keep running (and receiving HTTP commands) even when
-        // the Editor/Player window is not focused.
+        // Build target lookup (case-insensitive) from Inspector list
+        _targetMap = new Dictionary<string, Transform>(System.StringComparer.OrdinalIgnoreCase);
+        foreach (var nt in namedTargets)
+            if (nt.target != null)
+                _targetMap[nt.key] = nt.target;
+
         Application.runInBackground = true;
 
         CacheActions();
@@ -110,7 +147,7 @@ public class AgentBridge : MonoBehaviour
     {
         CacheState();
 
-        // Feed move axis every frame while timer is running
+        // Tick legacy move axis while its timer is active
         if (_moveTimer > 0f)
         {
             ApplyMoveAxis(_moveAxis);
@@ -130,7 +167,7 @@ public class AgentBridge : MonoBehaviour
         }
         if (raw != null)
         {
-            if (logActions) Debug.Log($"[AgentBridge] dequeued: {raw} | animal={animal != null} inputLink={inputLink != null}");
+            if (logActions) Debug.Log($"[AgentBridge] dispatch: {raw}");
             Dispatch(JsonUtility.FromJson<ActionRequest>(raw));
         }
     }
@@ -145,7 +182,7 @@ public class AgentBridge : MonoBehaviour
         {
             try   { HandleHttp(_listener.GetContext()); }
             catch (HttpListenerException) { break; }
-            catch (System.Exception e)   { Debug.LogError($"[AgentBridge] {e.Message}"); }
+            catch (System.Exception e)    { Debug.LogError($"[AgentBridge] listener error: {e.Message}"); }
         }
     }
 
@@ -167,7 +204,12 @@ public class AgentBridge : MonoBehaviour
                 break;
 
             case "/action":
-                if (req.HttpMethod != "POST") { resp.StatusCode = 405; Send(resp, "{\"error\":\"POST required\"}"); return; }
+                if (req.HttpMethod != "POST")
+                {
+                    resp.StatusCode = 405;
+                    Send(resp, "{\"error\":\"POST required\"}");
+                    return;
+                }
                 string body;
                 using (var sr = new StreamReader(req.InputStream)) body = sr.ReadToEnd();
                 lock (_lock) { _pending.Enqueue(body); }
@@ -204,52 +246,76 @@ public class AgentBridge : MonoBehaviour
 
     void Dispatch(ActionRequest req)
     {
-        if (req.action == "wait") return;
-
-        // ── Movement (axis-based, not a button) ──────────────────────────────
-        if (req.action == "move")
+        switch (req.action)
         {
-            _moveAxis  = new Vector2(req.x, req.y);
-            _moveTimer = req.hold > 0 ? req.hold : 0.3f;
-            ApplyMoveAxis(_moveAxis);
-            return;
-        }
+            // ── Intentional pause ────────────────────────────────────────────
+            case "wait":
+                return;
 
-        if (req.action == "stop")
-        {
-            _moveAxis  = Vector2.zero;
-            _moveTimer = 0f;
-            ApplyMoveAxis(Vector2.zero);
-            return;
-        }
+            // ── NavMesh navigation (high-level intent) ───────────────────────
+            case "go_to":
+                if (aiControl != null)
+                    aiControl.SetDestination(new Vector3(req.x, req.y, req.z));
+                else
+                    Debug.LogWarning("[AgentBridge] go_to: MAnimalAIControl not wired.");
+                break;
 
-        // ── Button inputs via MInputLink ─────────────────────────────────────
-        PressButton(req.action, req.hold > 0 ? req.hold : 0.3f);
+            case "follow":
+                if (aiControl == null)
+                    Debug.LogWarning("[AgentBridge] follow: MAnimalAIControl not wired.");
+                else if (_targetMap.TryGetValue(req.target, out var followTarget))
+                    aiControl.SetTarget(followTarget, true);
+                else
+                    Debug.LogWarning($"[AgentBridge] follow: unknown target '{req.target}'. Registered: {string.Join(", ", _targetMap.Keys)}");
+                break;
+
+            case "wander":
+                if (aiControl == null)
+                    Debug.LogWarning("[AgentBridge] wander: MAnimalAIControl not wired.");
+                else if (_targetMap.TryGetValue("HomeArea", out var homeArea))
+                    aiControl.SetTarget(homeArea, true);
+                else
+                    Debug.LogWarning("[AgentBridge] wander: 'HomeArea' not registered in namedTargets.");
+                break;
+
+            // ── Stop all movement ────────────────────────────────────────────
+            case "stop":
+                _moveAxis  = Vector2.zero;
+                _moveTimer = 0f;
+                ApplyMoveAxis(Vector2.zero);
+                if (aiControl != null) aiControl.Stop();
+                break;
+
+            // ── Legacy axis input (micro-adjustments only) ───────────────────
+            case "move":
+                _moveAxis  = new Vector2(req.x, req.y);
+                _moveTimer = req.hold > 0 ? req.hold : 0.3f;
+                ApplyMoveAxis(_moveAxis);
+                break;
+
+            // ── Button inputs via MInputLink ─────────────────────────────────
+            default:
+                PressButton(req.action, req.hold > 0 ? req.hold : 0.3f);
+                break;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  MOVE AXIS HELPER
-    //  Feeds the Vector2 into MInputLink so Malbers treats it as joystick input.
+    //  MOVE AXIS HELPER  (legacy)
     // ─────────────────────────────────────────────────────────────────────────
 
     void ApplyMoveAxis(Vector2 axis)
     {
-        // Drive the animal directly — MInputLink.MoveAxis is just a stored value
-        // and does not forward to the animal unless its own InputAction callbacks fire.
         var v = new Vector3(axis.x, 0f, axis.y);
         if (logActions && axis != Vector2.zero)
-            Debug.Log($"[AgentBridge] ApplyMoveAxis v={v} animal={animal != null} inputLink={inputLink != null}");
-        if (animal != null)
-            animal.SetInputAxis(v);
-        if (inputLink != null)
-            inputLink.MoveAxis = v;   // keep in sync so Malbers HUD / other listeners see it
+            Debug.Log($"[AgentBridge] ApplyMoveAxis v={v}");
+        if (animal    != null) animal.SetInputAxis(v);
+        if (inputLink != null) inputLink.MoveAxis = v;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     //  BUTTON PRESS HELPER
-    //
-    //  Fires OnInputDown → waits `hold` seconds → fires OnInputUp.
-    //  This matches exactly what Malbers expects from a physical key press.
+    //  Fires OnInputDown → waits hold seconds → fires OnInputUp.
     // ─────────────────────────────────────────────────────────────────────────
 
     void PressButton(string inputName, float hold)
@@ -267,11 +333,8 @@ public class AgentBridge : MonoBehaviour
             return;
         }
 
-        // Press
         btn.OnInputDown.Invoke();
         btn.OnInputChanged.Invoke(true);
-
-        // Release after hold duration
         StartCoroutine(ReleaseAfter(btn, hold));
     }
 
@@ -282,7 +345,6 @@ public class AgentBridge : MonoBehaviour
         btn.OnInputChanged.Invoke(false);
     }
 
-    // Search the current active map, then fall back to all maps
     MInputAction FindButton(string inputName)
     {
         if (inputLink.ActiveMActionMap != null)
@@ -290,8 +352,6 @@ public class AgentBridge : MonoBehaviour
             var b = inputLink.ActiveMActionMap.buttons.Find(x => x.name == inputName);
             if (b != null) return b;
         }
-
-        // Try every map in case the active map is wrong
         foreach (var map in inputLink.m_MapButtons)
         {
             var b = map.buttons.Find(x => x.name == inputName);
@@ -301,12 +361,13 @@ public class AgentBridge : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  ACTIONS CACHE  (built once on Start — button names are stable at runtime)
+    //  ACTIONS CACHE  (built once on Start)
     // ─────────────────────────────────────────────────────────────────────────
 
     void CacheActions()
     {
-        var names = new System.Collections.Generic.List<string> { "move", "stop", "wait" };
+        // Core actions always available — nav first so they appear prominently
+        var names = new List<string> { "go_to", "follow", "wander", "stop", "wait", "move" };
 
         if (inputLink != null)
         {
@@ -345,11 +406,19 @@ public class AgentBridge : MonoBehaviour
 
         if (animal != null)
         {
-            s.activeState  = animal.ActiveState  != null ? animal.ActiveState.name  : "none";
+            s.activeState  = animal.ActiveState != null ? animal.ActiveState.name : "none";
             s.activeStance = animal.ActiveStance.ToString();
             s.grounded     = animal.Grounded;
             s.speed        = animal.HorizontalSpeed;
             s.sprint       = animal.Sprint;
+        }
+
+        if (aiControl != null)
+        {
+            s.aiActive      = aiControl.Active;
+            s.hasArrived    = aiControl.HasArrived;
+            s.remainingDist = aiControl.RemainingDistance;
+            s.currentTarget = aiControl.Target != null ? aiControl.Target.name : "";
         }
 
         _stateJson = JsonUtility.ToJson(s);

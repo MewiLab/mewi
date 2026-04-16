@@ -77,13 +77,23 @@ class ActionManager:
                 hold=kwargs.get("hold", 0.15),
             )
 
-        if action == "stop":
-            return await self._execute_simple("stop")
+        if action == "go_to":
+            return await self._execute_nav_goto(
+                x=kwargs.get("x", 0.0),
+                y=kwargs.get("y", 0.0),
+                z=kwargs.get("z", 0.0),
+            )
 
-        if action == "wait":
-            return ActionResult(success=True, action="wait", detail="Intentional pause")
+        if action == "follow":
+            return await self._execute_nav_follow(target=kwargs.get("target", ""))
 
-        # Validate against registry
+        if action in ("wander", "stop", "wait"):
+            if action == "wait":
+                return ActionResult(success=True, action="wait", detail="Intentional pause")
+            data = await self._client.send_action(action)
+            return ActionResult(success=data.get("ok", False), action=action, raw_response=data)
+
+        # Validate button action against registry
         known = self._client.action_names
         if known and action not in known:
             return ActionResult(
@@ -154,5 +164,23 @@ class ActionManager:
             success=data.get("ok", False),
             action="move",
             detail=f"axis=({x:.2f}, {z:.2f})",
+            raw_response=data,
+        )
+
+    async def _execute_nav_goto(self, x: float, y: float, z: float) -> ActionResult:
+        data = await self._client.send_action("go_to", x=x, y=y, z=z)
+        return ActionResult(
+            success=data.get("ok", False),
+            action="go_to",
+            detail=f"dest=({x:.1f}, {y:.1f}, {z:.1f})",
+            raw_response=data,
+        )
+
+    async def _execute_nav_follow(self, target: str) -> ActionResult:
+        data = await self._client.send_action("follow", target=target)
+        return ActionResult(
+            success=data.get("ok", False),
+            action="follow",
+            detail=f"target={target}",
             raw_response=data,
         )
