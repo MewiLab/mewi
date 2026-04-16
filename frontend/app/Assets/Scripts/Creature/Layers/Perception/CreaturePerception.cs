@@ -19,9 +19,14 @@ public class CreaturePerception : MonoBehaviour
 
     [Header("Environment Scan")]
     [Tooltip("Assign Player, Animal, Enemy, and Item layers here.")]
-    public LayerMask scanLayers;         
+    public LayerMask scanLayers;
     public float     scanRadius = 1f; // Ensure this is large enough to cover sightRange
     readonly Collider[] _scanBuffer = new Collider[32];
+
+    [Header("Semantic Scan")]
+    [Tooltip("Assign only the 'Semantic' layer here — trigger colliders placed on scene objects.")]
+    public LayerMask semanticLayer;
+    readonly Collider[] _semanticBuffer = new Collider[32];
 
     // State for approach speed estimation for MULTIPLE creatures simultaneously
     readonly Dictionary<Transform, Vector3> _prevPositions  = new Dictionary<Transform, Vector3>();
@@ -120,6 +125,30 @@ public class CreaturePerception : MonoBehaviour
         _board.playerApproachingFast = closestCreature != null && _speedEstimates.GetValueOrDefault(closestCreature) > _config.fastApproachSpeed;
 
         CleanupOldPositions(seenThisFrame);
+
+        ScanSemanticZones();
+    }
+
+    void ScanSemanticZones()
+    {
+        int n = Physics.OverlapSphereNonAlloc(_self.position, scanRadius, _semanticBuffer, semanticLayer);
+        for (int i = 0; i < n; i++)
+        {
+            var zone = _semanticBuffer[i].GetComponent<SemanticZone>();
+            if (zone == null) continue;
+
+            float dist      = Vector3.Distance(_self.position, _semanticBuffer[i].transform.position);
+            float intensity = 1f - Mathf.Clamp01(dist / scanRadius);
+
+            _board.sensorEvents.Add(SensoryEvent.Create(
+                SensoryEvent.SenseType.NearbyObject,
+                _semanticBuffer[i].transform.position,
+                intensity,
+                _semanticBuffer[i].transform,
+                zone.label,
+                zone.category
+            ));
+        }
     }
 
     bool IsInSight(Vector3 toTarget, float dist)

@@ -60,7 +60,8 @@ public class CreatureAgent : MonoBehaviour
     [Serializable] class EntityData
     {
         public string type;      // SensoryEvent.SenseType as string
-        public string label;     // GameObject.name — key differentiator
+        public string label;     // human-readable name, e.g. "BP_House_2"
+        public string category;  // semantic class, e.g. "house", "lantern", "shelter"
         public float  intensity; // 0-1
         public float  px, py, pz;
     }
@@ -74,6 +75,7 @@ public class CreatureAgent : MonoBehaviour
             {
                 type      = evt.type.ToString(),
                 label     = evt.label,
+                category  = evt.category,
                 intensity = evt.intensity,
                 px        = evt.position.x,
                 py        = evt.position.y,
