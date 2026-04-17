@@ -29,8 +29,15 @@ def real_supabase(real_settings):
     """
     Real Supabase client (service role) for integration tests.
     Used to verify side-effects directly against the database.
+    Skips automatically if the Supabase host is unreachable (e.g. CI with no network access).
     """
-    return create_supabase(real_settings)
+    import httpx
+    client = create_supabase(real_settings)
+    try:
+        client.table("users").select("id").limit(1).execute()
+    except httpx.ConnectError as exc:
+        pytest.skip(f"Supabase unreachable (DNS/network): {exc}")
+    return client
 
 
 @pytest.fixture

@@ -802,7 +802,13 @@ def _make_paid_agent() -> tuple[CreatureAgent, MockUnityClient]:
 
 
 def _real_llm():
-    """Load the LLM configured in .env — the same one the app uses."""
+    """Load the LLM configured in .env — the same one the app uses.
+    Skips the calling test if no real API key is available.
+    """
+    import os
+    key = os.environ.get("OPENAI_API_KEY", "")
+    if not key or "fake" in key.lower():
+        pytest.skip("No real OPENAI_API_KEY — set it in .env to run LLM tests")
     from app.agent.llm_provider import create_llm_provider
     return create_llm_provider()
 
