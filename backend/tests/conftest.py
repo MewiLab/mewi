@@ -4,6 +4,7 @@ Shared test fixtures.
 - Unit fixtures (settings, mock_redis, mock_supabase): no real connections.
 - Integration fixtures (real_*): loads real credentials from .env.
   Only used when running `make test-integration CONFIRM_PAID=1`.
+  Note: the same .env is used for both integration and unit tests, so be careful not to include real credentials if you run unit tests without the CONFIRM_PAID flag! The mock_* fixtures are safe to use in unit tests without .env values, while the real_* fixtures will automatically skip if required .env values are missing.
 """
 
 import os
