@@ -1,9 +1,10 @@
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks
 
-from app.api.deps import RedisDep, SettingsDep, AgentDep, GraphDep
+from app.api.deps import RedisDep, SettingsDep, AgentDep, GraphDep, SupabaseDep
 from app.services.agent_service import AgentService
+from app.services.memory_service import persist_tick
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -29,29 +30,33 @@ async def agent_tick(
     payload: dict[str, Any],
     agent: AgentDep,
     graph: GraphDep,
+    supabase: SupabaseDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+    background_tasks: BackgroundTasks,
 ):
-    """
-    One tick of the agent's brain.
+    """Run one full agent tick."""
+    # Assuming the client passes the ID in the payload. Adjust this if it 
+    # lives on the agent object itself (e.g., agent.id)
+    creature_id = payload.get("user_id") or payload.get("creature_id")
+    
+    if not creature_id:
+        # Fallback or raise an HTTPException depending on your requirements
+        creature_id = "default_creature"
 
-    Unity POSTs the environment + creature snapshot.
-    The pre-compiled graph runs: perceive → remember → reason → act → reflect.
-    Returns the chosen action and reasoning.
-
-    This is the hot path — called every N seconds by Unity during gameplay.
-    The graph was compiled once at startup (in lifespan.py), not per request.
-    """
-    result = await graph.ainvoke({
-        "raw_payload": payload,
-        "messages": [],
-        "tick": agent.memory.tick_count,
-        "available_actions": agent.body.available_actions,
-        "perception": None,
-        "perception_error": None,
-        "memory_context": None,
-        "chosen_action": None,
-        "reasoning": None,
-        "action_result": None,
-    })
+    svc = AgentService(
+        redis=redis,
+        settings=settings,
+        agent=agent,
+        graph=graph,
+        supabase=supabase
+    )
+    
+    result = await svc.run_tick(
+        creature_id=creature_id,
+        payload=payload,
+        background_tasks=background_tasks
+    )
 
     return {
         "tick": result.get("tick"),

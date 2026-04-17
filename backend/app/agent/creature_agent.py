@@ -119,7 +119,6 @@ class CreatureAgent:
 
     async def disconnect(self) -> None:
         """Clean shutdown."""
-        await self.body.stop()
         await self.body.close()
 
 

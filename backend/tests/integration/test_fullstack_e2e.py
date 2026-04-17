@@ -31,7 +31,7 @@ class TestFullStackE2E:
     # ── Microlog: API → Supabase ──────────────────────────────
 
     async def test_post_microlog_persists_in_supabase(
-        self, real_client, real_supabase
+        self, real_client, real_supabase, test_user
     ):
         """
         User POSTs a microlog via the API.
@@ -141,7 +141,7 @@ class TestFullStackE2E:
     # ── Round-trip: API → Supabase + Redis together ───────────
 
     async def test_post_microlog_and_verify_both_stores(
-        self, real_client, real_supabase, real_redis
+        self, real_client, real_supabase, real_redis, test_user
     ):
         """
         The big one: POST a microlog, then verify:
