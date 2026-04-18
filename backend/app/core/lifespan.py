@@ -1,5 +1,4 @@
 import logging
-import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -37,12 +36,12 @@ async def lifespan(app: FastAPI):
     llm = create_llm_provider(settings.llm)
     app.state.graph = build_creature_graph(app.state.agent, llm).compile()
 
-    logger.info("Hydrating agent memory from last session…")
-    await hydrate_agent(
-        agent=app.state.agent,
-        supabase=app.state.supabase,
-        redis=app.state.redis,
-    )
+    # logger.info("Hydrating agent memory from last session…")
+    # await hydrate_agent(
+    #     agent=app.state.agent,
+    #     supabase=app.state.supabase,
+    #     redis=app.state.redis,
+    # )
     yield
 
     # Shutdown

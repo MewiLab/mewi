@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.workers.agent_tasks import run_agent_job
+from app.workers.agent_worker import run_agent_job
 
 
 FAKE_JOB_ID = "abc12345"
