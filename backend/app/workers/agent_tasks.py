@@ -5,45 +5,62 @@ Runs as a FastAPI BackgroundTask. All dependencies are passed explicitly
 so the worker is testable in isolation.
 """
 
-import asyncio
 import logging
 
 import redis.asyncio as aioredis
-from supabase import Client
 
+from app.agent.creature_agent import CreatureAgent
 from app.core.config import Settings
-from app.models.microlog import MicrologUpdate
-from app.repositories.microlog_repo import MicrologRepository
 from app.services.agent_service import AgentService
 
 logger = logging.getLogger(__name__)
 
 
-async def agent_thinking_task(
+async def run_agent_job(
     *,
-    creature_id: str,
-    snapshot: dict,
-    supabase: Client,
+    job_id: str,
+    payload: dict,
     redis: aioredis.Redis,
     settings: Settings,
+    graph,
+    agent: CreatureAgent,
 ) -> None:
     """
-    Agent thinking pipeline triggered by a Unity game-world snapshot.
+    Run one LangGraph tick and store the result via AgentService for Unity to poll.
 
-    TODO: Replace the stub with a real LLM / LangGraph call using snapshot.
+    Job lifecycle (managed by AgentService):
+      "pending"            — set by the router before this task starts
+      {"status":"done",…}  — written here on success
+      {"status":"error"}   — written here on failure; Unity aborts polling immediately
     """
-    agent_svc = AgentService(redis, settings)
+    svc = AgentService(redis, settings)
 
     try:
-        await agent_svc.set_status(creature_id, "thinking")
+        result = await graph.ainvoke({
+            "raw_payload": payload,
+            "messages": [],
+            "tick": agent.memory.tick_count,
+            "available_actions": agent.body.available_actions,
+            "perception": None,
+            "perception_error": None,
+            "memory_context": None,
+            "chosen_action": None,
+            "reasoning": None,
+            "action_result": None,
+        })
 
-        # ── Replace this block with LangGraph / LLM call ─────
-        #TODO
-        await asyncio.sleep(3)
-        # ──────────────────────────────────────────────────────
+        action_result = result.get("action_result") or {}
+        kwargs = action_result.get("kwargs") or {}
+
+        await svc.complete_job(job_id, {
+            "action": action_result.get("action", "wait"),
+            "x": float(kwargs.get("x", 0.0)),
+            "y": float(kwargs.get("y", 0.0)),
+            "z": float(kwargs.get("z", 0.0)),
+            "target": str(kwargs.get("target", "")),
+            "reasoning": result.get("reasoning", ""),
+        })
 
     except Exception:
-        logger.exception("Agent thinking failed for creature %s", creature_id)
-    finally:
-        # Always restore idle — prevents Unity cat from being stuck in "thinking"
-        await agent_svc.set_status(creature_id, "idle")
+        logger.exception("Agent job %s failed", job_id)
+        await svc.fail_job(job_id)

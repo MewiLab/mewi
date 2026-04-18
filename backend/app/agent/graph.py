@@ -116,23 +116,25 @@ def make_reason_node(agent: CreatureAgent, model: ChatOpenAI | None = None):
 
 
 def make_act_node(agent: CreatureAgent):
-    """Execute the chosen action through the body."""
+    """
+    Capture the chosen action for delivery via Redis polling.
 
-    async def act(state: AgentGraphState) -> dict[str, Any]:
+    The action is no longer sent directly to Unity here — the background
+    worker (agent_tasks.py) writes it to Redis and Unity polls for it.
+    """
+
+    def act(state: AgentGraphState) -> dict[str, Any]:
         chosen = state.get("chosen_action")
 
         if not chosen or chosen.get("action") == "wait":
             return {
-                "action_result": {"success": True, "action": "wait", "detail": "Intentional pause"},
+                "action_result": {"action": "wait", "kwargs": {}},
             }
-
-        result = await agent.act(chosen["action"], **chosen.get("kwargs", {}))
 
         return {
             "action_result": {
-                "success": result.success,
-                "action": result.action,
-                "detail": result.detail,
+                "action": chosen["action"],
+                "kwargs": chosen.get("kwargs", {}),
             },
         }
 
