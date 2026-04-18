@@ -49,6 +49,7 @@ def mock_redis():
     client = AsyncMock()
     client.set = AsyncMock()
     client.get = AsyncMock(return_value=None)
+    client.delete = AsyncMock()
     return client
 
 

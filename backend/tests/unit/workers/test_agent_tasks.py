@@ -1,63 +1,140 @@
 """
-Unit tests for the agent_thinking_task background worker.
+Unit tests for the run_agent_job background worker.
 
-All external calls (Redis, Supabase) are mocked.
-asyncio.sleep is patched to skip the 3-second delay.
+Redis and the LangGraph are mocked — no real connections or LLM calls.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+import json
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.workers.agent_tasks import agent_thinking_task
+from app.workers.agent_tasks import run_agent_job
 
 
-FAKE_CREATURE_ID = "creature-abc-123"
-FAKE_SNAPSHOT = {"location": "park", "mood": "curious", "nearby_humans": 2}
+FAKE_JOB_ID = "abc12345"
+FAKE_PAYLOAD = {"self": {"x": 0, "y": 0, "z": 0}, "mood": {"fear": 0.1}}
 
 
-class TestAgentThinkingTask:
-    @patch("app.workers.agent_tasks.asyncio.sleep", new_callable=AsyncMock)
-    async def test_sets_thinking_then_idle(self, mock_sleep, settings, mock_redis, mock_supabase):
-        await agent_thinking_task(
-            creature_id=FAKE_CREATURE_ID,
-            snapshot=FAKE_SNAPSHOT,
-            supabase=mock_supabase,
+def make_fake_agent():
+    agent = MagicMock()
+    agent.memory.tick_count = 5
+    agent.body.available_actions = ["wander", "sit", "follow"]
+    return agent
+
+
+def make_fake_graph(action="wander", kwargs=None):
+    graph = AsyncMock()
+    graph.ainvoke.return_value = {
+        "action_result": {"action": action, "kwargs": kwargs or {}},
+        "reasoning": "felt like wandering",
+    }
+    return graph
+
+
+class TestRunAgentJobSuccess:
+    async def test_invokes_graph_with_correct_state(self, settings, mock_redis):
+        agent = make_fake_agent()
+        graph = make_fake_graph()
+
+        await run_agent_job(
+            job_id=FAKE_JOB_ID,
+            payload=FAKE_PAYLOAD,
             redis=mock_redis,
             settings=settings,
+            graph=graph,
+            agent=agent,
         )
 
-        # Redis should have been called: thinking → idle
-        calls = mock_redis.set.call_args_list
-        assert len(calls) == 2
-        assert calls[0].args == (f"agent_status:{FAKE_CREATURE_ID}", "thinking")
-        assert calls[1].args == (f"agent_status:{FAKE_CREATURE_ID}", "idle")
+        call_kwargs = graph.ainvoke.call_args[0][0]
+        assert call_kwargs["raw_payload"] == FAKE_PAYLOAD
+        assert call_kwargs["tick"] == 5
+        assert call_kwargs["available_actions"] == ["wander", "sit", "follow"]
 
-    @patch("app.workers.agent_tasks.asyncio.sleep", new_callable=AsyncMock)
-    async def test_sleep_simulates_thinking(self, mock_sleep, settings, mock_redis, mock_supabase):
-        await agent_thinking_task(
-            creature_id=FAKE_CREATURE_ID,
-            snapshot=FAKE_SNAPSHOT,
-            supabase=mock_supabase,
+    async def test_writes_done_status_to_redis(self, settings, mock_redis):
+        await run_agent_job(
+            job_id=FAKE_JOB_ID,
+            payload=FAKE_PAYLOAD,
             redis=mock_redis,
             settings=settings,
+            graph=make_fake_graph("wander"),
+            agent=make_fake_agent(),
         )
 
-        mock_sleep.assert_awaited_once()
+        mock_redis.set.assert_called_once()
+        key, raw = mock_redis.set.call_args[0]
+        assert key == f"job:{FAKE_JOB_ID}"
+        stored = json.loads(raw)
+        assert stored["status"] == "done"
+        assert stored["action"] == "wander"
 
-    @patch("app.workers.agent_tasks.asyncio.sleep", new_callable=AsyncMock)
-    async def test_restores_idle_on_error(self, mock_sleep, settings, mock_redis, mock_supabase):
-        """Even if thinking raises, status must return to idle."""
-        mock_sleep.side_effect = RuntimeError("thinking exploded")
+    async def test_stores_go_to_kwargs_flat(self, settings, mock_redis):
+        graph = make_fake_graph("go_to", {"x": 10.0, "y": 0.0, "z": 5.0})
 
-        await agent_thinking_task(
-            creature_id=FAKE_CREATURE_ID,
-            snapshot=FAKE_SNAPSHOT,
-            supabase=mock_supabase,
+        await run_agent_job(
+            job_id=FAKE_JOB_ID,
+            payload=FAKE_PAYLOAD,
             redis=mock_redis,
             settings=settings,
+            graph=graph,
+            agent=make_fake_agent(),
         )
 
-        # Last Redis call must be idle (the finally block)
-        last_call = mock_redis.set.call_args_list[-1]
-        assert last_call.args[1] == "idle"
+        _, raw = mock_redis.set.call_args[0]
+        stored = json.loads(raw)
+        assert stored["action"] == "go_to"
+        assert stored["x"] == 10.0
+        assert stored["z"] == 5.0
+
+    async def test_stores_follow_target(self, settings, mock_redis):
+        graph = make_fake_graph("follow", {"target": "Player"})
+
+        await run_agent_job(
+            job_id=FAKE_JOB_ID,
+            payload=FAKE_PAYLOAD,
+            redis=mock_redis,
+            settings=settings,
+            graph=graph,
+            agent=make_fake_agent(),
+        )
+
+        _, raw = mock_redis.set.call_args[0]
+        stored = json.loads(raw)
+        assert stored["action"] == "follow"
+        assert stored["target"] == "Player"
+
+
+class TestRunAgentJobFailure:
+    async def test_writes_error_status_on_graph_exception(self, settings, mock_redis):
+        graph = AsyncMock()
+        graph.ainvoke.side_effect = RuntimeError("LLM timeout")
+
+        await run_agent_job(
+            job_id=FAKE_JOB_ID,
+            payload=FAKE_PAYLOAD,
+            redis=mock_redis,
+            settings=settings,
+            graph=graph,
+            agent=make_fake_agent(),
+        )
+
+        mock_redis.set.assert_called_once()
+        key, raw = mock_redis.set.call_args[0]
+        assert key == f"job:{FAKE_JOB_ID}"
+        stored = json.loads(raw)
+        assert stored["status"] == "error"
+
+    async def test_does_not_raise_on_exception(self, settings, mock_redis):
+        graph = AsyncMock()
+        graph.ainvoke.side_effect = ValueError("bad payload")
+
+        # Must not propagate — FastAPI BackgroundTask would swallow it anyway,
+        # but the explicit catch ensures we always write an error key.
+        await run_agent_job(
+            job_id=FAKE_JOB_ID,
+            payload=FAKE_PAYLOAD,
+            redis=mock_redis,
+            settings=settings,
+            graph=graph,
+            agent=make_fake_agent(),
+        )
