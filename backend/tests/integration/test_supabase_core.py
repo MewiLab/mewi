@@ -1,18 +1,7 @@
-"""
-Integration tests for the Supabase core submodule.
-
-Covers:
-  - Async client factory (create_supabase_async)
-  - SupabaseSchemaManager.initialize_db()
-  - SupabaseSchemaManager.adapt_unity_payload() [pure, no network]
-
-Marked @paid — only runs with `CONFIRM_PAID=1 make test-integration`.
-Requires real SUPABASE_URL / SUPABASE_SECRET_KEY in .env (loaded by conftest).
-
-asyncio_mode = "auto" (pyproject.toml), so no @pytest.mark.asyncio needed.
-"""
-
 import pytest
+import asyncio
+from httpx import Timeout
+from supabase._async.client import AsyncClient
 
 from app.core.config import Settings
 from app.core.supabase.client import create_supabase_async
@@ -111,10 +100,30 @@ class TestAdaptUnityPayload:
 @pytest.mark.paid
 async def test_unity_to_supabase_full_flow(real_settings):
     client = await create_supabase_async(real_settings)
+    
+    client.postgrest.timeout = 60
+    
     manager = SupabaseSchemaManager(client)
     
+    await manager.initialize_db()
+    
+    try:
+        await client.rpc("exec_sql", {"query": "NOTIFY pgrst, 'reload schema';"}).execute()
+    except Exception:
+        pass
+        
+    await asyncio.sleep(1.5)
+    
+    user_res = await client.table("users").select("id").limit(1).execute()
+    
+    if not user_res.data:
+        user_new = await client.table("users").insert({"aura": "test_user"}).execute()
+        target_user_id = user_new.data[0]["id"]
+    else:
+        target_user_id = user_res.data[0]["id"]
+
     raw_unity_data = {
-        "userId": "aef1d359-b099-4134-8fee-8554e9c7528f", 
+        "userId": target_user_id, 
         "posX": 10.5, 
         "posY": 0.0, 
         "posZ": -5.2
@@ -127,3 +136,4 @@ async def test_unity_to_supabase_full_flow(real_settings):
     
     assert len(result.data) == 1
     assert result.data[0]["pos_x"] == 10.5
+    assert result.data[0]["user_id"] == target_user_id
