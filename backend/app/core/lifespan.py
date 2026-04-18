@@ -8,6 +8,11 @@ from app.core.config import get_settings
 from app.core.logger import setup_logging
 from app.core.redis import create_redis, close_redis
 from app.core.supabase import create_supabase
+<<<<<<< HEAD
+=======
+from app.core.supabase.client import create_supabase_async
+from app.core.supabase.schema_manager import SupabaseSchemaManager
+>>>>>>> be33d97 (feat: implement modular supabase client, schema manager, and unity adapter)
 from app.agent.creature_agent import create_creature_agent
 from app.agent.llm_provider import create_llm_provider
 from app.agent.graph import build_creature_graph
@@ -23,6 +28,13 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Connecting to Supabase…")
     app.state.supabase = create_supabase(settings)
+<<<<<<< HEAD
+=======
+    if settings.env == "development":
+        logger.info("Development mode: applying database schema…")
+        _async_supabase = await create_supabase_async(settings)
+        await SupabaseSchemaManager(_async_supabase).initialize_db()
+>>>>>>> be33d97 (feat: implement modular supabase client, schema manager, and unity adapter)
     logger.info("Connecting to Redis…")
     app.state.redis = create_redis(settings)
     

@@ -3,6 +3,10 @@ from typing import Literal
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> be33d97 (feat: implement modular supabase client, schema manager, and unity adapter)
 class LLMSettings(BaseSettings):
     """
     All LLM config in one place. Switch provider with a single env var.
@@ -65,6 +69,12 @@ class Settings(BaseSettings):
     redis_port: int = 6379
     redis_db: int = 0
 
+<<<<<<< HEAD
+=======
+    # Environment
+    env: Literal["development", "production", "test"] = "production"
+
+>>>>>>> be33d97 (feat: implement modular supabase client, schema manager, and unity adapter)
     # System
     debug: bool = False
     agent_status_ttl: int = 300  
