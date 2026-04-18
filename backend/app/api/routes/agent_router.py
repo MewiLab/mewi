@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks
 
 from app.api.deps import RedisDep, SettingsDep, AgentDep, GraphDep
 from app.services.agent_service import AgentService
-from app.workers.agent_tasks import run_agent_job
+from app.workers.agent_worker import run_agent_job
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 

@@ -54,7 +54,7 @@ class AgentService:
         """
         raw = await self._redis.get(f"job:{job_id}")
 
-        if raw is None or raw == b"pending":
+        if raw is None or raw == "pending":
             return {"status": "pending"}
 
         data = json.loads(raw)

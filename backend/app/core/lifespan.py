@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,7 +12,6 @@ from app.agent.creature_agent import create_creature_agent
 from app.agent.llm_provider import create_llm_provider
 from app.agent.graph import build_creature_graph
 from app.services.memory_service import hydrate_agent
-
 logger = logging.getLogger(__name__)
 
 

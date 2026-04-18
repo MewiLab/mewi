@@ -46,6 +46,25 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+<<<<<<< HEAD
 
+=======
+  # ── Application Runtime ─────────────────────────────────────
+  mewi_agent_runtime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mewi_agent_runtime
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      # It's best practice to load environment variables this way
+      - .env 
+    depends_on:
+      redis:
+        # Ensures the backend doesn't try to connect before Redis is ready
+        condition: service_healthy
+>>>>>>> ca436bce27cd1b3b821ada000ac6e99d9821540d
 volumes:
   redis_data:

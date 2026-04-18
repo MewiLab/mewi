@@ -1,13 +1,14 @@
+import json
 import logging
 from typing import Any, Literal
 
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, END
 
 from app.agent.schemas.state_schema import AgentGraphState
 from app.agent.creature_agent import CreatureAgent
 from app.agent.schemas.perception_schema import PerceptionError
+from app.agent.llm_provider import LLMProvider
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -16,8 +17,6 @@ logger = logging.getLogger(__name__)
 # ─── Node definitions ────────────────────────────────────────────────────────
 # Each function returns a factory that closes over the agent instance.
 # This keeps nodes testable (pass a mock agent) and stateless (no globals).
-
-
 def make_perceive_node(agent: CreatureAgent):
     """Process raw Unity payload through the eye."""
 
@@ -52,66 +51,60 @@ def make_remember_node(agent: CreatureAgent):
     return remember
 
 
-def make_reason_node(agent: CreatureAgent, model: ChatOpenAI | None = None):
+def make_reason_node(agent: CreatureAgent, llm: LLMProvider):
     """
     The LLM decision node — the only node that calls an LLM.
-
+    Receives an LLMProvider — doesn't know or care which backend it is.
     Reads perception + memory, produces a chosen_action.
     """
-    if model is None:
-        settings = get_settings()
-        model = ChatOpenAI(
-            api_key=settings.openai_api_key,
-            model="gpt-4.1",
-            temperature=0,
-        )
-
-    def reason(state: AgentGraphState) -> dict[str, Any]:
+    async def reason(state: AgentGraphState) -> dict[str, Any]:
         perception = state.get("perception", {})
         memory_ctx = state.get("memory_context", {})
-        actions = state.get("available_actions", [])
+        actions    = state.get("available_actions", [])
 
         system_prompt = (
             "You are the brain of a cat navigating a 3D environment. "
             "Based on what you perceive and remember, choose ONE action to take. "
-            "Respond with JSON only: {\"action\": \"<name>\", \"kwargs\": {}, \"reasoning\": \"<why>\"}\n\n"
-            f"Available actions: {actions}\n"
+            "Respond with ONLY a JSON object — no extra text:\n"
+            "  {\"action\": \"<name>\", \"kwargs\": {}, \"reasoning\": \"<why>\"}\n\n"
+            f"Available actions: {actions}\n\n"
+            "For the 'move' action kwargs must be:\n"
+            "  x: float  (-1 = strafe left,  0 = straight,  1 = strafe right)\n"
+            "  y: float  (-1 = backward,      0 = stop,      1 = forward)\n"
+            "  hold: float  (seconds to keep moving, default 0.3)\n"
+            "Example move: {\"action\": \"move\", \"kwargs\": {\"x\": 0, \"y\": 1, \"hold\": 0.4}, \"reasoning\": \"...\"}\n"
+            "For button actions (Sprint, Jump, Attack1 …) kwargs may include hold: float.\n"
         )
-
         user_content = (
             f"Current perception:\n{perception}\n\n"
             f"Recent memory:\n{memory_ctx}\n"
         )
 
-        response = model.invoke([
+        response = await llm.ainvoke([
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_content),
         ])
 
-        # Parse the LLM's response
         try:
-            import json
             text = response.content.strip()
-            # Strip markdown fences if present
             if text.startswith("```"):
                 text = text.split("\n", 1)[1].rsplit("```", 1)[0]
             decision = json.loads(text)
         except (json.JSONDecodeError, IndexError):
             logger.warning("LLM returned unparseable response: %s", response.content)
-            decision = {"action": "wait", "kwargs": {}, "reasoning": "Failed to parse LLM output"}
+            decision = {
+                "action": "wait", "kwargs": {}, 
+                "reasoning": "Failed to parse LLM output"
+            }
 
         return {
             "chosen_action": {
-                "action": decision.get("action", "wait"),
-                "kwargs": decision.get("kwargs", {}),
+                "action": decision.get("action", "wait"), 
+                "kwargs": decision.get("kwargs", {})
             },
             "reasoning": decision.get("reasoning", ""),
-            "messages": [
-                HumanMessage(content=user_content),
-                response,
-            ],
+            "messages": [HumanMessage(content=user_content), response],
         }
-
     return reason
 
 
@@ -168,22 +161,16 @@ def make_reflect_node(agent: CreatureAgent):
 
 def route_after_perceive(state: AgentGraphState) -> Literal["remember", "act"]:
     """If perception failed, skip reasoning and just wait."""
-    if state.get("perception_error"):
-        return "act"  # act node will see no chosen_action and emit "wait"
-    return "remember"
-
+    return "act" if state.get("perception_error") else "remember"  # act node will see no chosen_action and emit "wait"
 
 def route_after_reason(state: AgentGraphState) -> Literal["act", "__end__"]:
     """If the LLM chose 'wait', we can skip execution."""
-    chosen = state.get("chosen_action", {})
-    if chosen.get("action") == "wait":
-        return END
-    return "act"
+    return END if state.get("chosen_action", {}).get("action") == "wait" else "act"
 
 
 def build_creature_graph(
     agent: CreatureAgent,
-    model: ChatOpenAI | None = None,
+    llm: LLMProvider, 
 ) -> StateGraph:
     """
     Build the LangGraph for one tick of creature behavior.
@@ -197,15 +184,12 @@ def build_creature_graph(
     The agent is NOT stored in graph state.  It's captured by closures
     in the node functions.  Graph state is purely data (serializable).
     """
-
     graph = StateGraph(AgentGraphState)
-
     graph.add_node("perceive", make_perceive_node(agent))
     graph.add_node("remember", make_remember_node(agent))
-    graph.add_node("reason"  , make_reason_node(agent, model))
+    graph.add_node("reason"  , make_reason_node(agent, llm))
     graph.add_node("act"     , make_act_node(agent))
     graph.add_node("reflect" , make_reflect_node(agent))
-
 
     graph.set_entry_point("perceive")
     graph.add_conditional_edges("perceive", route_after_perceive)
