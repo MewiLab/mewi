@@ -65,12 +65,9 @@ class Settings(BaseSettings):
     redis_port: int = 6379
     redis_db: int = 0
 
-<<<<<<< HEAD
-=======
     # Environment
     env: Literal["development", "production", "test"] = "production"
 
->>>>>>> be33d97 (feat: implement modular supabase client, schema manager, and unity adapter)
     # System
     debug: bool = False
     agent_status_ttl: int = 300  
