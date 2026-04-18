@@ -3,10 +3,6 @@ from typing import Literal
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-<<<<<<< HEAD
-=======
-
->>>>>>> be33d97 (feat: implement modular supabase client, schema manager, and unity adapter)
 class LLMSettings(BaseSettings):
     """
     All LLM config in one place. Switch provider with a single env var.
