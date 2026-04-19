@@ -1,11 +1,9 @@
-import uuid
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter
 
 from app.api.deps import RedisDep, SettingsDep, AgentDep, GraphDep
 from app.services.agent_service import AgentService
-from app.workers.agent_worker import run_agent_job
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -26,51 +24,40 @@ async def get_agent_status(
     }
 
 
-@router.post("/tick", status_code=202)
+@router.post("/tick")
 async def agent_tick(
     payload: dict[str, Any],
-    background_tasks: BackgroundTasks,
-    redis: RedisDep,
-    settings: SettingsDep,
-    graph: GraphDep,
     agent: AgentDep,
+    graph: GraphDep,
 ):
     """
-    Enqueue one tick of the agent's brain and return immediately.
+    One tick of the agent's brain.
 
-    Unity POSTs the environment + creature snapshot and receives a job_id.
-    The LangGraph pipeline (perceive → remember → reason → act → reflect)
-    runs in the background via AgentService.
+    Unity POSTs the environment + creature snapshot.
+    The pre-compiled graph runs: perceive → remember → reason → act → reflect.
+    Returns the chosen action and reasoning.
 
-    Unity polls GET /agent/tick/result/{job_id} until status is "done" or "error".
+    This is the hot path — called every N seconds by Unity during gameplay.
+    The graph was compiled once at startup (in lifespan.py), not per request.
     """
-    job_id = uuid.uuid4().hex[:8]
-    svc = AgentService(redis, settings)
-    await svc.enqueue_job(job_id)
-    background_tasks.add_task(
-        run_agent_job,
-        job_id=job_id,
-        payload=payload,
-        redis=redis,
-        settings=settings,
-        graph=graph,
-        agent=agent,
-    )
-    return {"job_id": job_id}
+    result = await graph.ainvoke({
+        "raw_payload": payload,
+        "messages": [],
+        "tick": agent.memory.tick_count,
+        "available_actions": agent.body.available_actions,
+        "perception": None,
+        "perception_error": None,
+        "memory_context": None,
+        "chosen_action": None,
+        "reasoning": None,
+        "action_result": None,
+    })
 
-
-@router.get("/tick/result/{job_id}")
-async def get_tick_result(job_id: str, redis: RedisDep, settings: SettingsDep):
-    """
-    Poll for the result of a previously submitted tick job.
-
-    Returns:
-      {"status": "pending"}          — job is still running
-      {"status": "done", "action":…} — job complete; key consumed
-      {"status": "error"}            — backend pipeline failed; key consumed
-    """
-    svc = AgentService(redis, settings)
-    return await svc.consume_job(job_id)
+    return {
+        "tick": result.get("tick"),
+        "action": result.get("action_result"),
+        "reasoning": result.get("reasoning"),
+    }
 
 
 # ─── Debug / introspection endpoints ────────────────────────────────────────

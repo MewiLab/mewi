@@ -133,21 +133,19 @@ class SnapshotManager:
  
         creature_pos = getattr(creature, "position", None)
  
-        highest = ThreatLevel.SAFE
         for entity in nearby_entities:
             tag = getattr(entity, "tag", "").lower()
             if tag not in self.hostile_tags:
                 continue
-
+ 
             if creature_pos is not None:
                 dist = self._distance(creature_pos, entity.position)
                 if dist <= self.threat_radius:
-                    return ThreatLevel.DANGER  # can't get worse, exit early
-                highest = ThreatLevel.CAUTION
-            else:
-                highest = ThreatLevel.CAUTION
-
-        return highest
+                    return ThreatLevel.DANGER
+ 
+            return ThreatLevel.CAUTION
+ 
+        return ThreatLevel.SAFE
  
     @staticmethod
     def _distance(a, b) -> float:
