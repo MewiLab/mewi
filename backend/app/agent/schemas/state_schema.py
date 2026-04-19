@@ -30,8 +30,9 @@ class AgentGraphState(TypedDict):
     Flow:
       perceive → writes perception, raw_payload
       remember → writes memory_context
-      reason   → reads perception + memory, writes chosen_action, messages
-      act      → reads chosen_action, writes action_xqresult
+      reason   → reads perception + memory + goal + internal_state,
+                 writes chosen_action, messages
+      act      → reads chosen_action, writes action_result
       reflect  → reads action_result, writes messages
 
     Each node only touches its own channels.  No node reaches into
@@ -51,7 +52,7 @@ class AgentGraphState(TypedDict):
     reasoning: str | None                     # LLM's chain-of-thought (for debugging)
 
     # Action
-    action_result: dict[str, Any] | None      # {"success": bool, "action": str, "detail": str}
+    action_result: dict[str, Any] | None      # {"action": str, "kwargs": dict}
 
     # Message history (appended by reason + reflect)
     messages: Annotated[list, operator.add]
@@ -59,4 +60,7 @@ class AgentGraphState(TypedDict):
     # Metadata
     tick: int
     available_actions: list[str]
-    creature_id: str  # Passed from run_tick; available to graph nodes for DB recall
+
+    # Agent intent & internal state — inform the LLM's instinct-driven decisions
+    goal: str | None                          # Current high-level objective
+    internal_state: dict[str, Any] | None     # {"energy": float, "hunger": float, "mood": str}

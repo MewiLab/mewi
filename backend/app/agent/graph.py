@@ -1,5 +1,14 @@
+"""
+graph.py — LangGraph wiring for the MEW creature agent.
+
+Nodes are thin: each delegates real work to either the CreatureAgent
+(perception, memory, action) or the LLMProvider (reasoning).
+All prompt content lives in prompts.py.
+"""
+
 import json
 import logging
+import re
 from typing import Any, Literal
 
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -9,14 +18,59 @@ from app.agent.schemas.state_schema import AgentGraphState
 from app.agent.creature_agent import CreatureAgent
 from app.agent.schemas.perception_schema import PerceptionError
 from app.agent.llm_provider import LLMProvider
-from app.core.config import get_settings
+from app.agent.prompts import (
+    build_mew_system_prompt,
+    format_perception_for_prompt,
+    format_memory_for_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
+# Regex to strip markdown code fences the LLM sometimes wraps JSON in.
+_FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]+?)\s*```")
 
-# ─── Node definitions ────────────────────────────────────────────────────────
-# Each function returns a factory that closes over the agent instance.
-# This keeps nodes testable (pass a mock agent) and stateless (no globals).
+
+# ─── JSON extraction helper ──────────────────────────────────────────────────
+
+def _extract_json(text: str) -> dict:
+    """
+    Parse LLM output into a dict as robustly as possible.
+
+    Handles:
+    - Clean JSON
+    - JSON wrapped in ```json ... ``` or ``` ... ``` fences
+    - JSON embedded somewhere in a longer text response
+    """
+    text = text.strip()
+
+    # 1. Try clean parse first (fastest path)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # 2. Strip markdown fences
+    match = _FENCE_RE.search(text)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    # 3. Find the first {...} block anywhere in the text
+    start = text.find("{")
+    end   = text.rfind("}") + 1
+    if start != -1 and end > start:
+        try:
+            return json.loads(text[start:end])
+        except json.JSONDecodeError:
+            pass
+
+    raise ValueError(f"No valid JSON found in LLM response: {text[:200]}")
+
+
+# ─── Node factories ──────────────────────────────────────────────────────────
+
 def make_perceive_node(agent: CreatureAgent):
     """Process raw Unity payload through the eye."""
 
@@ -53,31 +107,30 @@ def make_remember_node(agent: CreatureAgent):
 
 def make_reason_node(agent: CreatureAgent, llm: LLMProvider):
     """
-    The LLM decision node — the only node that calls an LLM.
-    Receives an LLMProvider — doesn't know or care which backend it is.
-    Reads perception + memory, produces a chosen_action.
-    """
-    async def reason(state: AgentGraphState) -> dict[str, Any]:
-        perception = state.get("perception", {})
-        memory_ctx = state.get("memory_context", {})
-        actions    = state.get("available_actions", [])
+    The LLM decision node — the only node that calls an external model.
 
-        system_prompt = (
-            "You are the brain of a cat navigating a 3D environment. "
-            "Based on what you perceive and remember, choose ONE action to take. "
-            "Respond with ONLY a JSON object — no extra text:\n"
-            "  {\"action\": \"<name>\", \"kwargs\": {}, \"reasoning\": \"<why>\"}\n\n"
-            f"Available actions: {actions}\n\n"
-            "For the 'move' action kwargs must be:\n"
-            "  x: float  (-1 = strafe left,  0 = straight,  1 = strafe right)\n"
-            "  y: float  (-1 = backward,      0 = stop,      1 = forward)\n"
-            "  hold: float  (seconds to keep moving, default 0.3)\n"
-            "Example move: {\"action\": \"move\", \"kwargs\": {\"x\": 0, \"y\": 1, \"hold\": 0.4}, \"reasoning\": \"...\"}\n"
-            "For button actions (Sprint, Jump, Attack1 …) kwargs may include hold: float.\n"
+    Reads: perception, memory_context, goal, internal_state, available_actions
+    Writes: chosen_action, reasoning, messages
+    """
+
+    async def reason(state: AgentGraphState) -> dict[str, Any]:
+        perception    = state.get("perception") or {}
+        memory_ctx    = state.get("memory_context") or {}
+        goal          = state.get("goal") or "Explore and stay safe."
+        internal_state = state.get("internal_state") or {}
+
+        perception_text = format_perception_for_prompt(perception)
+        memory_text     = format_memory_for_prompt(memory_ctx)
+        action_desc     = agent.body.get_actions_for_prompt()
+
+        system_prompt = build_mew_system_prompt(
+            action_desc=action_desc,
+            goal=goal,
+            internal_state=internal_state,
         )
         user_content = (
-            f"Current perception:\n{perception}\n\n"
-            f"Recent memory:\n{memory_ctx}\n"
+            f"=== Current Perception ===\n{perception_text}\n\n"
+            f"=== Recent Memory ===\n{memory_text}"
         )
 
         response = await llm.ainvoke([
@@ -86,50 +139,51 @@ def make_reason_node(agent: CreatureAgent, llm: LLMProvider):
         ])
 
         try:
-            text = response.content.strip()
-            if text.startswith("```"):
-                text = text.split("\n", 1)[1].rsplit("```", 1)[0]
-            decision = json.loads(text)
-        except (json.JSONDecodeError, IndexError):
-            logger.warning("LLM returned unparseable response: %s", response.content)
+            decision = _extract_json(response.content)
+        except (ValueError, AttributeError):
+            logger.warning(
+                "LLM returned unparseable response (tick=%d): %.300s",
+                state.get("tick", 0),
+                getattr(response, "content", ""),
+            )
             decision = {
-                "action": "wait", "kwargs": {}, 
-                "reasoning": "Failed to parse LLM output"
+                "action": "wait",
+                "kwargs": {},
+                "reasoning": "Failed to parse LLM output — defaulting to wait.",
             }
 
         return {
             "chosen_action": {
-                "action": decision.get("action", "wait"), 
-                "kwargs": decision.get("kwargs", {})
+                "action": decision.get("action", "wait"),
+                "kwargs": decision.get("kwargs") or {},
             },
             "reasoning": decision.get("reasoning", ""),
             "messages": [HumanMessage(content=user_content), response],
         }
+
     return reason
 
 
 def make_act_node(agent: CreatureAgent):
-    """Execute the chosen action through the body."""
+    """
+    Capture the chosen action for delivery via Redis polling.
+
+    The action is not sent directly to Unity here — the worker writes
+    it to Redis and Unity polls for it.
+    """
 
     async def act(state: AgentGraphState) -> dict[str, Any]:
         chosen = state.get("chosen_action")
 
         if not chosen or chosen.get("action") == "wait":
-            return {
-                "action_result": {
-                    "success": True, 
-                    "action": "wait", 
-                    "detail": "Intentional pause"
-                },
-            }
+            return {"action_result": {"action": "wait", "kwargs": {}}}
 
         result = await agent.act(chosen["action"], **chosen.get("kwargs", {}))
 
         return {
             "action_result": {
-                "success": result.success,
-                "action": result.action,
-                "detail": result.detail,
+                "action": chosen["action"],
+                "kwargs": chosen.get("kwargs") or {},
             },
         }
 
@@ -137,22 +191,17 @@ def make_act_node(agent: CreatureAgent):
 
 
 def make_reflect_node(agent: CreatureAgent):
-    """Post-action reflection — assess outcome, update memory annotations."""
+    """Post-action reflection — assess outcome and update memory annotations."""
 
     def reflect(state: AgentGraphState) -> dict[str, Any]:
-        action_result = state.get("action_result", {})
-        reasoning = state.get("reasoning", "")
+        action_result = state.get("action_result") or {}
+        reasoning     = state.get("reasoning") or ""
 
         summary = (
             f"Action: {action_result.get('action', '?')} | "
-            f"Success: {action_result.get('success', '?')} | "
-            f"Reason: {reasoning}"
+            f"Reason: {reasoning[:120]}"
         )
-
         logger.info("Reflect: %s", summary)
-
-        # If the action discovered something, annotate location
-        # (future: more sophisticated reflection logic)
 
         return {
             "messages": [HumanMessage(content=f"[Reflection] {summary}")],
@@ -161,37 +210,39 @@ def make_reflect_node(agent: CreatureAgent):
     return reflect
 
 
+# ─── Routing ─────────────────────────────────────────────────────────────────
+
 def route_after_perceive(state: AgentGraphState) -> Literal["remember", "act"]:
-    """If perception failed, skip reasoning and just wait."""
-    return "act" if state.get("perception_error") else "remember"  # act node will see no chosen_action and emit "wait"
+    """Skip reasoning when perception failed — act node will emit 'wait'."""
+    return "act" if state.get("perception_error") else "remember"
 
-def route_after_reason(state: AgentGraphState) -> Literal["act", "__end__"]:
-    """If the LLM chose 'wait', we can skip execution."""
-    return END if state.get("chosen_action", {}).get("action") == "wait" else "act"
 
+def route_after_reason(state: AgentGraphState) -> Literal["act"]:
+    """Always pass through act so reflect always runs regardless of action."""
+    return "act"
+
+
+# ─── Graph builder ────────────────────────────────────────────────────────────
 
 def build_creature_graph(
     agent: CreatureAgent,
-    llm: LLMProvider, 
+    llm: LLMProvider,
 ) -> StateGraph:
     """
-    Build the LangGraph for one tick of creature behavior.
-    perceive -> remember -> reason -> act -> reflect
-             -> act                -> end
-    
-    With conditional branches:
-        perceive --[error]--> act (wait)
-        reason --[wait]--> END
+    Build the LangGraph for one tick of creature behavior:
+
+        perceive → remember → reason → act → reflect → END
+                 ↘ (error) ↗
 
     The agent is NOT stored in graph state.  It's captured by closures
-    in the node functions.  Graph state is purely data (serializable).
+    in the node functions so state is purely serializable data.
     """
     graph = StateGraph(AgentGraphState)
     graph.add_node("perceive", make_perceive_node(agent))
     graph.add_node("remember", make_remember_node(agent))
-    graph.add_node("reason"  , make_reason_node(agent, llm))
-    graph.add_node("act"     , make_act_node(agent))
-    graph.add_node("reflect" , make_reflect_node(agent))
+    graph.add_node("reason",   make_reason_node(agent, llm))
+    graph.add_node("act",      make_act_node(agent))
+    graph.add_node("reflect",  make_reflect_node(agent))
 
     graph.set_entry_point("perceive")
     graph.add_conditional_edges("perceive", route_after_perceive)

@@ -33,29 +33,34 @@ async def agent_tick(
     supabase: SupabaseDep,
     redis: RedisDep,
     settings: SettingsDep,
-    background_tasks: BackgroundTasks,
+    graph: GraphDep,
+    agent: AgentDep,
+    supabase: SupabaseDep,
 ):
-    """Run one full agent tick."""
-    # Assuming the client passes the ID in the payload. Adjust this if it 
-    # lives on the agent object itself (e.g., agent.id)
-    creature_id = payload.get("user_id") or payload.get("creature_id")
-    
-    if not creature_id:
-        # Fallback or raise an HTTPException depending on your requirements
-        creature_id = "default_creature"
+    """
+    Enqueue one tick of the agent's brain and return immediately.
 
-    svc = AgentService(
+    Unity POSTs the environment + creature snapshot and receives a job_id.
+    The LangGraph pipeline (perceive → remember → reason → act → reflect)
+    runs in the background via AgentService.
+
+    After the graph finishes, the worker asynchronously logs the decision
+    to the micrologs table (Contextual Retrieval format) without blocking
+    this response.
+
+    Unity polls GET /agent/tick/result/{job_id} until status is "done" or "error".
+    """
+    job_id = uuid.uuid4().hex[:8]
+    svc = AgentService(redis, settings)
+    await svc.enqueue_job(job_id)
+    background_tasks.add_task(
+        run_agent_job,
+        job_id=job_id,
+        payload=payload,
         redis=redis,
         settings=settings,
         agent=agent,
-        graph=graph,
-        supabase=supabase
-    )
-    
-    result = await svc.run_tick(
-        creature_id=creature_id,
-        payload=payload,
-        background_tasks=background_tasks
+        supabase=supabase,
     )
 
     return {

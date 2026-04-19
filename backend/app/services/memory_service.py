@@ -1,7 +1,7 @@
 """
 Memory service — composes MemoryRepository + MemoryCache.
 
-Two public functions wired into the app lifecycle:
+Public functions:
 
   persist_tick(agent, supabase, redis)
       Called as a FastAPI BackgroundTask after each /tick response.
@@ -11,12 +11,18 @@ Two public functions wired into the app lifecycle:
       Called once in lifespan.py at startup.
       Restores agent memory from Redis (hot path) or Supabase (cold path).
 
+  log_contextual_decision(action, reasoning, perception_ctx, supabase)
+      Stores the agent's decision in the micrologs table using Anthropic's
+      Contextual Retrieval framing: situational context is prepended to the
+      decision text so each log record is self-contained for future retrieval.
+      Fire-and-forget — never raises; errors are logged and swallowed.
+
 Architecture: Route → Service → Repo → Supabase
               Route → Service → Cache → Redis
-The agent package is never imported by repos or other services.
 """
 
 import logging
+import uuid
 from typing import Any, Dict
 
 import redis.asyncio as aioredis
@@ -143,3 +149,113 @@ async def hydrate_agent(
             )
 
     logger.info("Hydrated %d/%d ticks into agent memory for '%s'", restored, len(ticks), creature_id)
+
+
+# ── Contextual decision logging ─────────────────────────────────────────────
+# Implements Anthropic's Contextual Retrieval pattern:
+# each stored record prepends a situational context header so the log entry
+# is self-contained and meaningful when retrieved out of order.
+
+# Deterministic UUID namespace so creature log entries have stable user_ids.
+_CREATURE_NS = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+
+
+def _build_context_header(perception_ctx: dict) -> str:
+    """Build the situational context prefix (Contextual Retrieval framing)."""
+    if not perception_ctx:
+        return "[Context: no perception data]"
+
+    tick    = perception_ctx.get("tick", 0)
+    threat  = perception_ctx.get("threat_level", "safe").upper()
+    pos     = perception_ctx.get("creature", {}).get("position", {})
+    env     = perception_ctx.get("environment", {})
+    n_ents  = perception_ctx.get("entity_count", 0)
+
+    return (
+        f"[Context: tick={tick} | threat={threat} | "
+        f"pos=({pos.get('x', 0):.1f}, {pos.get('z', 0):.1f}) | "
+        f"weather={env.get('weather', 'unknown')} | "
+        f"entities_nearby={n_ents}]"
+    )
+
+
+def _estimate_valence(action: str, perception_ctx: dict) -> float:
+    """
+    Rough valence score for the micrologs row.
+    Negative = aversive / threat response; positive = approach / play.
+    """
+    threat = perception_ctx.get("threat_level", "safe")
+    if threat == "danger":
+        return -0.7
+    if action in ("Attack1",):
+        return -0.2
+    if action in ("Jump", "Sprint"):
+        return 0.4
+    if action == "wait":
+        return 0.0
+    return 0.15   # mild positive for exploratory movement
+
+
+def _estimate_arousal(action: str, perception_ctx: dict) -> float:
+    """
+    Rough arousal score: 0 = calm, 1 = maximally activated.
+    """
+    threat = perception_ctx.get("threat_level", "safe")
+    if threat == "danger":
+        return 0.9
+    if action in ("Sprint", "Attack1"):
+        return 0.7
+    if action == "Jump":
+        return 0.5
+    if action == "move":
+        return 0.3
+    return 0.1
+
+
+async def log_contextual_decision(
+    *,
+    action: str,
+    reasoning: str,
+    perception_ctx: dict,
+    supabase: Client,
+    creature_id: str = _DEFAULT_CREATURE_ID,
+) -> None:
+    """
+    Store the agent's LLM decision in the micrologs table.
+
+    Content layout (Contextual Retrieval pattern):
+        [Context: tick=N | threat=X | pos=(x,z) | …]
+
+        Action: <name>
+        Reasoning: <LLM's internal monologue>
+
+    A deterministic UUID derived from creature_id is used as user_id so the
+    system can write without a human user being present.
+
+    Errors are caught and logged — this must never block the Unity response.
+    """
+    try:
+        context_header = _build_context_header(perception_ctx)
+        content = (
+            f"{context_header}\n\n"
+            f"Action: {action}\n"
+            f"Reasoning: {reasoning}"
+        )
+
+        system_user_id = str(uuid.uuid5(_CREATURE_NS, creature_id))
+
+        supabase.table("micrologs").insert({
+            "user_id":  system_user_id,
+            "content":  content,
+            "valence":  _estimate_valence(action, perception_ctx),
+            "arousal":  _estimate_arousal(action, perception_ctx),
+        }).execute()
+
+        logger.debug(
+            "Logged contextual decision for '%s': action=%s",
+            creature_id, action,
+        )
+    except Exception:
+        logger.error(
+            "Failed to log contextual decision for '%s'", creature_id, exc_info=True
+        )
