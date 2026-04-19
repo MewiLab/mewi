@@ -8,12 +8,8 @@ name: Unit Tests
 on:
   push:
     branches: ["*"]
-    paths:
-      - "backend/**"
   pull_request:
     branches: [main]
-    paths:
-      - "backend/**"
 
 jobs:
   unit:
