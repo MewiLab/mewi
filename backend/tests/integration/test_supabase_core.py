@@ -8,17 +8,7 @@ from app.core.supabase.client import create_supabase_async
 from app.core.supabase.schema_manager import SupabaseSchemaManager
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
-
-@pytest.fixture
-def real_settings() -> Settings:
-    """
-    Load settings from the real .env.
-    conftest.py calls load_dotenv(override=True) at import time,
-    so real credentials are already in os.environ when this runs.
-    """
-    return Settings()
-
+# real_settings is provided by tests/integration/conftest.py
 
 # ── Test 1: Async client factory ──────────────────────────────────────────────
 

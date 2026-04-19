@@ -49,10 +49,21 @@ jobs:
       - name: Run integration tests
         working-directory: ./backend
         env:
+          # Supabase
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          # OpenAI — used only for the embedding service (text-embedding-3-small)
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          EMBEDDING_MODEL: text-embedding-3-small
+          # LLM — Ollama via the Primehub endpoint (config.py reads LLM_* prefix)
+          LLM_PROVIDER: ollama
+          LLM_MODEL: gemma3:27b
+          LLM_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
+          # Raw Ollama vars (used by langchain-ollama / direct clients)
+          OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
+          OLLAMA_MODEL: gemma3:27b
+          # Redis (spun up as a service above)
           REDIS_HOST: localhost
           REDIS_PORT: 6379
         run: uv run pytest tests/integration -m "paid" -s --tb=short

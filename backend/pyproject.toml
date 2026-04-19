@@ -28,6 +28,7 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
 testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
@@ -37,7 +38,15 @@ markers = [
 # no env here — pytest-env handles it below
 
 [tool.pytest_env]
-SUPABASE_URL = "http://fake-supabase"
-SUPABASE_PUBLISHABLE_KEY = "fake-anon-key"
-SUPABASE_SECRET_KEY = "fake-service-role-key"
-OPENAI_API_KEY = "fake-openai-key"
+# override = false: only set when the shell has NOT already provided a real value.
+# GitHub Actions secrets and local .env (via load_dotenv) always win over these fakes.
+SUPABASE_URL             = {value = "http://fake-supabase",       override = false}
+SUPABASE_PUBLISHABLE_KEY = {value = "fake-anon-key",              override = false}
+SUPABASE_SECRET_KEY      = {value = "fake-service-role-key",      override = false}
+OPENAI_API_KEY           = {value = "fake-openai-key",            override = false}
+LLM_PROVIDER             = {value = "ollama",                     override = false}
+LLM_MODEL                = {value = "gemma3:27b",                 override = false}
+LLM_BASE_URL             = {value = "http://localhost:11434",      override = false}
+OLLAMA_BASE_URL          = {value = "http://localhost:11434",      override = false}
+OLLAMA_MODEL             = {value = "gemma3:27b",                 override = false}
+EMBEDDING_MODEL          = {value = "text-embedding-3-small",     override = false}
