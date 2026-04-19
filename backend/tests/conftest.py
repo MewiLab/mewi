@@ -22,48 +22,95 @@ from app.main import create_app
 load_dotenv(override=True)  # .env values win over pytest-env fakes
 
 
-# ── Integration fixtures (real connections, require .env) ─────────────────────
+# ── Integration fixtures (real connections — needs .env + CONFIRM_PAID=1) ─────
 
 @pytest.fixture
-def real_settings():
-    """Load real settings from .env — all env vars must be set."""
-    return Settings()
+def real_supabase(real_settings):
+    """
+    Real Supabase client (service role) for integration tests.
+    Used to verify side-effects directly against the database.
+    Skips automatically if the Supabase host is unreachable (e.g. CI with no network access).
+    """
+    import httpx
+    client = create_supabase(real_settings)
+    try:
+        client.table("users").select("id").limit(1).execute()
+    except httpx.ConnectError as exc:
+        pytest.skip(f"Supabase unreachable (DNS/network): {exc}")
+    return client
+
+
+@pytest.fixture
+def test_user(real_supabase):
+    """
+    Ensure the E2E test user exists in Supabase before each test that writes micrologs.
+    Deletes the user (and cascades to micrologs) after the test completes.
+    """
+    user_id = "66af1b4c-4628-4544-addd-15c9a36b4707"
+    real_supabase.table("users").upsert({"id": user_id}).execute()
+    yield user_id
+    real_supabase.table("users").delete().eq("id", user_id).execute()
+
+
+@pytest.fixture
+async def real_client(real_settings, real_redis):
+    """
+    httpx.AsyncClient pointed at the real FastAPI app.
+    Overrides Redis, Supabase, and Settings dependencies with real connections.
+    """
+    from app.main import create_app
+    from app.api.deps import get_redis, get_supabase, get_settings
+
+    supabase = create_supabase(real_settings)
+    app = create_app()
+    app.dependency_overrides[get_redis]    = lambda: real_redis
+    app.dependency_overrides[get_supabase] = lambda: supabase
+    app.dependency_overrides[get_settings] = lambda: real_settings
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        yield client
+
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
 async def real_redis(real_settings):
-    """Create a real async Redis connection."""
-    from app.core.redis import create_redis, close_redis
-    redis = create_redis(real_settings)
-    yield redis
-    await close_redis(redis)
-
-
-@pytest.fixture
-def real_supabase(real_settings):
-    """Create a real Supabase client using the service role key."""
-    return create_supabase(real_settings)
-
-
-@pytest.fixture
-async def real_client(real_settings, real_redis, real_supabase):
-    """httpx AsyncClient wired to a fresh FastAPI app with real dependencies.
-
-    Uses dependency_overrides so the lifespan (which needs Unity/OpenAI)
-    never runs — only the route-layer deps are replaced.
     """
-    from app.main import create_app
-    from app.api.deps import get_settings, get_redis, get_supabase
+    Real async Redis client for integration tests.
+    Connects using credentials from .env via real_settings.
+    Closes the connection after the test completes.
+    """
+    client = aioredis.from_url(
+        f"redis://{real_settings.redis_host}:{real_settings.redis_port}",
+        db=real_settings.redis_db,
+        decode_responses=False,
+    )
+    yield client
+    await client.aclose()
 
-    app = create_app()
-    app.dependency_overrides[get_settings] = lambda: real_settings
-    app.dependency_overrides[get_redis] = lambda: real_redis
-    app.dependency_overrides[get_supabase] = lambda: real_supabase
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        yield client
-
-    app.dependency_overrides.clear()
+@pytest.fixture
+def real_settings():
+    """
+    Load real credentials from .env for integration / paid tests.
+    Only used when running `make test-integration CONFIRM_PAID=1`.
+    Skips automatically if any required env var is missing.
+    """
+    url = os.environ.get("SUPABASE_URL", "")
+    anon = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
+    secret = os.environ.get("SUPABASE_SECRET_KEY", "")
+    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    if not all([url, anon, secret]):
+        pytest.skip("real_settings requires SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY / SUPABASE_SECRET_KEY in .env")
+    return Settings(
+        supabase_url=url,
+        supabase_publishable_key=anon,
+        supabase_secret_key=secret,
+        openai_api_key=openai_key or "sk-fake",
+    )
 
 
 # ── Unit fixtures (no real connections) ───────────────────────────────────────
@@ -93,6 +140,11 @@ def mock_redis():
     client = AsyncMock()
     client.set = AsyncMock()
     client.get = AsyncMock(return_value=None)
+    # MemoryCache operations (load_ticks / push_tick / clear)
+    client.lrange = AsyncMock(return_value=[])
+    client.rpush = AsyncMock(return_value=1)
+    client.ltrim = AsyncMock()
+    client.delete = AsyncMock()
     return client
 
 
