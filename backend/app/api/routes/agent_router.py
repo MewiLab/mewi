@@ -3,7 +3,7 @@ from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks
 
-from app.api.deps import RedisDep, SettingsDep, AgentDep, GraphDep
+from app.api.deps import RedisDep, SettingsDep, AgentDep, GraphDep, SupabaseDep
 from app.services.agent_service import AgentService
 from app.workers.agent_worker import run_agent_job
 
@@ -34,6 +34,7 @@ async def agent_tick(
     settings: SettingsDep,
     graph: GraphDep,
     agent: AgentDep,
+    supabase: SupabaseDep,
 ):
     """
     Enqueue one tick of the agent's brain and return immediately.
@@ -41,6 +42,10 @@ async def agent_tick(
     Unity POSTs the environment + creature snapshot and receives a job_id.
     The LangGraph pipeline (perceive → remember → reason → act → reflect)
     runs in the background via AgentService.
+
+    After the graph finishes, the worker asynchronously logs the decision
+    to the micrologs table (Contextual Retrieval format) without blocking
+    this response.
 
     Unity polls GET /agent/tick/result/{job_id} until status is "done" or "error".
     """
@@ -55,6 +60,7 @@ async def agent_tick(
         settings=settings,
         graph=graph,
         agent=agent,
+        supabase=supabase,
     )
     return {"job_id": job_id}
 
