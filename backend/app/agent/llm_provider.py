@@ -40,7 +40,7 @@ def _make_langchain_provider(settings) -> LLMProvider:
     if settings.provider == "openai":
         from langchain_openai import ChatOpenAI
         kwargs: dict[str, Any] = dict(
-            api_key=settings.api_key,
+            api_key=settings.api_key or None,
             model=settings.model,
             temperature=settings.temperature,
             max_tokens=settings.max_tokens,
@@ -53,7 +53,7 @@ def _make_langchain_provider(settings) -> LLMProvider:
     if settings.provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
         return ChatAnthropic(
-            api_key=settings.api_key,
+            api_key=settings.api_key or None,
             model=settings.model,
             temperature=settings.temperature,
             max_tokens=settings.max_tokens,
@@ -64,12 +64,9 @@ def _make_langchain_provider(settings) -> LLMProvider:
     
 def _make_ollama_provider(settings) -> LLMProvider:
     from langchain_openai import ChatOpenAI
-    base_url = settings.base_url.rstrip("/")
-    if not base_url.endswith("/v1"):
-        base_url = base_url + "/v1"
     return ChatOpenAI(
         api_key="ollama",           # Ollama ignores the key but the field is required
-        base_url=base_url,
+        base_url=f"{settings.base_url}",
         model=settings.model,
         temperature=settings.temperature,
         max_tokens=settings.max_tokens,
@@ -79,7 +76,7 @@ def _make_ollama_provider(settings) -> LLMProvider:
 def _make_openrouter_provider(settings) -> LLMProvider:
     from langchain_openai import ChatOpenAI
     return ChatOpenAI(
-        api_key=settings.api_key,
+        api_key=settings.api_key or None,
         base_url=settings.base_url,
         model=settings.model,
         temperature=settings.temperature,
