@@ -46,6 +46,19 @@ def real_supabase(real_settings):
 
 
 @pytest.fixture
+def test_user(real_supabase):
+    """Ensure TEST_USER_ID exists in the users table (FK guard for micrologs).
+
+    Upserts before the test, deletes after — keeps Supabase clean.
+    """
+    user_id = "66af1b4c-4628-4544-addd-15c9a36b4707"
+    real_supabase.table("users").upsert({"id": user_id}).execute()
+    yield user_id
+    real_supabase.table("micrologs").delete().eq("user_id", user_id).execute()
+    real_supabase.table("users").delete().eq("id", user_id).execute()
+
+
+@pytest.fixture
 async def real_client(real_settings, real_redis, real_supabase):
     """httpx AsyncClient wired to a fresh FastAPI app with real dependencies.
 

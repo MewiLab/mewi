@@ -1,12 +1,14 @@
+# app/services/embedding_service.py
 """
-Embedding service — wraps the OpenAI embeddings API.
+Embedding service — wraps any OpenAI-compatible embeddings endpoint.
 
-Stateless: receives the API key from Settings so it's easy to swap
-providers or mock in tests.
+Follows the same provider pattern as LLMSettings:
+  EMBEDDING_PROVIDER=openai       (default)
+  EMBEDDING_PROVIDER=openrouter
+  EMBEDDING_MODEL=text-embedding-3-small
 """
 
 import logging
-
 from openai import OpenAI
 
 from app.core.config import Settings
@@ -14,21 +16,22 @@ from app.core.exceptions import EmbeddingError
 
 logger = logging.getLogger(__name__)
 
-MODEL = "text-embedding-3-small"
-
 
 class EmbeddingService:
     def __init__(self, settings: Settings):
-        self._client = OpenAI(api_key=settings.openai_api_key)
+        emb = settings.embedding            
+        self._model = emb.model
+        self._client = OpenAI(
+            api_key=emb.api_key or settings.llm.api_key or None,
+            base_url=emb.base_url or None,
+        )
 
     def embed_text(self, text: str) -> list[float]:
-        """Return the embedding vector for a single text string."""
         if not text or not text.strip():
             return []
-
         try:
-            response = self._client.embeddings.create(input=text, model=MODEL)
+            response = self._client.embeddings.create(input=text, model=self._model)
             return response.data[0].embedding
         except Exception as exc:
-            logger.error("OpenAI embedding error: %s", exc)
+            logger.error("Embedding error: %s", exc)
             raise EmbeddingError(str(exc)) from exc

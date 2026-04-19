@@ -56,6 +56,7 @@ class AgentGraphState(TypedDict):
     # Message history (appended by reason + reflect)
     messages: Annotated[list, operator.add]
 
-    # Metadata 
+    # Metadata
     tick: int
     available_actions: list[str]
+    creature_id: str  # Passed from run_tick; available to graph nodes for DB recall

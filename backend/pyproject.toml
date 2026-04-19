@@ -7,6 +7,8 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.135.2",
     "langchain>=1.2.13",
+    "langchain-anthropic>=1.4.0",
+    "langchain-ollama>=1.0.1",
     "langchain-openai>=1.1.12",
     "langgraph>=1.1.3",
     "litellm>=1.82.6",
@@ -28,11 +30,14 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
-markers = ["paid: marks tests that call paid external APIs"]
+markers = [
+    "paid: marks tests that call paid external APIs (real LLM)",
+    "live: marks tests that require a running Unity AgentBridge at localhost:8080",
+]
 # no env here — pytest-env handles it below
 
 [tool.pytest_env]
-SUPABASE_URL = "http://fake-supabase"
-SUPABASE_PUBLISHABLE_KEY = "fake-anon-key"
-SUPABASE_SECRET_KEY = "fake-service-role-key"
-OPENAI_API_KEY = "fake-openai-key"
+SUPABASE_URL = {value = "http://fake-supabase", skip_if_set = true}
+SUPABASE_PUBLISHABLE_KEY = {value = "fake-anon-key", skip_if_set = true}
+SUPABASE_SECRET_KEY = {value = "fake-service-role-key", skip_if_set = true}
+OPENAI_API_KEY = {value = "fake-openai-key", skip_if_set = true}
