@@ -22,6 +22,50 @@ from app.main import create_app
 load_dotenv(override=True)  # .env values win over pytest-env fakes
 
 
+# ── Integration fixtures (real connections, require .env) ─────────────────────
+
+@pytest.fixture
+def real_settings():
+    """Load real settings from .env — all env vars must be set."""
+    return Settings()
+
+
+@pytest.fixture
+async def real_redis(real_settings):
+    """Create a real async Redis connection."""
+    from app.core.redis import create_redis, close_redis
+    redis = create_redis(real_settings)
+    yield redis
+    await close_redis(redis)
+
+
+@pytest.fixture
+def real_supabase(real_settings):
+    """Create a real Supabase client using the service role key."""
+    return create_supabase(real_settings)
+
+
+@pytest.fixture
+async def real_client(real_settings, real_redis, real_supabase):
+    """httpx AsyncClient wired to a fresh FastAPI app with real dependencies.
+
+    Uses dependency_overrides so the lifespan (which needs Unity/OpenAI)
+    never runs — only the route-layer deps are replaced.
+    """
+    from app.main import create_app
+    from app.api.deps import get_settings, get_redis, get_supabase
+
+    app = create_app()
+    app.dependency_overrides[get_settings] = lambda: real_settings
+    app.dependency_overrides[get_redis] = lambda: real_redis
+    app.dependency_overrides[get_supabase] = lambda: real_supabase
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
 # ── Unit fixtures (no real connections) ───────────────────────────────────────
 
 @pytest.fixture
