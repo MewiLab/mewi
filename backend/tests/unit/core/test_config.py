@@ -4,11 +4,13 @@ from pydantic import ValidationError
 from app.core.config import Settings
 
 class TestSettings:
-    def test_valid_settings(self):
+    def test_valid_settings(self, monkeypatch):
+        monkeypatch.delenv("REDIS_HOST", raising=False)
         s = Settings(
             supabase_url="http://localhost",
-            supabase_publishable_key="key",  
-            supabase_secret_key="key",      
+            supabase_publishable_key="key",
+            supabase_secret_key="key",
+            _env_file=None,
         )
         assert s.redis_host == "localhost"
         assert s.redis_port == 6379
@@ -22,16 +24,16 @@ class TestSettings:
         monkeypatch.delenv("SUPABASE_URL", raising=False)
         with pytest.raises(ValidationError):
             Settings(
-                supabase_publishable_key="key",  
-                supabase_secret_key="key",       
+                supabase_publishable_key="key",
+                supabase_secret_key="key",
                 _env_file=None
             )
 
     def test_custom_redis_config(self):
         s = Settings(
             supabase_url="http://localhost",
-            supabase_publishable_key="key",  
-            supabase_secret_key="key",       
+            supabase_publishable_key="key",
+            supabase_secret_key="key",
             redis_host="redis.internal",
             redis_port=6380,
         )

@@ -32,7 +32,7 @@ async def real_redis(real_settings):
 class TestRedisReal:
     async def test_set_and_get_status(self, real_settings, real_redis):
         svc = AgentService(real_redis, real_settings)
-        await svc.set_status("test-integration-user", "thinking")
+        await svc._set_status("test-integration-user", "thinking")
         result = await svc.get_status("test-integration-user")
         assert result == "thinking"
 
@@ -43,6 +43,6 @@ class TestRedisReal:
 
     async def test_ttl_is_set(self, real_settings, real_redis):
         svc = AgentService(real_redis, real_settings)
-        await svc.set_status("test-ttl-user", "thinking")
+        await svc._set_status("test-ttl-user", "thinking")
         ttl = await real_redis.ttl("agent_status:test-ttl-user")
         assert 0 < ttl <= real_settings.agent_status_ttl

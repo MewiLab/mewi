@@ -1,140 +1,101 @@
 """
-Unit tests for the run_agent_job background worker.
+Unit tests for AgentWorker.
 
-Redis and the LangGraph are mocked — no real connections or LLM calls.
+Uses shared fixtures from tests/conftest.py:
+  settings, mock_redis, mock_supabase
 """
 
-import json
-from unittest.mock import AsyncMock, MagicMock
-
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
-from app.workers.agent_worker import run_agent_job
+from app.workers.agent_worker import AgentWorker
 
 
-FAKE_JOB_ID = "abc12345"
-FAKE_PAYLOAD = {"self": {"x": 0, "y": 0, "z": 0}, "mood": {"fear": 0.1}}
+FAKE_CREATURE_ID = "creature-abc-123"
+FAKE_GRAPH_RESULT = {
+    "tick": 1,
+    "action_result": {"success": True, "action": "wait", "detail": "pause"},
+    "reasoning": "nothing nearby",
+}
 
 
-def make_fake_agent():
+@pytest.fixture
+def mock_agent():
     agent = MagicMock()
-    agent.memory.tick_count = 5
-    agent.body.available_actions = ["wander", "sit", "follow"]
+    agent.memory.tick_count = 1
+    agent.body.available_actions = ["wait", "move", "stop"]
+    # get_state is awaited in _run_once — must be AsyncMock, not plain MagicMock
+    agent.body.get_state = AsyncMock(return_value={})
     return agent
 
 
-def make_fake_graph(action="wander", kwargs=None):
-    graph = AsyncMock()
-    graph.ainvoke.return_value = {
-        "action_result": {"action": action, "kwargs": kwargs or {}},
-        "reasoning": "felt like wandering",
-    }
+@pytest.fixture
+def mock_graph():
+    graph = MagicMock()
+    graph.ainvoke = AsyncMock(return_value=FAKE_GRAPH_RESULT)
     return graph
 
 
-class TestRunAgentJobSuccess:
-    async def test_invokes_graph_with_correct_state(self, settings, mock_redis):
-        agent = make_fake_agent()
-        graph = make_fake_graph()
-
-        await run_agent_job(
-            job_id=FAKE_JOB_ID,
-            payload=FAKE_PAYLOAD,
-            redis=mock_redis,
-            settings=settings,
-            graph=graph,
-            agent=agent,
-        )
-
-        call_kwargs = graph.ainvoke.call_args[0][0]
-        assert call_kwargs["raw_payload"] == FAKE_PAYLOAD
-        assert call_kwargs["tick"] == 5
-        assert call_kwargs["available_actions"] == ["wander", "sit", "follow"]
-
-    async def test_writes_done_status_to_redis(self, settings, mock_redis):
-        await run_agent_job(
-            job_id=FAKE_JOB_ID,
-            payload=FAKE_PAYLOAD,
-            redis=mock_redis,
-            settings=settings,
-            graph=make_fake_graph("wander"),
-            agent=make_fake_agent(),
-        )
-
-        mock_redis.set.assert_called_once()
-        key, raw = mock_redis.set.call_args[0]
-        assert key == f"job:{FAKE_JOB_ID}"
-        stored = json.loads(raw)
-        assert stored["status"] == "done"
-        assert stored["action"] == "wander"
-
-    async def test_stores_go_to_kwargs_flat(self, settings, mock_redis):
-        graph = make_fake_graph("go_to", {"x": 10.0, "y": 0.0, "z": 5.0})
-
-        await run_agent_job(
-            job_id=FAKE_JOB_ID,
-            payload=FAKE_PAYLOAD,
-            redis=mock_redis,
-            settings=settings,
-            graph=graph,
-            agent=make_fake_agent(),
-        )
-
-        _, raw = mock_redis.set.call_args[0]
-        stored = json.loads(raw)
-        assert stored["action"] == "go_to"
-        assert stored["x"] == 10.0
-        assert stored["z"] == 5.0
-
-    async def test_stores_follow_target(self, settings, mock_redis):
-        graph = make_fake_graph("follow", {"target": "Player"})
-
-        await run_agent_job(
-            job_id=FAKE_JOB_ID,
-            payload=FAKE_PAYLOAD,
-            redis=mock_redis,
-            settings=settings,
-            graph=graph,
-            agent=make_fake_agent(),
-        )
-
-        _, raw = mock_redis.set.call_args[0]
-        stored = json.loads(raw)
-        assert stored["action"] == "follow"
-        assert stored["target"] == "Player"
+@pytest.fixture
+def worker(settings, mock_redis, mock_supabase, mock_agent, mock_graph):
+    return AgentWorker(
+        creature_id=FAKE_CREATURE_ID,
+        agent=mock_agent,
+        graph=mock_graph,
+        redis=mock_redis,
+        supabase=mock_supabase,
+        settings=settings,
+        interval_seconds=10.0,
+    )
 
 
-class TestRunAgentJobFailure:
-    async def test_writes_error_status_on_graph_exception(self, settings, mock_redis):
-        graph = AsyncMock()
-        graph.ainvoke.side_effect = RuntimeError("LLM timeout")
+class TestAgentWorkerTick:
+    async def test_sets_thinking_then_idle(self, worker, mock_redis):
+        await worker._run_once()
 
-        await run_agent_job(
-            job_id=FAKE_JOB_ID,
-            payload=FAKE_PAYLOAD,
-            redis=mock_redis,
-            settings=settings,
-            graph=graph,
-            agent=make_fake_agent(),
-        )
+        statuses = [c.args[1] for c in mock_redis.set.call_args_list]
+        assert statuses[0] == "thinking"
+        assert statuses[-1] == "idle"
 
-        mock_redis.set.assert_called_once()
-        key, raw = mock_redis.set.call_args[0]
-        assert key == f"job:{FAKE_JOB_ID}"
-        stored = json.loads(raw)
-        assert stored["status"] == "error"
+    async def test_invokes_graph_with_agent_state(self, worker, mock_graph, mock_agent):
+        await worker._run_once()
 
-    async def test_does_not_raise_on_exception(self, settings, mock_redis):
-        graph = AsyncMock()
-        graph.ainvoke.side_effect = ValueError("bad payload")
+        payload = mock_graph.ainvoke.call_args.args[0]
+        assert payload["tick"] == mock_agent.memory.tick_count
+        assert payload["available_actions"] == mock_agent.body.available_actions
 
-        # Must not propagate — FastAPI BackgroundTask would swallow it anyway,
-        # but the explicit catch ensures we always write an error key.
-        await run_agent_job(
-            job_id=FAKE_JOB_ID,
-            payload=FAKE_PAYLOAD,
-            redis=mock_redis,
-            settings=settings,
-            graph=graph,
-            agent=make_fake_agent(),
-        )
+    async def test_restores_idle_on_graph_failure(self, worker, mock_graph, mock_redis):
+        """Graph crash must never leave creature stuck in 'thinking'."""
+        mock_graph.ainvoke.side_effect = RuntimeError("LLM timeout")
+
+        with pytest.raises(RuntimeError):
+            await worker._run_once()
+
+        last_status = mock_redis.set.call_args_list[-1].args[1]
+        assert last_status == "idle"
+
+    async def test_calls_persist_tick_after_success(self, worker, mock_supabase, mock_redis):
+        with patch("app.workers.agent_worker.persist_tick", new_callable=AsyncMock) as mock_persist:
+            await worker._run_once()
+        mock_persist.assert_awaited_once_with(worker._agent, mock_supabase, mock_redis)
+
+
+class TestAgentWorkerLifecycle:
+    async def test_stop_sets_running_false(self, worker):
+        await worker.stop()
+        assert worker._running is False
+
+    async def test_run_once_called_in_start_loop(self, worker):
+        call_count = 0
+
+        async def fake_run_once():
+            nonlocal call_count
+            call_count += 1
+            await worker.stop()
+
+        worker._run_once = fake_run_once
+
+        with patch("app.workers.base.asyncio.sleep", new_callable=AsyncMock):
+            await worker.start()
+
+        assert call_count == 1

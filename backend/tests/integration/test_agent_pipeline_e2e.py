@@ -31,7 +31,7 @@ class TestAgentPipelineE2E:
         assert data["status"] == "idle"
         assert data["is_thinking"] is False
 
-    async def test_create_microlog_returns_201(self, real_client):
+    async def test_create_microlog_returns_201(self, real_client, test_user):
         """POST a microlog — verify it persists and returns the created row."""
         payload = {
             "user_id": TEST_USER_ID,
@@ -46,7 +46,7 @@ class TestAgentPipelineE2E:
         assert data["content"] == payload["content"]
         assert data["id"] is not None
 
-    async def test_get_logs_returns_recent_entry(self, real_client):
+    async def test_get_logs_returns_recent_entry(self, real_client, test_user):
         """After creating a log, GET should return it."""
         # Create one first
         await real_client.post("/api/v1/micrologs/", json={
