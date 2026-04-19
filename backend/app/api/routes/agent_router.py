@@ -1,11 +1,10 @@
-import uuid
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks
 
 from app.api.deps import RedisDep, SettingsDep, AgentDep, GraphDep, SupabaseDep
 from app.services.agent_service import AgentService
-from app.workers.agent_worker import run_agent_job
+from app.services.memory_service import persist_tick
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -26,10 +25,12 @@ async def get_agent_status(
     }
 
 
-@router.post("/tick", status_code=202)
+@router.post("/tick")
 async def agent_tick(
     payload: dict[str, Any],
-    background_tasks: BackgroundTasks,
+    agent: AgentDep,
+    graph: GraphDep,
+    supabase: SupabaseDep,
     redis: RedisDep,
     settings: SettingsDep,
     graph: GraphDep,
@@ -58,25 +59,15 @@ async def agent_tick(
         payload=payload,
         redis=redis,
         settings=settings,
-        graph=graph,
         agent=agent,
         supabase=supabase,
     )
-    return {"job_id": job_id}
 
-
-@router.get("/tick/result/{job_id}")
-async def get_tick_result(job_id: str, redis: RedisDep, settings: SettingsDep):
-    """
-    Poll for the result of a previously submitted tick job.
-
-    Returns:
-      {"status": "pending"}          — job is still running
-      {"status": "done", "action":…} — job complete; key consumed
-      {"status": "error"}            — backend pipeline failed; key consumed
-    """
-    svc = AgentService(redis, settings)
-    return await svc.consume_job(job_id)
+    return {
+        "tick": result.get("tick"),
+        "action": result.get("action_result"),
+        "reasoning": result.get("reasoning"),
+    }
 
 
 # ─── Debug / introspection endpoints ────────────────────────────────────────

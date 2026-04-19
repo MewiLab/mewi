@@ -225,7 +225,8 @@ class TestRememberNode:
 class TestReasonNode:
     """make_reason_node — LLM decision, JSON parsing, fallback."""
 
-    def test_returns_chosen_action_from_llm(self):
+    @pytest.mark.asyncio
+    async def test_returns_chosen_action_from_llm(self):
         agent, _ = _make_agent()
         llm  = MockLLMProvider(action="Jump", kwargs={"hold": 0.3}, reasoning="looks fun")
         node = make_reason_node(agent, llm)
@@ -233,25 +234,27 @@ class TestReasonNode:
         state = {**_base_state(agent, _unity_payload()),
                  "perception": {"threat_level": "safe"},
                  "memory_context": {"memory_ticks": 0}}
-        out = node(state)
+        out = await node(state)
 
         assert out["chosen_action"]["action"] == "Jump"
         assert out["chosen_action"]["kwargs"]["hold"] == 0.3
         assert out["reasoning"] == "looks fun"
 
-    def test_malformed_llm_falls_back_to_wait(self):
+    @pytest.mark.asyncio
+    async def test_malformed_llm_falls_back_to_wait(self):
         agent, _ = _make_agent()
         node = make_reason_node(agent, MalformedLLMProvider())
 
         state = {**_base_state(agent, _unity_payload()),
                  "perception": {},
                  "memory_context": {}}
-        out = node(state)
+        out = await node(state)
 
         assert out["chosen_action"]["action"] == "wait"
         assert "failed" in out["reasoning"].lower()
 
-    def test_llm_code_fence_stripped(self):
+    @pytest.mark.asyncio
+    async def test_llm_code_fence_stripped(self):
         """LLMs often wrap JSON in ```json ... ``` — node must handle it."""
         agent, _ = _make_agent()
 
@@ -264,18 +267,19 @@ class TestReasonNode:
 
         node = make_reason_node(agent, FencedLLM())
         state = {**_base_state(agent, _unity_payload()), "perception": {}, "memory_context": {}}
-        out = node(state)
+        out = await node(state)
 
         assert out["chosen_action"]["action"] == "Sprint"
 
-    def test_messages_appended(self):
+    @pytest.mark.asyncio
+    async def test_messages_appended(self):
         agent, _ = _make_agent()
         llm  = MockLLMProvider(action="move")
         node = make_reason_node(agent, llm)
 
         state = {**_base_state(agent, _unity_payload()),
                  "perception": {}, "memory_context": {}}
-        out = node(state)
+        out = await node(state)
 
         assert len(out["messages"]) >= 2  # HumanMessage + AIMessage
 
@@ -798,9 +802,19 @@ def _make_paid_agent() -> tuple[CreatureAgent, MockUnityClient]:
 
 
 def _real_llm():
-    """Load the LLM configured in .env — the same one the app uses."""
+    """Load the LLM configured in .env — the same one the app uses.
+    Skips the calling test if no real API key is available.
+    """
+    from app.core.config import get_settings
+    llm_settings = get_settings().llm
+    key = llm_settings.api_key
+    if not key or "fake" in key.lower():
+        pytest.skip(
+            f"No real LLM API key for provider '{llm_settings.provider}' "
+            f"(set LLM_API_KEY in .env to run LLM tests)"
+        )
     from app.agent.llm_provider import create_llm_provider
-    return create_llm_provider()
+    return create_llm_provider(llm_settings)
 
 
 def _scenario_payload(

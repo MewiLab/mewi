@@ -7,12 +7,13 @@ No real Supabase, Redis, or OpenAI calls happen.
 
 from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
+from app.api.deps import get_graph
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.api.deps import get_supabase, get_redis, get_settings, get_agent, get_graph
+from app.api.deps import get_supabase, get_redis, get_settings, get_agent
 
 
 FAKE_USER_ID = str(uuid4())
@@ -50,39 +51,17 @@ def mock_db():
 
 @pytest.fixture
 def mock_redis_dep():
-    r = AsyncMock()
-    r.delete = AsyncMock()
-    return r
+    from unittest.mock import AsyncMock
+    return AsyncMock()
 
 
 @pytest.fixture
-def mock_agent_dep():
-    agent = MagicMock()
-    agent.memory.tick_count = 0
-    agent.body.available_actions = []
-    agent.body.is_connected = False
-    return agent
-
-
-@pytest.fixture
-def mock_graph_dep():
-    graph = AsyncMock()
-    graph.ainvoke.return_value = {
-        "action_result": {"action": "wander", "kwargs": {}},
-        "reasoning": "mock reasoning",
-    }
-    return graph
-
-
-@pytest.fixture
-def client(fake_settings, mock_db, mock_redis_dep, mock_agent_dep, mock_graph_dep):
-    """FastAPI TestClient with all external deps overridden — no real LLM/Redis/DB calls."""
+def client(fake_settings, mock_db, mock_redis_dep):
+    """FastAPI TestClient with all external deps overridden."""
     app = create_app()
     app.dependency_overrides[get_settings] = lambda: fake_settings
     app.dependency_overrides[get_supabase] = lambda: mock_db
     app.dependency_overrides[get_redis] = lambda: mock_redis_dep
-    app.dependency_overrides[get_agent] = lambda: mock_agent_dep
-    app.dependency_overrides[get_graph] = lambda: mock_graph_dep
     with TestClient(app, raise_server_exceptions=False) as c:
         yield c
     app.dependency_overrides.clear()
@@ -149,67 +128,59 @@ class TestAgentRoutes:
         assert data["is_thinking"] is False
 
     def test_get_status_returns_thinking(self, client, mock_redis_dep):
-        mock_redis_dep.get.return_value = "thinking"
+        mock_redis_dep.get.return_value = b"thinking"
         resp = client.get(f"/api/v1/agent/status/{FAKE_USER_ID}")
         data = resp.json()
         assert data["status"] == "thinking"
         assert data["is_thinking"] is True
 
-    def test_agent_tick_returns_202_with_job_id(self, client, mock_redis_dep):
-        payload = {"self": {"x": 0, "y": 0, "z": 0}, "mood": {"fear": 0.1}}
+    def test_agent_tick_returns_200_with_action(self, client):
+        # 1. Create a mock graph object with our fake ainvoke response
+        mock_graph = AsyncMock()
+        mock_graph.ainvoke.return_value = {
+            "tick": 1,
+            "action_result": {"success": True, "action": "move", "detail": "moving to target"},
+            "reasoning": "I saw a mouse.",
+        }
+
+        # Mock the agent with tick_count > 0 so _hydrate_if_empty is skipped.
+        # Without this, the real agent (tick_count=0) would trigger hydrate_agent,
+        # which would call mock_db on agent_tick_history and hit a KeyError since
+        # mock_db returns FAKE_ROW (a microlog row without a "perception" key).
+        mock_agent = MagicMock()
+        mock_agent.memory.tick_count = 1
+        mock_agent.body.available_actions = ["wait", "move"]
+
+        # 2. Tell FastAPI to use our mock graph / agent instead of the real ones
+        client.app.dependency_overrides[get_graph] = lambda: mock_graph
+        client.app.dependency_overrides[get_agent] = lambda: mock_agent
+
+        # 3. Send the payload
+        payload = {
+            "environment_snapshot": {},
+            "creature_snapshot": {}
+        }
         resp = client.post("/api/v1/agent/tick", json=payload)
 
-        assert resp.status_code == 202
+        # 4. Clean up the overrides so they don't affect other tests
+        client.app.dependency_overrides.pop(get_graph, None)
+        client.app.dependency_overrides.pop(get_agent, None)
+
+        # 5. Assert the response
+        assert resp.status_code == 200
         data = resp.json()
-        assert "job_id" in data
-        assert len(data["job_id"]) == 8  # uuid4().hex[:8]
-
-    def test_agent_tick_enqueues_pending_job_in_redis(self, client, mock_redis_dep):
-        payload = {"self": {"x": 0, "y": 0, "z": 0}}
-        client.post("/api/v1/agent/tick", json=payload)
-
-        # First set call must be the pending enqueue; the background worker
-        # may add more set calls (complete_job / fail_job) — don't assert_called_once.
-        first_key, first_value = mock_redis_dep.set.call_args_list[0][0]
-        assert first_key.startswith("job:")
-        assert first_value == "pending"
+        assert data["tick"] == 1
+        assert data["action"]["action"] == "move"
+        assert data["reasoning"] == "I saw a mouse."
 
     def test_agent_tick_invalid_payload_returns_422(self, client):
+        # Sending a string instead of a JSON dictionary to trigger Pydantic validation
         resp = client.post(
-            "/api/v1/agent/tick",
+            "/api/v1/agent/tick", 
             headers={"Content-Type": "application/json"},
-            content='"not a dictionary"',
+            content='"not a dictionary"'
         )
         assert resp.status_code == 422
-
-    def test_poll_result_returns_pending_when_key_missing(self, client, mock_redis_dep):
-        mock_redis_dep.get.return_value = None
-        resp = client.get("/api/v1/agent/tick/result/abc12345")
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "pending"
-
-    def test_poll_result_returns_pending_while_running(self, client, mock_redis_dep):
-        mock_redis_dep.get.return_value = "pending"
-        resp = client.get("/api/v1/agent/tick/result/abc12345")
-        assert resp.json()["status"] == "pending"
-
-    def test_poll_result_returns_done_and_consumes_key(self, client, mock_redis_dep):
-        import json
-        mock_redis_dep.get.return_value = json.dumps(
-            {"status": "done", "action": "wander", "x": 0, "y": 0, "z": 0, "target": ""}
-        )
-        resp = client.get("/api/v1/agent/tick/result/abc12345")
-        data = resp.json()
-        assert data["status"] == "done"
-        assert data["action"] == "wander"
-        mock_redis_dep.delete.assert_called_once_with("job:abc12345")
-
-    def test_poll_result_returns_error_and_consumes_key(self, client, mock_redis_dep):
-        import json
-        mock_redis_dep.get.return_value = json.dumps({"status": "error"})
-        resp = client.get("/api/v1/agent/tick/result/abc12345")
-        assert resp.json()["status"] == "error"
-        mock_redis_dep.delete.assert_called_once_with("job:abc12345")
 
 
 # ── /api/v1/assets ────────────────────────────────────────────

@@ -172,11 +172,13 @@ def make_act_node(agent: CreatureAgent):
     it to Redis and Unity polls for it.
     """
 
-    def act(state: AgentGraphState) -> dict[str, Any]:
+    async def act(state: AgentGraphState) -> dict[str, Any]:
         chosen = state.get("chosen_action")
 
         if not chosen or chosen.get("action") == "wait":
             return {"action_result": {"action": "wait", "kwargs": {}}}
+
+        result = await agent.act(chosen["action"], **chosen.get("kwargs", {}))
 
         return {
             "action_result": {

@@ -250,7 +250,7 @@ class TestActionManager:
     @pytest.mark.asyncio
     async def test_move_routes_correctly(self, body, mock_client):
         await body.connect()
-        result = await body.move(x=0.5, z=1.0)
+        result = await body.move(x=0.5, y=1.0)
         assert result.success is True
         assert mock_client.last_action["action"] == "move"
         assert mock_client.last_action["x"] == 0.5

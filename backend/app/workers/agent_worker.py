@@ -18,9 +18,11 @@ import logging
 import uuid
 
 import redis.asyncio as aioredis
+from supabase import Client
 
-from app.agent.creature_agent import CreatureAgent
 from app.core.config import Settings
+from app.workers.base import BaseWorker
+from app.agent.creature_agent import CreatureAgent
 from app.services.agent_service import AgentService
 from app.services.memory_service import log_contextual_decision
 from app.workers.base import BaseWorker
