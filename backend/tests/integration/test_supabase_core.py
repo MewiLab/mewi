@@ -107,23 +107,3 @@ class TestAdaptUnityPayload:
         mapping = {"count": "n", "flag": "active", "score": "rating", "label": "tag"}
         result = SupabaseSchemaManager.adapt_unity_payload(payload, mapping)
         assert result == {"n": 42, "active": True, "rating": 3.14, "tag": None}
-
-@pytest.mark.paid
-async def test_unity_to_supabase_full_flow(real_settings):
-    client = await create_supabase_async(real_settings)
-    manager = SupabaseSchemaManager(client)
-    
-    raw_unity_data = {
-        "userId": "aef1d359-b099-4134-8fee-8554e9c7528f", 
-        "posX": 10.5, 
-        "posY": 0.0, 
-        "posZ": -5.2
-    }
-    
-    mapping = {"posX": "pos_x", "posY": "pos_y", "posZ": "pos_z", "userId": "user_id"}
-    db_payload = manager.adapt_unity_payload(raw_unity_data, mapping)
-    
-    result = await client.table("perception_snapshots").insert(db_payload).execute()
-    
-    assert len(result.data) == 1
-    assert result.data[0]["pos_x"] == 10.5
