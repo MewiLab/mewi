@@ -1,6 +1,7 @@
+import os
 from functools import lru_cache
 from typing import Literal
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class LLMSettings(BaseSettings):
@@ -12,8 +13,8 @@ class LLMSettings(BaseSettings):
         LLM_PROVIDER=openrouter    LLM_API_KEY=sk-or-...  LLM_MODEL=anthropic/claude-sonnet-4-5
     """
     model_config = SettingsConfigDict(
-        env_prefix="LLM_", 
-        env_file=".env", 
+        env_prefix="LLM_",
+        env_file=".env",
         extra="ignore"
     )
 
@@ -32,25 +33,38 @@ class LLMSettings(BaseSettings):
             self.base_url = "http://localhost:11434"
         if self.provider == "openrouter" and not self.base_url:
             self.base_url = "https://openrouter.ai/api/v1"
+        # CI sets OPENAI_API_KEY; fall back to it when LLM_API_KEY is absent.
+        if not self.api_key:
+            self.api_key = os.environ.get("OPENAI_API_KEY", "")
         return self
 
 
 class EmbeddingSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="EMBEDDING_", 
-        env_file=".env", 
+        env_prefix="EMBEDDING_",
+        env_file=".env",
         extra="ignore"
     )
 
     model:    str = "text-embedding-3-small"
-    api_key:  str = ""        # falls back to LLM_API_KEY if empty
+    api_key:  str = ""        # falls back to LLM_API_KEY / OPENAI_API_KEY if empty
     base_url: str = ""        # leave empty for OpenAI default
+
+    @model_validator(mode="after")
+    def _resolve_api_key(self):
+        if not self.api_key:
+            self.api_key = (
+                os.environ.get("LLM_API_KEY")
+                or os.environ.get("OPENAI_API_KEY")
+                or ""
+            )
+        return self
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env", 
-        env_file_encoding="utf-8", 
+        env_file=".env",
+        env_file_encoding="utf-8",
         extra="ignore"
     )
 
@@ -59,6 +73,14 @@ class Settings(BaseSettings):
     supabase_publishable_key: str
     supabase_secret_key: str
     supabase_timeout: float = 10.0
+
+    @field_validator("supabase_url")
+    @classmethod
+    def _normalize_supabase_url(cls, v: str) -> str:
+        v = v.strip().rstrip("/")
+        if v and not v.startswith(("http://", "https://")):
+            v = "https://" + v
+        return v
     
     # Redis
     redis_host: str = "localhost"

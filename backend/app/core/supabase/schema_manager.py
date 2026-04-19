@@ -5,6 +5,7 @@ Reads migration.sql and applies it via the exec_sql RPC tunnel.
 Only intended to run in development; guarded in lifespan.py.
 """
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -23,14 +24,23 @@ class SupabaseSchemaManager:
         sql = _SQL_PATH.read_text(encoding="utf-8")
         await self._client.rpc("exec_sql", {"query": sql}).execute()
 
-    async def initialize_db(self) -> None:
+    async def initialize_db(self, retries: int = 5, delay: float = 3.0) -> None:
         logger.info("Applying database schema from %s", _SQL_PATH)
-        try:
-            await self.apply_schema()
-            logger.info("Schema applied successfully")
-        except Exception as exc:
-            logger.error("Schema application failed: %s", exc)
-            raise
+        last_exc: Exception | None = None
+        for attempt in range(1, retries + 1):
+            try:
+                await self.apply_schema()
+                logger.info("Schema applied successfully")
+                return
+            except Exception as exc:
+                last_exc = exc
+                logger.warning(
+                    "Schema apply attempt %d/%d failed: %s", attempt, retries, exc
+                )
+                if attempt < retries:
+                    await asyncio.sleep(delay)
+        logger.error("Schema application failed after %d attempts", retries)
+        raise last_exc  # type: ignore[misc]
 
     @staticmethod
     def adapt_unity_payload(payload: dict, mapping: dict) -> dict:

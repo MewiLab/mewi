@@ -30,7 +30,6 @@ def mock_settings():
         supabase_url="http://fake-supabase",
         supabase_publishable_key="fake-anon-key",
         supabase_secret_key="fake-secret-key",
-        openai_api_key="fake-openai-key"
     )
 
 
@@ -42,6 +41,12 @@ def settings(mock_settings):
 @pytest.fixture
 def fake_settings(mock_settings):
     return mock_settings
+
+
+@pytest.fixture(scope="session")
+def real_settings():
+    """Session-scoped fixture that reads from real environment variables."""
+    return Settings()
 
 
 @pytest.fixture

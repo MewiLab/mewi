@@ -9,9 +9,9 @@ on:
   push:
     branches: [main]
     paths:
-      - "backend/app/**"
-      - "backend/tests/integration/**"
-      - "backend/pyproject.toml"
+      - "backend/app/**"          # catch everything under app/
+      - "backend/tests/integration/**"  # also re-run if tests themselves change
+      - "backend/pyproject.toml"  # dependency changes
   pull_request:
     branches: [main]
     paths:
@@ -41,11 +41,6 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        run: uv python install
 
       - name: Install dependencies
         working-directory: ./backend
@@ -54,11 +49,13 @@ jobs:
       - name: Run integration tests
         working-directory: ./backend
         env:
-          CONFIRM_PAID: "1" 
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           REDIS_HOST: localhost
-          REDIS_PORT: 6379
+          REDIS_PORT: "6379"
+          ENV: test
+          CONFIRM_PAID: "1"
         run: uv run pytest tests/integration -m "paid" -s --tb=short
