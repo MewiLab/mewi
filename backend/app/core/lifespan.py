@@ -8,12 +8,12 @@ from app.core.config import get_settings
 from app.core.logger import setup_logging
 from app.core.redis import create_redis, close_redis
 from app.core.supabase import create_supabase
-from app.core.supabase.client import create_supabase_async
-from app.core.supabase.schema_manager import SupabaseSchemaManager
 from app.agent.creature_agent import create_creature_agent
 from app.agent.llm_provider import create_llm_provider
 from app.agent.graph import build_creature_graph
 from app.services.memory_service import hydrate_agent
+from app.workers.agent_worker import AgentWorker
+from app.workers.microlog_worker import MicrologWorker
 logger = logging.getLogger(__name__)
 
 
@@ -25,10 +25,6 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Connecting to Supabase…")
     app.state.supabase = create_supabase(settings)
-    if settings.env == "development":
-        logger.info("Development mode: applying database schema…")
-        _async_supabase = await create_supabase_async(settings)
-        await SupabaseSchemaManager(_async_supabase).initialize_db()
     logger.info("Connecting to Redis…")
     app.state.redis = create_redis(settings)
     
@@ -48,9 +44,37 @@ async def lifespan(app: FastAPI):
         supabase=app.state.supabase,
         redis=app.state.redis,
     )
+    
+    # Start background workers
+    agent_worker = AgentWorker(
+        creature_id="default",
+        agent=app.state.agent,
+        graph=app.state.graph,
+        redis=app.state.redis,
+        supabase=app.state.supabase,
+        settings=settings,
+        interval_seconds=settings.agent_worker_interval,   # add to Settings
+    )
+    microlog_worker = MicrologWorker(
+        supabase=app.state.supabase,
+        settings=settings,
+    )
+
+    worker_tasks = [
+        asyncio.create_task(agent_worker.start()),
+        asyncio.create_task(microlog_worker.start()),
+    ]
+    logger.info("Workers started")
+
+    logger.info("All clients ready")
+
     yield
 
     # Shutdown
+    logger.info("Stopping workers…")
+    for task in worker_tasks:
+        task.cancel()
+    await asyncio.gather(*worker_tasks, return_exceptions=True)
     logger.info("Shutting down agent…")
     await app.state.agent.disconnect()
     logger.info("Closing Redis pool…")

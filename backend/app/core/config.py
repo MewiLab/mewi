@@ -54,6 +54,8 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    env: str = "production"
+
     # Supabase
     supabase_url: str
     supabase_publishable_key: str
