@@ -86,6 +86,12 @@ class Settings(BaseSettings):
     microlog_worker_interval: float = 30.0    # seconds between embedding batches
     agent_job_ttl: int = 120
 
+    # Test mode — when True, the graph skips the LLM and cycles through
+    # ActionManager.TEST_ACTION_CYCLE (sit/eat/drink/...) so each tick fires
+    # a different obvious action. Use this to verify Unity CreatureMotor
+    # action-mode abilities without spending LLM tokens.
+    test_action_cycle: bool = False
+
 @lru_cache
 def get_settings() -> Settings:
     """Cached so the .env file is only read once per process."""

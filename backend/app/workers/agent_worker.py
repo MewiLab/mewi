@@ -49,15 +49,16 @@ async def run_agent_job(
             "action_result": None,
         })
 
-        action_result = result.get("action_result") or {}
-        kwargs = action_result.get("kwargs") or {}
+        action_result  = result.get("action_result") or {}
+        chosen_action  = result.get("chosen_action") or {}
+        kwargs         = chosen_action.get("kwargs") or {}
 
         await svc.complete_job(job_id, {
-            "action": action_result.get("action", "wait"),
-            "x": float(kwargs.get("x", 0.0)),
-            "y": float(kwargs.get("y", 0.0)),
-            "z": float(kwargs.get("z", 0.0)),
-            "target": str(kwargs.get("target", "")),
+            "action":    action_result.get("action", "wait"),
+            "x":         float(kwargs.get("x", 0.0)),
+            "y":         float(kwargs.get("y", 0.0)),
+            "z":         float(kwargs.get("z", 0.0)),
+            "target":    str(kwargs.get("target", "")),
             "reasoning": result.get("reasoning", ""),
         })
 

@@ -8,6 +8,7 @@ from langgraph.graph import StateGraph, END
 from app.agent.schemas.state_schema import AgentGraphState
 from app.agent.creature_agent import CreatureAgent
 from app.agent.schemas.perception_schema import PerceptionError
+from app.agent.schemas.action_schema import get_prompt_block
 from app.agent.llm_provider import LLMProvider
 from app.core.config import get_settings
 
@@ -56,24 +57,35 @@ def make_reason_node(agent: CreatureAgent, llm: LLMProvider):
     The LLM decision node — the only node that calls an LLM.
     Receives an LLMProvider — doesn't know or care which backend it is.
     Reads perception + memory, produces a chosen_action.
+
+    When settings.test_action_cycle is True, this node **skips the LLM**
+    and instead returns the next action from ActionManager.next_test_action(),
+    cycling through obvious non-navigation actions so you can verify every
+    Unity CreatureMotor action-mode ability without spending tokens.
     """
+    settings = get_settings()
+
     async def reason(state: AgentGraphState) -> dict[str, Any]:
+        # ── Test mode: bypass LLM, cycle through obvious actions ─────────
+        if settings.test_action_cycle:
+            action = agent.body.next_test_action()
+            logger.info("[test_action_cycle] dispatching '%s' (LLM skipped)", action)
+            return {
+                "chosen_action": {"action": action, "kwargs": {}},
+                "reasoning":     f"test_action_cycle → {action}",
+                "messages":      [],
+            }
+
         perception = state.get("perception", {})
         memory_ctx = state.get("memory_context", {})
         actions    = state.get("available_actions", [])
 
         system_prompt = (
-            "You are the brain of a cat navigating a 3D environment. "
+            "You are the brain of a stray cat navigating a 3D environment. "
             "Based on what you perceive and remember, choose ONE action to take. "
-            "Respond with ONLY a JSON object — no extra text:\n"
+            "Respond with ONLY a JSON object — no extra text, no markdown:\n"
             "  {\"action\": \"<name>\", \"kwargs\": {}, \"reasoning\": \"<why>\"}\n\n"
-            f"Available actions: {actions}\n\n"
-            "For the 'move' action kwargs must be:\n"
-            "  x: float  (-1 = strafe left,  0 = straight,  1 = strafe right)\n"
-            "  y: float  (-1 = backward,      0 = stop,      1 = forward)\n"
-            "  hold: float  (seconds to keep moving, default 0.3)\n"
-            "Example move: {\"action\": \"move\", \"kwargs\": {\"x\": 0, \"y\": 1, \"hold\": 0.4}, \"reasoning\": \"...\"}\n"
-            "For button actions (Sprint, Jump, Attack1 …) kwargs may include hold: float.\n"
+            + get_prompt_block()
         )
         user_content = (
             f"Current perception:\n{perception}\n\n"
@@ -93,13 +105,13 @@ def make_reason_node(agent: CreatureAgent, llm: LLMProvider):
         except (json.JSONDecodeError, IndexError):
             logger.warning("LLM returned unparseable response: %s", response.content)
             decision = {
-                "action": "wait", "kwargs": {}, 
+                "action": "wait", "kwargs": {},
                 "reasoning": "Failed to parse LLM output"
             }
 
         return {
             "chosen_action": {
-                "action": decision.get("action", "wait"), 
+                "action": decision.get("action", "wait"),
                 "kwargs": decision.get("kwargs", {})
             },
             "reasoning": decision.get("reasoning", ""),

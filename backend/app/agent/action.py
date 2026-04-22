@@ -12,9 +12,33 @@ import logging
 from typing import Any
 
 from app.agent.unity_client import UnityClientProtocol, ActionStep, SequenceResult
-from app.agent.schemas.action_schema import ActionResult, ActionSchema
+from app.agent.schemas.action_schema import ActionResult, ActionSchema, VALID_ACTION_NAMES
 
 logger = logging.getLogger(__name__)
+
+
+# ── Test-mode action cycle ───────────────────────────────────────────────────
+# Obvious, non-navigation actions used by the graph when
+# settings.test_action_cycle is True. These should produce a visible effect
+# in the Unity editor on every tick — no NavMesh involvement required — so
+# you can verify each CreatureMotor action-mode ability plays correctly.
+#
+# Keep walking/navigation OUT of this list:
+#   - NO  go_to / follow / wander / flee / investigate
+#   - YES sit, eat, drink, vocalize, groom, sleep, smell, alert
+#
+# If one of these fails in Unity, the corresponding ability index in
+# CreatureMotor.cs is either 0 or wrong.
+TEST_ACTION_CYCLE: list[str] = [
+    "sit",
+    "eat",
+    "drink",
+    "vocalize",
+    "groom",
+    "sleep",
+    "smell",
+    "alert",
+]
 
 
 class ActionManager:
@@ -47,6 +71,19 @@ class ActionManager:
 
     def __init__(self, client: UnityClientProtocol) -> None:
         self._client = client
+        self._test_cycle_index: int = 0
+
+    # ─── Test cycle (bypasses LLM) ────────────────────────────────────────
+    def next_test_action(self) -> str:
+        """Return the next action from TEST_ACTION_CYCLE, advancing the index.
+
+        Used by the graph when running in test_action_cycle mode so each tick
+        fires a different obvious action and you can watch the animal loop
+        through sit → eat → drink → … in the Unity editor.
+        """
+        action = TEST_ACTION_CYCLE[self._test_cycle_index % len(TEST_ACTION_CYCLE)]
+        self._test_cycle_index += 1
+        return action
 
     # ─── Lifecycle ────────────────────────────────────────────────────────
 
@@ -82,29 +119,17 @@ class ActionManager:
                 detail="Not connected. Call connect() first.",
             )
 
-        if action == "move":
-            return await self._execute_move(
-                x=kwargs.get("x", 0.0),
-                y=kwargs.get("y", 0.0),
-                hold=kwargs.get("hold", 0.3),
-            )
-
-        if action == "stop":
-            return await self._execute_simple("stop")
-
         if action == "wait":
             return ActionResult(success=True, action="wait", detail="Intentional pause")
 
-        # Validate against registry
-        known = self._client.action_names
-        if known and action not in known:
+        if action not in VALID_ACTION_NAMES:
             return ActionResult(
                 success=False,
                 action=action,
-                detail=f"Unknown action '{action}'. Available: {sorted(known)}",
+                detail=f"Unknown action '{action}'. Valid: {sorted(VALID_ACTION_NAMES)}",
             )
 
-        return await self._execute_simple(action, hold=kwargs.get("hold", 0.3))
+        return await self._execute_simple(action, **kwargs)
 
     # ─── Sequence execution ───────────────────────────────────────────────
 
