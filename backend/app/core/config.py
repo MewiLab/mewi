@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     debug: bool = False
     agent_status_ttl: int = 300  
     log_level: str = "INFO"
-    log_file_path: str | None = "app.log"  # Set to empty string in .env to disable file logging
+    log_file_path: str | None = None  # Opt in locally via LOG_FILE_PATH=app.log in .env
     log_max_bytes: int = 5_000_000         # 5 MB
     log_backup_count: int = 3
     
