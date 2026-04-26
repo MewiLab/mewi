@@ -294,8 +294,18 @@ class AgentService:
         )
 
     async def _set_status(self, creature_id: str, status: str) -> None:
-        await self._redis.set(
-            _STATUS_KEY.format(creature_id=creature_id),
-            status,
-            ex=self._ttl,
-        )
+        """
+        Updates the creature's status in Redis.
+        Wrapped in try-except to ensure Redis Auth/Connection issues 
+        do not crash the main API response for Unity.
+        """
+        try:
+            await self._redis.set(
+                _STATUS_KEY.format(creature_id=creature_id),
+                status,
+                ex=self._ttl,
+            )
+        except Exception as e:
+            # We log the warning but do NOT re-raise the exception.
+            # This allows the API to return 200 OK even if Redis is down.
+            logger.warning(f"Redis status update skipped: {e}")
