@@ -155,10 +155,21 @@ class TestAgentRoutes:
         client.app.dependency_overrides[get_graph] = lambda: mock_graph
         client.app.dependency_overrides[get_agent] = lambda: mock_agent
 
-        # 3. Send the payload
+        # 3. Send the payload — must satisfy TickPayload (creature_id required,
+        #    all other fields match perception_snapshots / creature_states columns)
         payload = {
-            "environment_snapshot": {},
-            "creature_snapshot": {}
+            "creature_id":   FAKE_CREATURE_ID,
+            "pos_x":         1.0,
+            "pos_y":         0.0,
+            "pos_z":         2.5,
+            "user_distance": 3.0,
+            "user_velocity": 0.5,
+            "time_of_day":   14,
+            "hunger":        0.3,
+            "energy":        0.8,
+            "mood":          0.1,
+            "curiosity":     0.6,
+            "fear":          0.0,
         }
         resp = client.post("/api/v1/agent/tick", json=payload)
 
