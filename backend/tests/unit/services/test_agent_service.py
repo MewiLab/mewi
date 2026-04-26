@@ -144,8 +144,12 @@ class TestRunTick:
                 payload={},
                 background_tasks=mock_background_tasks,
             )
-        mock_background_tasks.add_task.assert_called_once_with(
-            mock_persist, svc._agent, mock_supabase, mock_redis
+        # run_full_tick_flow schedules 2 background tasks:
+        #   1. _save_behavior_decision  (DB write for the AI decision)
+        #   2. persist_tick             (serialise tick to agent_tick_history)
+        assert mock_background_tasks.add_task.call_count == 2
+        mock_background_tasks.add_task.assert_any_call(
+            mock_persist, svc._agent, mock_supabase, mock_redis, FAKE_CREATURE_ID
         )
 
     async def test_restores_idle_on_graph_failure(self, svc, mock_graph, mock_redis):
@@ -165,7 +169,7 @@ class TestRunTick:
     async def test_raises_without_graph(self, settings, mock_redis):
         """Calling run_tick on a status-only service must fail clearly."""
         svc = AgentService(redis=mock_redis, settings=settings)
-        with pytest.raises(RuntimeError, match="without graph/agent"):
+        with pytest.raises(RuntimeError, match="requires graph and agent"):
             await svc.run_tick(
                 creature_id=FAKE_CREATURE_ID,
                 payload={},
