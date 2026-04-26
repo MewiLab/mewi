@@ -69,7 +69,7 @@ async def agent_tick(
         logger.exception("Unhandled error in agent_tick")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Tick processing failed — check server logs",
+            detail=f"Error: {type(e).__name__} - {str(e)}",
         )
 
     return TickResponse(

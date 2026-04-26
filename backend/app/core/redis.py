@@ -11,6 +11,7 @@ from app.core.config import Settings
 
 logger = logging.getLogger(__name__)
 
+
 def create_redis(settings: Settings) -> aioredis.Redis:
     """
     Build an async Redis client with a connection pool.
@@ -20,15 +21,17 @@ def create_redis(settings: Settings) -> aioredis.Redis:
         logger.info("Connecting to Redis using REDIS_URL...")
         return aioredis.from_url(
             settings.redis_url,
-            decode_responses=True
+            decode_responses=True,
+            socket_timeout=5.0,
+            socket_keepalive=True,
+            retry_on_timeout=True
         )
     
-    logger.info(f"Connecting to Redis at {settings.redis_host}:{settings.redis_port}...")
     return aioredis.Redis(
         host=settings.redis_host,
         port=settings.redis_port,
-        db=settings.redis_db,
-        decode_responses=True,
+        password=getattr(settings, 'redis_password', None), # 如果你有設密碼
+        decode_responses=True
     )
     
 async def close_redis(client: aioredis.Redis) -> None:
