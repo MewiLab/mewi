@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     supabase_timeout: float = 10.0
     
     # Redis
+    redis_url: str | None = None
+
+    # origin Redis
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
