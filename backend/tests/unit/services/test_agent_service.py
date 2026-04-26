@@ -152,19 +152,28 @@ class TestRunTick:
             mock_persist, svc._agent, mock_supabase, mock_redis, FAKE_CREATURE_ID
         )
 
-    async def test_restores_idle_on_graph_failure(self, svc, mock_graph, mock_redis):
-        """Graph crash must never leave creature stuck in 'thinking'."""
-        mock_graph.ainvoke.side_effect = RuntimeError("LLM exploded")
-
-        with pytest.raises(RuntimeError):
-            await svc.run_tick(
-                creature_id=FAKE_CREATURE_ID,
-                payload={},
-                background_tasks=MagicMock(),
-            )
-
-        last_status = mock_redis.set.call_args_list[-1].args[1]
-        assert last_status == "idle"
+    @pytest.mark.asyncio
+    async def test_restores_idle_on_graph_failure(service, background_tasks):
+        """
+        Test that the service handles AI failures gracefully by returning 
+        a fallback action instead of crashing the entire request.
+        """
+        # 1. Mock the graph to raise an exception (e.g., OpenAI Timeout)
+        service._graph.ainvoke.side_effect = RuntimeError("AI connection failed")
+        
+        payload = {"creature_id": "test-cat", "pos_x": 0}
+        
+        # 2. Call the service. It should NOT raise an exception anymore 
+        # because of our new try-except block in AgentService.
+        result = await service.run_full_tick_flow(payload, background_tasks)
+        
+        # 3. Verify that the fallback mechanism kicked in
+        # The action should be "wait" as defined in our AgentService fallback
+        assert result["action_result"]["action"] == "wait"
+        assert "AI_SERVICE_UNAVAILABLE" in result["action_result"]["metadata"]["reason"]
+        
+        # 4. Ensure the creature status is still reset to "idle" in the end
+        assert await service.get_status("test-cat") == "idle"
 
     async def test_raises_without_graph(self, settings, mock_redis):
         """Calling run_tick on a status-only service must fail clearly."""
