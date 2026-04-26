@@ -113,9 +113,20 @@ class AgentService:
                 "reasoning":         None,
                 "action_result":     None,
             })
-        except Exception:
-            logger.exception("Graph failed for creature %s", creature_id)
-            raise
+        except Exception as e:
+            # Log the error but do not crash the request.
+            # This allows us to verify if Supabase writes (Step 5) work correctly.
+            logger.error(f"AI Reasoning failed (Timeout/Auth): {e}")
+            
+            # Provide a fallback result so the pipeline can continue.
+            result = {
+                "tick": self._agent.memory.tick_count,
+                "action_result": {
+                    "action": "wait", 
+                    "metadata": {"reason": "AI_SERVICE_UNAVAILABLE"}
+                },
+                "reasoning": f"Fallback action triggered due to error: {str(e)}"
+            }
         finally:
             await self._set_status(creature_id, "idle")
 

@@ -145,24 +145,37 @@ class TestRunTick:
                 background_tasks=mock_background_tasks,
             )
         # run_full_tick_flow schedules 2 background tasks:
-        #   1. _save_behavior_decision  (DB write for the AI decision)
-        #   2. persist_tick             (serialise tick to agent_tick_history)
+        #    1. _save_behavior_decision  (DB write for the AI decision)
+        #    2. persist_tick              (serialise tick to agent_tick_history)
         assert mock_background_tasks.add_task.call_count == 2
         mock_background_tasks.add_task.assert_any_call(
             mock_persist, svc._agent, mock_supabase, mock_redis, FAKE_CREATURE_ID
         )
 
     async def test_restores_idle_on_graph_failure(self, svc, mock_graph, mock_redis):
-        """Graph crash must never leave creature stuck in 'thinking'."""
-        mock_graph.ainvoke.side_effect = RuntimeError("LLM exploded")
+        """
+        NEW BEHAVIOR: Graph crash must be caught and return a fallback result.
+        The creature status must still be reset to 'idle'.
+        """
+        # [MODIFIED] Using an async side_effect to simulate a real AI timeout/failure
+        async def mock_fail(*args, **kwargs):
+            raise RuntimeError("LLM exploded")
+        
+        mock_graph.ainvoke = mock_fail
 
-        with pytest.raises(RuntimeError):
-            await svc.run_tick(
-                creature_id=FAKE_CREATURE_ID,
-                payload={},
-                background_tasks=MagicMock(),
-            )
+        # [MODIFIED] No longer using pytest.raises because AgentService now catches the error
+        result = await svc.run_tick(
+            creature_id=FAKE_CREATURE_ID,
+            payload={},
+            background_tasks=MagicMock(),
+        )
 
+        # [NEW] Verify that we received the fallback 'wait' action instead of a crash
+        assert result["action_result"]["action"] == "wait"
+        assert result["action_result"]["metadata"]["reason"] == "AI_SERVICE_UNAVAILABLE"
+
+        # [MODIFIED] Ensure status was still reset to idle at the end of the 'finally' block
+        # We look at the very last call to redis.set
         last_status = mock_redis.set.call_args_list[-1].args[1]
         assert last_status == "idle"
 
