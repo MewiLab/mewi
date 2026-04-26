@@ -145,35 +145,39 @@ class TestRunTick:
                 background_tasks=mock_background_tasks,
             )
         # run_full_tick_flow schedules 2 background tasks:
-        #   1. _save_behavior_decision  (DB write for the AI decision)
-        #   2. persist_tick             (serialise tick to agent_tick_history)
+        #    1. _save_behavior_decision  (DB write for the AI decision)
+        #    2. persist_tick              (serialise tick to agent_tick_history)
         assert mock_background_tasks.add_task.call_count == 2
         mock_background_tasks.add_task.assert_any_call(
             mock_persist, svc._agent, mock_supabase, mock_redis, FAKE_CREATURE_ID
         )
 
-    @pytest.mark.asyncio
-    async def test_restores_idle_on_graph_failure(service, background_tasks):
+    async def test_restores_idle_on_graph_failure(self, svc, mock_graph, mock_redis):
         """
-        Test that the service handles AI failures gracefully by returning 
-        a fallback action instead of crashing the entire request.
+        NEW BEHAVIOR: Graph crash must be caught and return a fallback result.
+        The creature status must still be reset to 'idle'.
         """
-        # 1. Mock the graph to raise an exception (e.g., OpenAI Timeout)
-        service._graph.ainvoke.side_effect = RuntimeError("AI connection failed")
+        # [MODIFIED] Using an async side_effect to simulate a real AI timeout/failure
+        async def mock_fail(*args, **kwargs):
+            raise RuntimeError("LLM exploded")
         
-        payload = {"creature_id": "test-cat", "pos_x": 0}
-        
-        # 2. Call the service. It should NOT raise an exception anymore 
-        # because of our new try-except block in AgentService.
-        result = await service.run_full_tick_flow(payload, background_tasks)
-        
-        # 3. Verify that the fallback mechanism kicked in
-        # The action should be "wait" as defined in our AgentService fallback
+        mock_graph.ainvoke = mock_fail
+
+        # [MODIFIED] No longer using pytest.raises because AgentService now catches the error
+        result = await svc.run_tick(
+            creature_id=FAKE_CREATURE_ID,
+            payload={},
+            background_tasks=MagicMock(),
+        )
+
+        # [NEW] Verify that we received the fallback 'wait' action instead of a crash
         assert result["action_result"]["action"] == "wait"
-        assert "AI_SERVICE_UNAVAILABLE" in result["action_result"]["metadata"]["reason"]
-        
-        # 4. Ensure the creature status is still reset to "idle" in the end
-        assert await service.get_status("test-cat") == "idle"
+        assert result["action_result"]["metadata"]["reason"] == "AI_SERVICE_UNAVAILABLE"
+
+        # [MODIFIED] Ensure status was still reset to idle at the end of the 'finally' block
+        # We look at the very last call to redis.set
+        last_status = mock_redis.set.call_args_list[-1].args[1]
+        assert last_status == "idle"
 
     async def test_raises_without_graph(self, settings, mock_redis):
         """Calling run_tick on a status-only service must fail clearly."""
