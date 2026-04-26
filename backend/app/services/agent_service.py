@@ -1,22 +1,26 @@
 """
-AgentService — orchestrates one tick of the agent loop.
+AgentService — orchestrates one full agent tick.
 
-Two public methods, two callers:
-  run_tick()   ← POST /agent/tick  (Unity hot path)
-  get_status() ← GET  /agent/status/{id}  (frontend polling)
+Public surface:
+  run_full_tick_flow()  ← POST /agent/tick  (Unity hot path, full DB pipeline)
+  run_tick()            ← AgentWorker back-compat shim → delegates to above
+  get_status()          ← GET  /agent/status/{id}  (frontend polling)
 
-Status lifecycle lives here, not in the router.
-The router is only responsible for HTTP parsing and response shaping.
+DB write order per tick:
+  1. _ensure_creature_registered  — upsert creatures + creature_states (auto-reg)
+  2. _save_perception_snapshot    — INSERT perception_snapshots, returns row id
+  3. _update_creature_states      — UPDATE creature_states from payload stats
+  4. graph.ainvoke                — LangGraph AI reasoning
+  5. _save_behavior_decision      — INSERT behavior_decisions (background task)
+  6. persist_tick                 — serialise to agent_tick_history (background task)
 
-Why not keep this logic in the router?
-  - Routers are untestable as units (they require the full FastAPI stack)
-  - Status bookkeeping + graph call + persistence is orchestration, not HTTP
-  - A future worker/queue can call run_tick() without touching the router at all
+All Supabase writes are best-effort: exceptions are caught, logged with full
+traceback, and never re-raised — so Unity is never blocked by a DB hiccup.
 """
 
 from __future__ import annotations
 
-import logging
+from datetime import datetime, timezone
 from typing import Any
 
 import redis.asyncio as aioredis
@@ -24,21 +28,19 @@ from fastapi import BackgroundTasks
 from supabase import Client
 
 from app.core.config import Settings
+from app.core.logger import get_logger
 from app.agent.creature_agent import CreatureAgent
 from app.services.memory_service import persist_tick, hydrate_agent
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
-# Redis key template — centralised so nothing else hardcodes it
 _STATUS_KEY = "agent_status:{creature_id}"
 
 
 class AgentService:
     """
-    Orchestrates the agent tick loop and exposes status reads.
-
-    Constructor takes all dependencies explicitly — no imports of
-    app.state, no singletons. Fully injectable and testable.
+    Stateless orchestrator.  All dependencies are injected via constructor
+    so this class is fully testable without FastAPI or a real DB.
     """
 
     def __init__(
@@ -55,92 +57,243 @@ class AgentService:
         self._graph    = graph
         self._supabase = supabase
 
-    # for agent_router to call
+    # ── Public API ──────────────────────────────────────────────────────────
+
+    async def run_full_tick_flow(
+        self,
+        payload: dict[str, Any],
+        background_tasks: BackgroundTasks,
+    ) -> dict[str, Any]:
+        """
+        Full tick pipeline:
+          auto-register → snapshot → state update → AI graph → persist (bg)
+
+        Raises RuntimeError if called without graph/agent (misconfigured DI).
+        Raises any unhandled graph exception after resetting status to idle.
+        All DB side-effects are best-effort and never block the response.
+        """
+        if self._graph is None or self._agent is None:
+            raise RuntimeError(
+                "AgentService.run_full_tick_flow requires graph and agent — "
+                "use the full constructor via AgentServiceDep"
+            )
+
+        creature_id: str = (
+            payload.get("creature_id")
+            or payload.get("user_id")
+            or "default"
+        )
+
+        # [EDD] Log the raw incoming snapshot for test-case reproducibility.
+        logger.debug("EDD snapshot  creature=%s  payload=%s", creature_id, payload)
+
+        # Step 1 — ensure rows exist so FK constraints on later inserts hold
+        self._ensure_creature_registered(creature_id)
+
+        # Step 2 — persist raw environment data; capture id for decision linkage
+        snapshot_id = self._save_perception_snapshot(creature_id, payload)
+
+        # Step 3 — sync internal states pushed from Unity
+        self._update_creature_states(creature_id, payload)
+
+        # Step 4 — run the AI reasoning graph
+        await self._set_status(creature_id, "thinking")
+        try:
+            await self._hydrate_if_empty(creature_id)
+            result = await self._graph.ainvoke({
+                "creature_id":       creature_id,
+                "raw_payload":       payload,
+                "messages":          [],
+                "tick":              self._agent.memory.tick_count,
+                "available_actions": self._agent.body.available_actions,
+                "perception":        None,
+                "perception_error":  None,
+                "memory_context":    None,
+                "chosen_action":     None,
+                "reasoning":         None,
+                "action_result":     None,
+            })
+        except Exception:
+            logger.exception("Graph failed for creature %s", creature_id)
+            raise
+        finally:
+            await self._set_status(creature_id, "idle")
+
+        # Step 5 — non-blocking persistence (runs after HTTP response is sent)
+        if self._supabase is not None:
+            background_tasks.add_task(
+                self._save_behavior_decision,
+                creature_id=creature_id,
+                snapshot_id=snapshot_id,
+                result=result,
+            )
+            background_tasks.add_task(
+                persist_tick, self._agent, self._supabase, self._redis,
+                creature_id,
+            )
+
+        # [EDD] Log the final AI output for round-trip test verification.
+        logger.debug(
+            "EDD result  creature=%s  tick=%s  action=%s",
+            creature_id, result.get("tick"), result.get("action_result"),
+        )
+        return result
+
     async def run_tick(
         self,
         creature_id: str,
         payload: dict[str, Any],
         background_tasks: BackgroundTasks,
     ) -> dict[str, Any]:
-        """
-        Run one full agent tick: perceive → remember → reason → act → reflect.
-
-        Manages the thinking/idle status transition around the graph call.
-        Schedules persistence as a non-blocking background task.
-
-        Returns the tick result dict for the router to shape into a response.
-
-        Raises on graph failure after resetting status to idle — the router
-        can catch and return a 500 without the creature being stuck "thinking".
-        """
-        if self._graph is None or self._agent is None:
-            raise RuntimeError("AgentService.run_tick called without graph/agent — use the full constructor")
-
-        await self._set_status(creature_id, "thinking")
-        try:
-            await self._hydrate_if_empty(creature_id)
-            result = await self._graph.ainvoke({
-                "creature_id":    creature_id,
-                "raw_payload":    payload,
-                "messages":       [],
-                "tick":           self._agent.memory.tick_count,
-                "available_actions": self._agent.body.available_actions,
-                "perception":     None,
-                "perception_error": None,
-                "memory_context": None,
-                "chosen_action":  None,
-                "reasoning":      None,
-                "action_result":  None,
-            })
-        except Exception:
-            logger.exception("Graph failed for creature %s", creature_id)
-            raise
-        finally:
-            # Always unblock Unity's animation system, even on failure
-            await self._set_status(creature_id, "idle")
-
-        # Non-blocking persistence — doesn't slow Unity's response
-        if self._supabase is not None:
-            background_tasks.add_task(
-                persist_tick, self._agent, self._supabase, self._redis
-            )
-
-        return result
-
-    async def _hydrate_if_empty(self, creature_id: str) -> None:
-        """
-        Restore agent memory from DB/cache before the first tick of a session.
-
-        Called at the top of run_tick.  When the in-memory buffer already has
-        ticks (normal running state), this is a no-op — no DB round-trip.
-        On a cold start (empty buffer), it calls hydrate_agent() which reads
-        Redis first, then falls back to Supabase.
-
-        Why here and not in lifespan.py only?
-          lifespan.py hydrates at startup against a known creature_id.
-          run_tick receives the actual creature_id from Unity, so if the
-          agent hasn't been hydrated for this creature yet, we catch it here.
-        """
-        if self._agent.memory.tick_count > 0:
-            return  # Buffer already populated; nothing to do
-        if self._supabase is None:
-            return  # No DB configured; start with empty memory
-        await hydrate_agent(
-            self._agent, self._supabase, self._redis, creature_id=creature_id
+        """Back-compat shim for AgentWorker — delegates to run_full_tick_flow."""
+        return await self.run_full_tick_flow(
+            {**payload, "creature_id": creature_id},
+            background_tasks,
         )
 
     async def get_status(self, creature_id: str) -> str:
-        """
-        Read the creature's current status from Redis.
-        Returns "idle" if no key exists (TTL expired or first poll).
-        """
+        """Read creature status from Redis. Returns 'idle' on cache miss."""
         value = await self._redis.get(_STATUS_KEY.format(creature_id=creature_id))
         if not value:
             return "idle"
         return value.decode() if isinstance(value, bytes) else value
 
+    # ── Private: DB helpers ─────────────────────────────────────────────────
+
+    def _ensure_creature_registered(self, creature_id: str) -> None:
+        """
+        Guarantee a creature row + creature_states row exist before any FK
+        writes. SELECT first to avoid clobbering existing state values on
+        every tick; only INSERT if the creature is genuinely new.
+        """
+        if self._supabase is None:
+            return
+        try:
+            resp = (
+                self._supabase.table("creature_states")
+                .select("creature_id")
+                .eq("creature_id", creature_id)
+                .limit(1)
+                .execute()
+            )
+            if resp.data:
+                return  # Already registered — fast path
+
+            logger.info("Auto-registering new creature: %s", creature_id)
+            self._supabase.table("creatures").upsert(
+                {"id": creature_id, "species": "cat"},
+                on_conflict="id",
+            ).execute()
+            self._supabase.table("creature_states").insert({
+                "creature_id": creature_id,
+                "hunger":    0.0,
+                "energy":    1.0,
+                "mood":      0.0,
+                "curiosity": 0.5,
+                "fear":      0.0,
+            }).execute()
+        except Exception:
+            logger.exception(
+                "Auto-registration failed for creature %s — continuing without DB rows",
+                creature_id,
+            )
+
+    def _save_perception_snapshot(
+        self, creature_id: str, payload: dict[str, Any]
+    ) -> str | None:
+        """
+        INSERT a row into perception_snapshots.
+        Returns the generated UUID so behavior_decisions can reference it.
+        Returns None on failure (decision row will have NULL snapshot_id).
+        """
+        if self._supabase is None:
+            return None
+        try:
+            row = {
+                "creature_id":   creature_id,
+                "pos_x":         payload.get("pos_x", 0.0),
+                "pos_y":         payload.get("pos_y", 0.0),
+                "pos_z":         payload.get("pos_z", 0.0),
+                "user_distance": payload.get("user_distance", 0.0),
+                "user_velocity": payload.get("user_velocity", 0.0),
+                "time_of_day":   payload.get("time_of_day", 0),
+                "raw_data":      payload,
+            }
+            resp = self._supabase.table("perception_snapshots").insert(row).execute()
+            if resp.data:
+                return resp.data[0].get("id")
+        except Exception:
+            logger.exception(
+                "Failed to save perception_snapshot for creature %s", creature_id
+            )
+        return None
+
+    def _update_creature_states(
+        self, creature_id: str, payload: dict[str, Any]
+    ) -> None:
+        """
+        Overwrite the creature's internal state columns with values pushed
+        from Unity. Only updates fields actually present in the payload so
+        partial ticks don't zero out unmentioned stats.
+        """
+        if self._supabase is None:
+            return
+        state_keys = ("hunger", "energy", "mood", "curiosity", "fear")
+        patch = {k: payload[k] for k in state_keys if k in payload}
+        if not patch:
+            return
+        try:
+            patch["updated_at"] = datetime.now(timezone.utc).isoformat()
+            self._supabase.table("creature_states").update(patch).eq(
+                "creature_id", creature_id
+            ).execute()
+        except Exception:
+            logger.exception(
+                "Failed to update creature_states for %s", creature_id
+            )
+
+    def _save_behavior_decision(
+        self,
+        creature_id: str,
+        snapshot_id: str | None,
+        result: dict[str, Any],
+    ) -> None:
+        """
+        INSERT a row into behavior_decisions.
+        Called as a BackgroundTask — runs after the HTTP response is sent.
+        """
+        if self._supabase is None:
+            return
+        try:
+            action = result.get("action_result") or {}
+            row = {
+                "creature_id":      creature_id,
+                "snapshot_id":      snapshot_id,
+                "decision_type":    action.get("action", "idle"),
+                "reasoning":        result.get("reasoning"),
+                "raw_brain_output": result,
+                "status":           "completed",
+            }
+            self._supabase.table("behavior_decisions").insert(row).execute()
+        except Exception:
+            logger.exception(
+                "Failed to save behavior_decision for creature %s", creature_id
+            )
+
+    async def _hydrate_if_empty(self, creature_id: str) -> None:
+        """
+        Restore agent memory from DB/cache before the first tick of a session.
+        No-op when the in-memory buffer already has ticks (hot path).
+        """
+        if self._agent.memory.tick_count > 0:
+            return
+        if self._supabase is None:
+            return
+        await hydrate_agent(
+            self._agent, self._supabase, self._redis, creature_id=creature_id
+        )
+
     async def _set_status(self, creature_id: str, status: str) -> None:
-        """Write status to Redis with TTL. Private — callers use run_tick()."""
         await self._redis.set(
             _STATUS_KEY.format(creature_id=creature_id),
             status,

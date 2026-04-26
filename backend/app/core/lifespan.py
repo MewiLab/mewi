@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.config import get_settings
-from app.core.logger import setup_logging
+from app.core.logger import get_logger, setup_logging, shutdown_logging
 from app.core.redis import create_redis, close_redis
 from app.core.supabase import create_supabase
 from app.agent.creature_agent import create_creature_agent
@@ -14,7 +14,7 @@ from app.agent.graph import build_creature_graph
 from app.services.memory_service import hydrate_agent
 from app.workers.agent_worker import AgentWorker
 from app.workers.microlog_worker import MicrologWorker
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -80,3 +80,4 @@ async def lifespan(app: FastAPI):
     logger.info("Closing Redis pool…")
     await close_redis(app.state.redis)
     logger.info("Shutdown complete.")
+    shutdown_logging()
