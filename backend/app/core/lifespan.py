@@ -27,7 +27,17 @@ async def lifespan(app: FastAPI):
     app.state.supabase = create_supabase(settings)
     logger.info("Connecting to Redis…")
     app.state.redis = create_redis(settings)
-    
+    try:
+        await app.state.redis.ping()
+        logger.info("Redis connection verified (PONG received).")
+    except Exception as exc:
+        # Log loudly so Railway logs make the auth error obvious.
+        # Workers tolerate Redis being down, so we don't crash the app.
+        logger.error(
+            "Redis PING failed at startup — workers will run in degraded mode: %s",
+            exc,
+        )
+
     logger.info("Creating creature agent…")
     app.state.agent = create_creature_agent(
         unity_url=settings.unity_bridge_url,

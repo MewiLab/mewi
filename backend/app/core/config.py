@@ -62,13 +62,14 @@ class Settings(BaseSettings):
     supabase_secret_key: str
     supabase_timeout: float = 10.0
     
-    # Redis
+    # Redis — REDIS_URL takes priority (Railway / production)
     redis_url: str | None = None
 
-    # origin Redis
+    # Fallback for local dev (used when REDIS_URL is not set)
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
+    redis_password: str = ""  # set REDIS_PASSWORD if your local Redis is password-protected
 
     # System
     debug: bool = False
