@@ -7,20 +7,21 @@ class LLMSettings(BaseSettings):
     """
     All LLM config in one place. Switch provider with a single env var.
     Examples (.env):
-        LLM_PROVIDER=openai
-        LLM_PROVIDER=ollama        LLM_BASE_URL=http://localhost:11434
-        LLM_PROVIDER=openrouter    LLM_API_KEY=sk-or-...  LLM_MODEL=anthropic/claude-sonnet-4-5
+        LLM_PROVIDER=openai      LLM_API_KEY=sk-...       LLM_MODEL=gpt-4o
+        LLM_PROVIDER=groq        LLM_API_KEY=gsk_...      LLM_MODEL=llama-3.3-70b-versatile
+        LLM_PROVIDER=openrouter  LLM_API_KEY=sk-or-...    LLM_MODEL=anthropic/claude-sonnet-4-5
+        LLM_PROVIDER=ollama      LLM_BASE_URL=https://xxxx.ngrok.io  LLM_MODEL=gemma3:4b
     """
     model_config = SettingsConfigDict(
-        env_prefix="LLM_", 
-        env_file=".env", 
-        extra="ignore"
+        env_prefix="LLM_",
+        env_file=".env",
+        extra="ignore",
     )
 
-    provider: Literal["openai", "anthropic", "ollama", "openrouter"] = "openai"
-    model: str = "gpt-4-turbo"  # Updated to a valid default model
+    provider: Literal["openai", "anthropic", "ollama", "openrouter", "groq"] = "openai"
+    model: str = "gpt-4-turbo"
     api_key: str = ""
-    base_url: str = ""          # Override via LLM_BASE_URL in .env
+    base_url: str = ""   # Override via LLM_BASE_URL; auto-filled for known providers
     temperature: float = 0.0
     max_tokens: int = 1024
     timeout: float = 30.0
@@ -32,6 +33,8 @@ class LLMSettings(BaseSettings):
             self.base_url = "http://localhost:11434"
         if self.provider == "openrouter" and not self.base_url:
             self.base_url = "https://openrouter.ai/api/v1"
+        if self.provider == "groq" and not self.base_url:
+            self.base_url = "https://api.groq.com/openai/v1"
         return self
 
 

@@ -20,6 +20,7 @@ traceback, and never re-raised — so Unity is never blocked by a DB hiccup.
 
 from __future__ import annotations
 
+import uuid as _uuid_mod
 from datetime import datetime, timezone
 from typing import Any
 
@@ -35,6 +36,9 @@ from app.services.memory_service import persist_tick, hydrate_agent
 logger = get_logger(__name__)
 
 _STATUS_KEY = "agent_status:{creature_id}"
+
+# Stable namespace for deterministic UUID generation (DNS namespace UUID)
+_CREATURE_NS = _uuid_mod.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
 
 
 class AgentService:
@@ -171,43 +175,73 @@ class AgentService:
 
     # ── Private: DB helpers ─────────────────────────────────────────────────
 
+    @staticmethod
+    def _to_db_id(creature_id: str) -> str:
+        """
+        creatures.id is a Postgres uuid column.  Convert a plain string like
+        'default' or 'cat_01' into a stable, deterministic UUID so that every
+        insert and FK reference always satisfies the column type constraint.
+        Strings that are already valid UUIDs are returned unchanged.
+        """
+        try:
+            _uuid_mod.UUID(creature_id)
+            return creature_id
+        except ValueError:
+            return str(_uuid_mod.uuid5(_CREATURE_NS, creature_id))
+
     def _ensure_creature_registered(self, creature_id: str) -> None:
         """
         Guarantee a creature row + creature_states row exist before any FK
         writes. SELECT first to avoid clobbering existing state values on
         every tick; only INSERT if the creature is genuinely new.
+
+        try/except intentionally removed — raw DB exceptions now propagate
+        so they appear in Railway logs instead of being silently swallowed.
+        The caller (run_full_tick_flow) has its own error handling.
         """
         if self._supabase is None:
             return
-        try:
-            resp = (
-                self._supabase.table("creature_states")
-                .select("creature_id")
-                .eq("creature_id", creature_id)
-                .limit(1)
-                .execute()
-            )
-            if resp.data:
-                return  # Already registered — fast path
 
-            logger.info("Auto-registering new creature: %s", creature_id)
-            self._supabase.table("creatures").upsert(
-                {"id": creature_id, "species": "cat"},
-                on_conflict="id",
-            ).execute()
-            self._supabase.table("creature_states").insert({
-                "creature_id": creature_id,
-                "hunger":    0.0,
-                "energy":    1.0,
-                "mood":      0.0,
-                "curiosity": 0.5,
-                "fear":      0.0,
-            }).execute()
-        except Exception:
-            logger.exception(
-                "Auto-registration failed for creature %s — continuing without DB rows",
-                creature_id,
-            )
+        db_id = self._to_db_id(creature_id)
+        logger.info(
+            "Checking creature registration: logical_id=%r  db_uuid=%s",
+            creature_id, db_id,
+        )
+
+        resp = (
+            self._supabase.table("creature_states")
+            .select("creature_id")
+            .eq("creature_id", db_id)
+            .limit(1)
+            .execute()
+        )
+        if resp.data:
+            return  # Already registered — fast path
+
+        # New creature: insert the parent row first, then the states row.
+        creatures_row = {
+            "id":         db_id,
+            "species":    "cat",
+            "name":       creature_id,   # preserve the logical name for readability
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        logger.info("Inserting into creatures: %s", creatures_row)
+        self._supabase.table("creatures").upsert(
+            creatures_row,
+            on_conflict="id",
+        ).execute()
+
+        states_row = {
+            "creature_id": db_id,
+            "hunger":      0.0,
+            "energy":      1.0,
+            "mood":        0.0,
+            "curiosity":   0.5,
+            "fear":        0.0,
+        }
+        logger.info("Inserting into creature_states: %s", states_row)
+        self._supabase.table("creature_states").insert(states_row).execute()
+        logger.info("Auto-registration complete for %r (%s)", creature_id, db_id)
 
     def _save_perception_snapshot(
         self, creature_id: str, payload: dict[str, Any]
@@ -221,7 +255,7 @@ class AgentService:
             return None
         try:
             row = {
-                "creature_id":   creature_id,
+                "creature_id":   self._to_db_id(creature_id),
                 "pos_x":         payload.get("pos_x", 0.0),
                 "pos_y":         payload.get("pos_y", 0.0),
                 "pos_z":         payload.get("pos_z", 0.0),
@@ -256,7 +290,7 @@ class AgentService:
         try:
             patch["updated_at"] = datetime.now(timezone.utc).isoformat()
             self._supabase.table("creature_states").update(patch).eq(
-                "creature_id", creature_id
+                "creature_id", self._to_db_id(creature_id)
             ).execute()
         except Exception:
             logger.exception(
@@ -278,7 +312,7 @@ class AgentService:
         try:
             action = result.get("action_result") or {}
             row = {
-                "creature_id":      creature_id,
+                "creature_id":      self._to_db_id(creature_id),
                 "snapshot_id":      snapshot_id,
                 "decision_type":    action.get("action", "idle"),
                 "reasoning":        result.get("reasoning"),
