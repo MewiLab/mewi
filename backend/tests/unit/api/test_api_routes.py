@@ -7,13 +7,12 @@ No real Supabase, Redis, or OpenAI calls happen.
 
 from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.api.deps import get_graph
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.api.deps import get_supabase, get_redis, get_settings, get_agent
+from app.api.deps import get_supabase, get_redis, get_settings, get_agent, get_graph, get_agent_service
 
 
 FAKE_USER_ID = str(uuid4())
@@ -53,6 +52,19 @@ def mock_db():
 def mock_redis_dep():
     from unittest.mock import AsyncMock
     return AsyncMock()
+
+
+@pytest.fixture(autouse=True)
+def reset_agent_service_singleton():
+    """
+    The AgentService singleton in deps.py holds per-creature buffers.
+    Reset it before and after every test so buffer state never bleeds
+    between test cases.
+    """
+    import app.api.deps as deps_module
+    deps_module._agent_service_singleton = None
+    yield
+    deps_module._agent_service_singleton = None
 
 
 @pytest.fixture
@@ -115,13 +127,31 @@ class TestMicrologRoutes:
 # ── /api/v1/agent ─────────────────────────────────────────────
 
 FAKE_CREATURE_ID = str(uuid4())
-FAKE_SNAPSHOT = {"location": "park", "mood": "curious", "nearby_humans": 2}
+
+
+def _nested_unity_payload(i: int = 0) -> dict:
+    """
+    Build a single valid Unity nested-schema payload for HTTP tests.
+    Matches TickPayload with alias="self" and alias="requestId".
+    """
+    return {
+        "requestId": f"req-{i:03d}",
+        "self": {
+            "location":       {"x": float(i), "y": 0.0, "z": 0.0},
+            "current_action": "walking",
+        },
+        "mood":   {"fear": 0.1, "trust": 0.8, "curiosity": 0.6, "social": 0.3, "energy": 0.9},
+        "health": {"hunger": 0.2},
+        "entities": [
+            {"id": "lamp-01", "tags": ["lantern"], "distance": 3.0, "direction": "north"}
+        ],
+    }
 
 
 class TestAgentRoutes:
     def test_get_status_returns_idle_by_default(self, client, mock_redis_dep):
         mock_redis_dep.get.return_value = None
-        resp = client.get(f"/api/v1/agent/status/{FAKE_USER_ID}")
+        resp = client.get(f"/api/v1/agent/status/{FAKE_CREATURE_ID}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "idle"
@@ -129,69 +159,116 @@ class TestAgentRoutes:
 
     def test_get_status_returns_thinking(self, client, mock_redis_dep):
         mock_redis_dep.get.return_value = b"thinking"
-        resp = client.get(f"/api/v1/agent/status/{FAKE_USER_ID}")
+        resp = client.get(f"/api/v1/agent/status/{FAKE_CREATURE_ID}")
         data = resp.json()
         assert data["status"] == "thinking"
         assert data["is_thinking"] is True
 
+    def test_get_status_response_contains_creature_id(self, client, mock_redis_dep):
+        mock_redis_dep.get.return_value = None
+        resp = client.get(f"/api/v1/agent/status/{FAKE_CREATURE_ID}")
+        assert resp.json()["creature_id"] == FAKE_CREATURE_ID
+
+    # ── Single-tick: new nested schema ────────────────────────────────────────
+
     def test_agent_tick_returns_200_with_action(self, client):
-        # 1. Create a mock graph object with our fake ainvoke response
+        """
+        POST /agent/tick/{creature_id} with the new nested Unity schema.
+        creature_id is now a path parameter — not in the body.
+        """
         mock_graph = AsyncMock()
         mock_graph.ainvoke.return_value = {
             "tick": 1,
             "action_result": {"success": True, "action": "move", "detail": "moving to target"},
             "reasoning": "I saw a mouse.",
         }
-
-        # Mock the agent with tick_count > 0 so _hydrate_if_empty is skipped.
-        # Without this, the real agent (tick_count=0) would trigger hydrate_agent,
-        # which would call mock_db on agent_tick_history and hit a KeyError since
-        # mock_db returns FAKE_ROW (a microlog row without a "perception" key).
         mock_agent = MagicMock()
         mock_agent.memory.tick_count = 1
         mock_agent.body.available_actions = ["wait", "move"]
 
-        # 2. Tell FastAPI to use our mock graph / agent instead of the real ones
         client.app.dependency_overrides[get_graph] = lambda: mock_graph
         client.app.dependency_overrides[get_agent] = lambda: mock_agent
 
-        # 3. Send the payload — must satisfy TickPayload (creature_id required,
-        #    all other fields match perception_snapshots / creature_states columns)
-        payload = {
-            "creature_id":   FAKE_CREATURE_ID,
-            "pos_x":         1.0,
-            "pos_y":         0.0,
-            "pos_z":         2.5,
-            "user_distance": 3.0,
-            "user_velocity": 0.5,
-            "time_of_day":   14,
-            "hunger":        0.3,
-            "energy":        0.8,
-            "mood":          0.1,
-            "curiosity":     0.6,
-            "fear":          0.0,
-        }
-        resp = client.post("/api/v1/agent/tick", json=payload)
+        resp = client.post(
+            f"/api/v1/agent/tick/{FAKE_CREATURE_ID}",
+            json=_nested_unity_payload(0),
+        )
 
-        # 4. Clean up the overrides so they don't affect other tests
         client.app.dependency_overrides.pop(get_graph, None)
         client.app.dependency_overrides.pop(get_agent, None)
 
-        # 5. Assert the response
         assert resp.status_code == 200
         data = resp.json()
         assert data["tick"] == 1
         assert data["action"]["action"] == "move"
         assert data["reasoning"] == "I saw a mouse."
 
-    def test_agent_tick_invalid_payload_returns_422(self, client):
-        # Sending a string instead of a JSON dictionary to trigger Pydantic validation
+    def test_agent_tick_old_flat_url_returns_404(self, client):
+        """The legacy endpoint /agent/tick (no creature_id) must no longer exist."""
+        resp = client.post("/api/v1/agent/tick", json=_nested_unity_payload(0))
+        assert resp.status_code == 404
+
+    def test_agent_tick_invalid_body_returns_422(self, client):
         resp = client.post(
-            "/api/v1/agent/tick", 
+            f"/api/v1/agent/tick/{FAKE_CREATURE_ID}",
             headers={"Content-Type": "application/json"},
-            content='"not a dictionary"'
+            content='"not a dict"',
         )
         assert resp.status_code == 422
+
+    # ── Batch: 10 nested payloads ─────────────────────────────────────────────
+
+    def test_agent_tick_batch_10_nested_payloads(self, client):
+        """
+        Send 10 consecutive Unity snapshots to the new endpoint.
+
+        Assertions:
+        - Every request returns HTTP 200.
+        - The service received the creature_id as the first positional arg.
+        - The service received the nested dict (with "self" and "requestId" keys).
+        - Each call carried a distinct requestId so the service can track order.
+        """
+        mock_service = MagicMock()
+        mock_service.run_full_tick_flow = AsyncMock(return_value={
+            "tick":          1,
+            "action_result": {"action": "wait"},
+            "reasoning":     "buffering",
+        })
+        client.app.dependency_overrides[get_agent_service] = lambda: mock_service
+
+        try:
+            for i in range(10):
+                resp = client.post(
+                    f"/api/v1/agent/tick/{FAKE_CREATURE_ID}",
+                    json=_nested_unity_payload(i),
+                )
+                assert resp.status_code == 200, (
+                    f"tick {i} failed with {resp.status_code}: {resp.text}"
+                )
+
+            # Service was called exactly 10 times
+            assert mock_service.run_full_tick_flow.call_count == 10
+
+            # Verify every call was shaped correctly
+            for idx, call in enumerate(mock_service.run_full_tick_flow.call_args_list):
+                args, _ = call
+                creature_id_arg, payload_arg, _bg = args
+
+                # creature_id came from the URL path, not the body
+                assert creature_id_arg == FAKE_CREATURE_ID
+
+                # Payload uses the by_alias=True serialisation: "self", "requestId"
+                assert "self"      in payload_arg, f"tick {idx}: 'self' key missing"
+                assert "requestId" in payload_arg, f"tick {idx}: 'requestId' key missing"
+                assert "mood"      in payload_arg, f"tick {idx}: 'mood' key missing"
+                assert "health"    in payload_arg, f"tick {idx}: 'health' key missing"
+                assert "entities"  in payload_arg, f"tick {idx}: 'entities' key missing"
+
+                # Each tick carries its own requestId for ordering
+                assert payload_arg["requestId"] == f"req-{idx:03d}"
+
+        finally:
+            client.app.dependency_overrides.pop(get_agent_service, None)
 
 
 # ── /api/v1/assets ────────────────────────────────────────────
