@@ -27,6 +27,11 @@ async def lifespan(app: FastAPI):
     app.state.supabase = create_supabase(settings)
     logger.info("Connecting to Redis…")
     app.state.redis = create_redis(settings)
+    try:
+        await app.state.redis.ping()
+        logger.info("Redis ping OK")
+    except Exception as exc:
+        logger.error("Redis ping FAILED — worker will be degraded: %s", exc)
     
     logger.info("Creating creature agent…")
     app.state.agent = create_creature_agent(

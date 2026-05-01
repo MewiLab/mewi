@@ -294,36 +294,50 @@ class AgentService:
         """
         Guarantee a creatures row + creature_states row exist before any FK
         writes.  SELECT first to avoid clobbering existing state values.
+
+        NOTE: try/except intentionally removed so raw DB exceptions are visible
+        in logs.  Restore the except block once the root cause is confirmed.
         """
         if self._supabase is None:
             return
-        try:
-            resp = (
-                self._supabase.table("creature_states")
-                .select("creature_id")
-                .eq("creature_id", creature_id)
-                .limit(1)
-                .execute()
-            )
-            if resp.data:
-                return
-            logger.info("Auto-registering new creature: %s", creature_id)
-            self._supabase.table("creatures").upsert(
-                {"id": creature_id, "species": "cat"}, on_conflict="id"
-            ).execute()
-            self._supabase.table("creature_states").insert({
+
+        resp = (
+            self._supabase.table("creature_states")
+            .select("creature_id")
+            .eq("creature_id", creature_id)
+            .limit(1)
+            .execute()
+        )
+        if resp.data:
+            return
+
+        logger.info("Auto-registering new creature: %s", creature_id)
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        creature_resp = self._supabase.table("creatures").upsert(
+            {
+                "id":         creature_id,
+                "species":    "cat",
+                "name":       f"cat-{creature_id[:8]}",
+                "created_at": now_iso,
+            },
+            on_conflict="id",
+        ).execute()
+        logger.info("creatures upsert response: %s", creature_resp.data)
+
+        states_resp = self._supabase.table("creature_states").upsert(
+            {
                 "creature_id": creature_id,
                 "hunger":    0.0,
                 "energy":    1.0,
                 "mood":      0.0,
                 "curiosity": 0.5,
                 "fear":      0.0,
-            }).execute()
-        except Exception:
-            logger.exception(
-                "Auto-registration failed for creature %s — continuing without DB rows",
-                creature_id,
-            )
+            },
+            on_conflict="creature_id",
+        ).execute()
+        logger.info("creature_states upsert response: %s", states_resp.data)
 
     def _update_creature_states(
         self, creature_id: str, payload: dict[str, Any]
