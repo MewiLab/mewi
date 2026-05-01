@@ -17,7 +17,7 @@ class LLMSettings(BaseSettings):
         extra="ignore"
     )
 
-    provider: Literal["openai", "anthropic", "ollama", "openrouter"] = "openai"
+    provider: Literal["openai", "anthropic", "ollama", "openrouter", "groq"] = "openai"
     model: str = "gpt-4-turbo"  # Updated to a valid default model
     api_key: str = ""
     base_url: str = ""          # Override via LLM_BASE_URL in .env
@@ -29,9 +29,11 @@ class LLMSettings(BaseSettings):
     def _set_defaults(self):
         """Fill in sensible base_url defaults so callers never have to."""
         if self.provider == "ollama" and not self.base_url:
-            self.base_url = "http://localhost:11434"
+            self.base_url = "http://localhost:11434/v1"
         if self.provider == "openrouter" and not self.base_url:
             self.base_url = "https://openrouter.ai/api/v1"
+        if self.provider == "groq" and not self.base_url:
+            self.base_url = "https://api.groq.com/openai/v1"
         return self
 
 
