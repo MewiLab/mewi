@@ -1,17 +1,24 @@
 """
 AgentService — orchestrates one full agent tick with semantic aggregation.
 
+Architecture: per-request instance + shared state
+  get_agent_service (deps.py) creates a fresh AgentService on every request,
+  injecting request-scoped deps (redis, supabase, agent, graph) cleanly.
+  Persistent cross-request data lives in AgentServiceState, which is a
+  process-scoped singleton injected at construction time.
+
 Buffer strategy (X-to-1 compression):
-  Raw Unity snapshots are held in an in-memory buffer keyed by creature_id.
-  When the buffer reaches `aggregation_limit`, SemanticService condenses all
-  snapshots into one narrative string that is persisted as a single row in
-  perception_snapshots.  FIFO enforcement keeps each creature at ≤ 100 rows.
+  Raw Unity snapshots accumulate in AgentServiceState.buffers, keyed by
+  creature_id.  When the buffer reaches `aggregation_limit`, SemanticService
+  condenses all snapshots into one narrative string that is persisted as a
+  single row in perception_snapshots.  FIFO enforcement keeps each creature
+  at ≤ 100 rows.
 
 DB write order per tick:
   1. _ensure_creature_registered  — upsert creatures + creature_states
   2. Append to in-memory buffer   — zero DB cost on most ticks
-  3. [buffer full] _flush_buffer  — INSERT one aggregated perception_snapshots row
-  4. [buffer full] _enforce_fifo  — DELETE oldest rows (BackgroundTask)
+  3. [buffer full, supabase set]  — _flush_buffer → INSERT perception_snapshots
+  4. [buffer full, supabase set]  — _enforce_fifo (BackgroundTask)
   5. _update_creature_states      — UPDATE creature_states from nested payload
   6. graph.ainvoke                — LangGraph AI reasoning
   7. _save_behavior_decision      — INSERT behavior_decisions (BackgroundTask)
@@ -20,8 +27,11 @@ DB write order per tick:
 All Supabase writes are best-effort: exceptions are caught, logged, and never
 re-raised so Unity is never blocked by a DB or network hiccup.
 
-AgentService MUST be used as a singleton (see deps.py) so that creature buffers
-survive across the per-request dependency-injection lifecycle.
+Thread safety:
+  AgentServiceState dicts are mutated concurrently under CPython's GIL, which
+  makes individual dict read/write operations atomic.  This is safe for
+  single-process deployments.  A multi-process deployment would need an
+  external store (e.g. Redis) for the shared buffers.
 """
 
 from __future__ import annotations
@@ -44,10 +54,28 @@ logger = get_logger(__name__)
 _STATUS_KEY = "agent_status:{creature_id}"
 
 
+class AgentServiceState:
+    """
+    Process-scoped state shared across all per-request AgentService instances.
+
+    Holds per-creature snapshot buffers and the UUID of the most recently
+    saved aggregated perception row.  Injected into AgentService so that
+    buffer contents survive the per-request dependency-injection lifecycle.
+    """
+
+    def __init__(self) -> None:
+        # Snapshot windows keyed by creature_id.
+        self.buffers: dict[str, list[dict[str, Any]]] = {}
+        # Most recent perception_snapshots.id for each creature.
+        # Used as snapshot_id FK in behavior_decisions rows.
+        self.last_snapshot_ids: dict[str, str | None] = {}
+
+
 class AgentService:
     """
-    Long-lived orchestrator that holds per-creature snapshot buffers.
-    Instantiate once (singleton) and refresh request-scoped deps each tick.
+    Per-request orchestrator.  Receives all request-scoped dependencies via
+    constructor injection.  Cross-request state (buffers, last snapshot IDs)
+    lives in the injected AgentServiceState singleton.
     """
 
     def __init__(
@@ -59,7 +87,9 @@ class AgentService:
         supabase: Client | None = None,
         semantic_service: SemanticService | None = None,
         aggregation_limit: int = 10,
+        state: AgentServiceState | None = None,
     ):
+        # ── Per-request deps (safe to overwrite — each request gets its own instance) ──
         self._redis             = redis
         self._ttl               = settings.agent_status_ttl
         self._agent             = agent
@@ -68,17 +98,24 @@ class AgentService:
         self._semantic          = semantic_service or SemanticService()
         self._aggregation_limit = aggregation_limit
 
-        # Keyed by creature_id — the reason this class must be a singleton.
-        self.buffers: dict[str, list[dict[str, Any]]] = {}
-        # Tracks the UUID of each creature's most recently saved aggregated row.
-        # behavior_decisions.snapshot_id references this until the next flush.
-        self._last_snapshot_ids: dict[str, str | None] = {}
+        # ── Shared state — outlives this request ──────────────────────────────
+        # Fall back to a fresh state when none is injected (unit-test path).
+        # In production, deps.py injects the process-level singleton so all
+        # concurrent instances share the same buffers.
+        self._state = state or AgentServiceState()
 
-        # Pin bound-method references once so background_tasks receives a stable
-        # identity.  Python creates a new wrapper object on every attribute access,
-        # meaning `self.m is self.m` is normally False.  Storing here as an instance
-        # attribute shadows the class descriptor and makes repeated lookups return
-        # the same object — required for `assert call.args[0] is svc._enforce_fifo_limit`.
+        # Expose shared collections as direct attributes so call sites and test
+        # assertions use the same `svc.buffers` / `svc._last_snapshot_ids` names
+        # as before.  These are *references* to the same dict objects held inside
+        # self._state, so any mutation is immediately visible to every other
+        # AgentService instance sharing the same state.
+        self.buffers            = self._state.buffers
+        self._last_snapshot_ids = self._state.last_snapshot_ids
+
+        # ── Stable bound-method reference ────────────────────────────────────
+        # Python creates a new wrapper object on every descriptor access, making
+        # `self.m is self.m` normally False.  Storing here as an instance
+        # attribute pins the identity so BackgroundTask assertions can use `is`.
         self._enforce_fifo_limit = self._enforce_fifo_limit  # type: ignore[method-assign]
 
     # ── Public API ──────────────────────────────────────────────────────────
@@ -108,15 +145,15 @@ class AgentService:
         # Step 1 — guarantee FK rows exist before any insert
         self._ensure_creature_registered(creature_id)
 
-        # Step 2 — append this snapshot to the in-memory buffer
+        # Step 2 — append this snapshot to the shared in-memory buffer
         buffer = self.buffers.setdefault(creature_id, [])
         buffer.append(payload)
 
         # Step 3 — flush when the aggregation window is full
         if len(buffer) >= self._aggregation_limit:
             if self._supabase is None:
-                # No persistence target: discard the window so the buffer does not
-                # grow unbounded, but schedule NO background tasks.
+                # No persistence target: discard the window so the buffer does
+                # not grow unbounded, but schedule NO background tasks.
                 logger.warning(
                     "Buffer full for creature %s but Supabase unavailable — "
                     "clearing without persist",
