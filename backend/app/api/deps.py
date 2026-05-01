@@ -1,10 +1,25 @@
 """
 FastAPI dependency functions.
 
-AgentService is held as a module-level singleton so that its in-memory
-creature buffers (used for semantic aggregation) survive across the
-per-request dependency-injection lifecycle.  All other resources are pulled
-from app.state (created in lifespan.py) and are already singletons there.
+Concurrency model
+─────────────────
+AgentService is now created fresh on every request so that per-request
+resources (redis, supabase, agent, graph) are injected cleanly without the
+race condition that arose from overwriting attributes on a shared singleton.
+
+Cross-request state (creature buffers, last snapshot IDs) lives in
+AgentServiceState, a lightweight process-scoped singleton that is created
+once at module level and injected into every fresh AgentService instance.
+
+Module-level singletons
+───────────────────────
+_shared_state     — AgentServiceState: holds per-creature snapshot buffers
+_semantic_service — SemanticService:   stateless, cheap to share
+
+Both are None until the first request triggers get_agent_service, at which
+point they are initialised and reused for the lifetime of the process.
+The deferred import inside get_agent_service matches the existing pattern in
+this file and avoids any startup ordering issues.
 """
 
 from __future__ import annotations
@@ -54,14 +69,25 @@ def get_graph(request: Request):
 GraphDep: TypeAlias = Annotated[object, Depends(get_graph)]
 
 
-# ── AgentService (singleton — preserves creature buffers) ─────
+# ── Process-scoped singletons ─────────────────────────────────
 #
-# A new AgentService would lose its in-memory buffers on every request.
-# The singleton pattern here ensures that snapshot buffers accumulate
-# correctly across ticks until the aggregation_limit is reached.
+# Declared as None here; initialised on the first call to get_agent_service.
+# Using None sentinels (rather than direct assignment) defers the import of
+# agent_service and semantic_service until the app is fully started, which
+# is consistent with the existing deferred-import pattern below.
 
-_agent_service_singleton: object | None = None
+_shared_state:     object | None = None   # AgentServiceState
+_semantic_service: object | None = None   # SemanticService
 
+
+# ── AgentService (per-request instance, shared state) ─────────
+#
+# A new AgentService is constructed on every request.
+# Per-request deps (redis, supabase, agent, graph) are injected fresh, so
+# concurrent requests for different creatures never overwrite each other's
+# attributes.
+# The _shared_state singleton carries the buffers across requests so the
+# X-to-1 aggregation window is preserved between ticks.
 
 def get_agent_service(
     redis: RedisDep,
@@ -70,33 +96,25 @@ def get_agent_service(
     graph: GraphDep,
     supabase: SupabaseDep,
 ):
-    global _agent_service_singleton
+    global _shared_state, _semantic_service
 
-    from app.services.agent_service import AgentService
+    from app.services.agent_service import AgentService, AgentServiceState
     from app.services.semantic_service import SemanticService
 
-    if _agent_service_singleton is None:
-        _agent_service_singleton = AgentService(
-            redis=redis,
-            settings=settings,
-            agent=agent,
-            graph=graph,
-            supabase=supabase,
-            semantic_service=SemanticService(),
-            aggregation_limit=10,
-        )
-    else:
-        # Refresh request-scoped deps without discarding buffer state.
-        # In practice redis/supabase/agent/graph are already singletons on
-        # app.state, so these assignments are no-ops — but they guard against
-        # hot-reload scenarios where app.state objects are recreated.
-        svc = _agent_service_singleton  # type: ignore[assignment]
-        svc._redis    = redis
-        svc._supabase = supabase
-        svc._agent    = agent
-        svc._graph    = graph
+    if _shared_state is None:
+        _shared_state     = AgentServiceState()
+        _semantic_service = SemanticService()
 
-    return _agent_service_singleton
+    return AgentService(
+        redis=redis,
+        settings=settings,
+        agent=agent,
+        graph=graph,
+        supabase=supabase,
+        semantic_service=_semantic_service,  # type: ignore[arg-type]
+        state=_shared_state,                 # type: ignore[arg-type]
+        aggregation_limit=10,
+    )
 
 
 AgentServiceDep: TypeAlias = Annotated[object, Depends(get_agent_service)]

@@ -56,15 +56,12 @@ def mock_redis_dep():
 
 @pytest.fixture(autouse=True)
 def reset_agent_service_singleton():
-    """
-    The AgentService singleton in deps.py holds per-creature buffers.
-    Reset it before and after every test so buffer state never bleeds
-    between test cases.
-    """
     import app.api.deps as deps_module
-    deps_module._agent_service_singleton = None
+    deps_module._shared_state     = None
+    deps_module._semantic_service = None
     yield
-    deps_module._agent_service_singleton = None
+    deps_module._shared_state     = None
+    deps_module._semantic_service = None
 
 
 @pytest.fixture
