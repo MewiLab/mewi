@@ -24,7 +24,7 @@ public class CreaturePerception : MonoBehaviour
     readonly Collider[] _scanBuffer = new Collider[32];
 
     [Header("Semantic Scan")]
-    [Tooltip("Assign only the 'Semantic' layer here — trigger colliders placed on scene objects.")]
+    [Tooltip("Assign the 'SemanticProp' layer (or any layer carrying SmartObject-tagged trigger colliders).")]
     public LayerMask semanticLayer;
     readonly Collider[] _semanticBuffer = new Collider[32];
 
@@ -67,25 +67,45 @@ public class CreaturePerception : MonoBehaviour
 
         // Track who we saw this frame so we can clean up old data from the dictionary
         HashSet<Transform> seenThisFrame = new HashSet<Transform>();
+        // Dedupe bone hits — a ragdoll/skinned rig exposes many colliders per root
+        HashSet<Transform> emittedRoots  = new HashSet<Transform>();
 
         for (int i = 0; i < n; i++)
         {
             Collider col = _scanBuffer[i];
             if (col.transform == _self) continue;
 
-            Transform targetT  = col.transform;
-            Vector3   toTarget = targetT.position - _self.position;
-            float     dist     = toTarget.magnitude;
-            
+            // Walk up to the meaningful root. For animals/players this lifts bone
+            // colliders (Head, Spine, R Forearm…) up to the CreatureController root.
+            var       cc      = col.GetComponentInParent<CreatureController>();
+            Transform targetT = cc != null ? cc.transform : col.transform;
+            if (targetT == _self) continue;
+            if (!emittedRoots.Add(targetT)) continue;   // already reported this root this tick
+
+            Vector3 toTarget = targetT.position - _self.position;
+            float   dist     = toTarget.magnitude;
+
             seenThisFrame.Add(targetT);
 
-            // 1. Emit Generic Nearby Event for EVERYTHING (Items, Players, Cats, Obstacles)
-            float intensity = 1f - Mathf.Clamp01(dist / scanRadius);
-            EmitEvent(SensoryEvent.SenseType.NearbyObject, targetT, intensity, col.gameObject.name);
+            // 1. Emit Generic Nearby Event.
+            //    Creatures: prefer their SmartObject (e.g. entity.cat.kitten) if authored,
+            //    otherwise fall back to a generic "cat" category.
+            //    Non-creatures on scanLayers aren't tagged as semantic props here —
+            //    props come through ScanSmartObjects() on the dedicated semantic layer.
+            if (cc != null)
+            {
+                var so = cc.GetComponentInChildren<SmartObject>();
+                string label    = so != null ? so.Label            : targetT.name;
+                string category = so != null ? so.SpecificCategory : "cat";
+
+                float intensity = 1f - Mathf.Clamp01(dist / scanRadius);
+                _board.sensorEvents.Add(SensoryEvent.Create(
+                    SensoryEvent.SenseType.NearbyObject,
+                    so != null ? so.Position : targetT.position,
+                    intensity, targetT, label, category));
+            }
 
             // 2. Creature-Specific Logic (Sight & Approach Speed)
-            // If it has a CreatureController, it's an Animal or Player.
-            var cc = col.GetComponent<CreatureController>();
             if (cc != null)
             {
                 bool inSight = IsInSight(toTarget, dist);
@@ -126,27 +146,32 @@ public class CreaturePerception : MonoBehaviour
 
         CleanupOldPositions(seenThisFrame);
 
-        ScanSemanticZones();
+        ScanSmartObjects();
     }
 
-    void ScanSemanticZones()
+    void ScanSmartObjects()
     {
         int n = Physics.OverlapSphereNonAlloc(_self.position, scanRadius, _semanticBuffer, semanticLayer);
+        // Dedupe by SmartObject instance — multiple colliders can share one component.
+        HashSet<SmartObject> emitted = new HashSet<SmartObject>();
+
         for (int i = 0; i < n; i++)
         {
-            var zone = _semanticBuffer[i].GetComponent<SemanticZone>();
-            if (zone == null) continue;
+            var so = _semanticBuffer[i].GetComponentInParent<SmartObject>();
+            if (so == null) continue;
+            if (!emitted.Add(so)) continue;
 
-            float dist      = Vector3.Distance(_self.position, _semanticBuffer[i].transform.position);
+            float dist      = Vector3.Distance(_self.position, so.Position);
             float intensity = 1f - Mathf.Clamp01(dist / scanRadius);
 
             _board.sensorEvents.Add(SensoryEvent.Create(
                 SensoryEvent.SenseType.NearbyObject,
-                _semanticBuffer[i].transform.position,
+                so.Position,
                 intensity,
-                _semanticBuffer[i].transform,
-                zone.label,
-                zone.category
+                so.transform,
+                so.Label,
+                so.SpecificCategory,
+                so.tags != null ? so.tags.ToArray() : System.Array.Empty<string>()
             ));
         }
     }

@@ -4,40 +4,33 @@
 //
 // Responsibilities (and ONLY these):
 //   Outbound — SendTick(board)
-//              Reads the blackboard, builds + POSTs the perception snapshot.
+//              Asks SnapshotManager to build the wire JSON, then POSTs it.
 //              Returns a requestId the caller uses to match the response.
-//              Owns the wire format — PeriodicMind never touches JSON.
+//              Does NOT know about channels, mood, spatial, etc.
 //
-//   Inbound  — HTTP listener on port 8080 receives POST /action from backend.
-//              Parses the command into an LLMIntent and stores it.
+//   Inbound  — PostAndPoll coroutine POSTs the tick and receives a job_id (202).
+//              PollResult coroutine polls GET /agent/tick/result/{job_id} until
+//              the backend writes a "done" or "error" result to Redis.
+//              Parses the response into an LLMIntent and stores it.
 //
 //   Query    — TryConsumeResponse(requestId, out LLMIntent)
 //              PeriodicMind polls this each Think() cycle.
 //              Returns true and clears the intent on match.
 //
-//   State    — GET /state serves motor/nav state for backend polling.
-//              Reads Malbers components — not the blackboard.
-//
 // NOT responsible for:
-//   • Writing the blackboard  (PeriodicMind is the sole Mind-slot writer)
-//   • Deciding which intent to apply  (PeriodicMind owns that)
+//   • Building the snapshot (SnapshotManager)
+//   • Writing the blackboard (PeriodicMind is the sole Mind-slot writer)
+//   • Deciding which intent to apply (PeriodicMind owns that)
 //
-// requestId matching uses "latest wins" for v1 — the backend does not yet echo
-// the requestId in its /action callback.
+// requestId matching uses "latest wins" for v1.
 // TODO: tighten to strict ID match once the backend echoes requestId.
 
 using UnityEngine;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Net;
-using System.Threading;
 using System.Text;
-using System.IO;
 using UnityEngine.Networking;
-using MalbersAnimations;
-using MalbersAnimations.Controller;
-using MalbersAnimations.Controller.AI;
 
 public class AgentMindBridge : MonoBehaviour
 {
@@ -46,11 +39,15 @@ public class AgentMindBridge : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
 
     [Header("Backend")]
-    public string backendUrl = "http://localhost:8000/api/v1/agent/tick";
+    public string backendUrl    = "http://localhost:8000/api/v1/agent/tick";
+    public string resultBaseUrl = "http://localhost:8000/api/v1/agent/tick/result/";
 
-    [Header("Inbound Listener")]
-    public int  listenerPort = 8080;
-    public bool logTraffic   = true;
+    [Header("Polling")]
+    public float pollIntervalSeconds = 1.5f;
+    public int   maxPollAttempts     = 20;    // ~30 s cap
+
+    [Header("Debug")]
+    public bool logTraffic = true;
 
     [Header("Named Targets (resolved for 'follow' intent)")]
     public List<NamedTarget> namedTargets = new List<NamedTarget>();
@@ -58,7 +55,7 @@ public class AgentMindBridge : MonoBehaviour
     [System.Serializable]
     public class NamedTarget
     {
-        public string    key;      // matches "target" field in backend /action callback
+        public string    key;
         public Transform target;
     }
 
@@ -68,215 +65,99 @@ public class AgentMindBridge : MonoBehaviour
 
     public class LLMIntent
     {
-        public string    intent;        // blackboard intent string: "go_to", "wander", "sit", …
-        public Vector3   destination;   // world position (go_to)
-        public Transform target;        // resolved Transform (follow); null otherwise
+        public string    intent;
+        public Vector3   destination;
+        public Transform target;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  OUTBOUND WIRE FORMAT  (POST /api/v1/agent/tick)
-    //  Matches the backend's PerceptionSnapshot schema exactly.
-    //  Lives here — PeriodicMind and CreaturePerception are shielded from this.
+    //  INBOUND WIRE FORMATS
     // ─────────────────────────────────────────────────────────────────────────
 
-    [Serializable] class TickPayload
-    {
-        public string     requestId;
-        public float      time;
-        public SelfData   self;
-        public MoodData   mood;
-        public HealthData health;
-        public EntityData[] entities;
-    }
-    [Serializable] class SelfData
-    {
-        public float x, y, z, rotY;
-        public bool  playerInSight;
-        public float closestPlayerDist;
-    }
-    [Serializable] class MoodData   { public float fear, trust, curiosity, social, energy; }
-    [Serializable] class HealthData { public float hunger; }
-    [Serializable] class EntityData
-    {
-        public string type, label, category;
-        public float  intensity, px, py, pz;
-    }
+    [Serializable] class TickAccepted { public string job_id; }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  INBOUND WIRE FORMAT  (POST /action from backend)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    [Serializable] class ActionCallback
+    // Flat layout — mirrors the ActionCallback the backend used to POST directly.
+    // "status" is added; action/x/y/z/target are the same fields.
+    [Serializable] class PollResponse
     {
-        public string requestId = "";
-        public string action    = "";
-        public float  x = 0f, y = 0f, z = 0f;
+        public string status = "";
+        public string action = "";
+        public float  x, y, z;
         public string target    = "";
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  STATE WIRE FORMAT  (GET /state)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    [Serializable] class MotorState
-    {
-        public float  posX, posY, posZ, rotY;
-        public string activeState, activeStance;
-        public bool   grounded;
-        public float  speed;
-        public bool   sprint;
-        public bool   aiActive;
-        public bool   hasArrived;
-        public float  remainingDist;
-        public string currentTarget;
+        public string requestId = "";
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     //  PRIVATE STATE
     // ─────────────────────────────────────────────────────────────────────────
 
-    MAnimal          _animal;
-    MAnimalAIControl _aiControl;
-
     Dictionary<string, Transform> _targetMap;
+    SnapshotManager               _snapshot;
 
-    HttpListener    _listener;
     readonly object _lock = new object();
 
-    // Latest response — listener thread writes, main thread reads
-    string    _latestResponseId = null;
-    LLMIntent _latestIntent     = null;
-    string    _pendingTargetKey = "";   // resolved on main thread in Tick()
-
-    volatile string _stateJson = "{}";
+    LLMIntent _latestIntent = null;
+    string    _pendingTargetKey = "";
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  INIT  (called by CreatureController — no board reference stored here)
+    //  INIT
     // ─────────────────────────────────────────────────────────────────────────
 
-    public void Init()
+    public void Init(SnapshotManager snapshot)
     {
-        _animal    = GetComponentInParent<MAnimal>();
-        _aiControl = GetComponentInParent<MAnimalAIControl>() ?? GetComponent<MAnimalAIControl>();
-
-        if (_animal    == null) Debug.LogWarning("[AgentMindBridge] MAnimal not found — /state will be sparse.");
-        if (_aiControl == null) Debug.LogWarning("[AgentMindBridge] MAnimalAIControl not found — nav state omitted.");
-
+        _snapshot  = snapshot;
         _targetMap = new Dictionary<string, Transform>(StringComparer.OrdinalIgnoreCase);
         foreach (var nt in namedTargets)
             if (nt.target != null)
                 _targetMap[nt.key] = nt.target;
 
-        Application.runInBackground = true;
-        StartListener();
+        if (_snapshot == null)
+            Debug.LogError("[AgentMindBridge] No SnapshotManager — SendTick will fail. Add SnapshotManager to the cat root.");
     }
-
-    void OnDestroy() => _listener?.Stop();
 
     // ─────────────────────────────────────────────────────────────────────────
     //  TICK  (called by CreatureController.Update — main thread)
     // ─────────────────────────────────────────────────────────────────────────
 
-    public void Tick()
-    {
-        ResolveFollowTarget();  // Transform lookup must happen on main thread
-        CacheMotorState();
-    }
+    public void Tick() => ResolvePendingTarget();
 
     // ─────────────────────────────────────────────────────────────────────────
     //  PUBLIC API — called by PeriodicMind
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Build a perception snapshot from the blackboard, POST it to the backend.
-    /// Returns a requestId — store it and pass to TryConsumeResponse() each tick.
-    /// </summary>
     public string SendTick(CreatureBlackboard board)
     {
-        string id      = Guid.NewGuid().ToString("N")[..8];
-        string json    = BuildSnapshotJson(board, id);
+        if (_snapshot == null)
+        {
+            Debug.LogError("[AgentMindBridge] SendTick aborted — SnapshotManager not wired.");
+            return null;
+        }
+
+        string id   = Guid.NewGuid().ToString("N")[..8];
+        string json = _snapshot.BuildJson(id);
 
         if (logTraffic) Debug.Log($"[AgentMindBridge] SendTick id={id}");
-        StartCoroutine(PostToBackend(json));
+        StartCoroutine(PostAndPoll(json));
         return id;
     }
 
-    /// <summary>
-    /// Check whether the backend replied to the given tick.
-    /// Clears the stored response on success (consume-once).
-    ///
-    /// v1: "latest wins" — any stored response is returned regardless of ID,
-    ///     because the backend does not yet echo requestId in /action.
-    /// TODO: replace with strict (_latestResponseId == requestId) once it does.
-    /// </summary>
     public bool TryConsumeResponse(string requestId, out LLMIntent intent)
     {
         lock (_lock)
         {
             if (_latestIntent == null) { intent = null; return false; }
 
-            intent            = _latestIntent;
-            _latestIntent     = null;
-            _latestResponseId = null;
+            intent        = _latestIntent;
+            _latestIntent = null;
             return true;
         }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  SNAPSHOT BUILDING  (main thread, called from SendTick)
-    //  The only place in the codebase that knows the backend's JSON contract.
+    //  OUTBOUND + POLL COROUTINES
     // ─────────────────────────────────────────────────────────────────────────
 
-    string BuildSnapshotJson(CreatureBlackboard board, string requestId)
-    {
-        var entities = new List<EntityData>();
-        foreach (var evt in board.sensorEvents)
-        {
-            entities.Add(new EntityData
-            {
-                type      = evt.type.ToString(),
-                label     = evt.label,
-                category  = evt.category,
-                intensity = evt.intensity,
-                px        = evt.position.x,
-                py        = evt.position.y,
-                pz        = evt.position.z,
-            });
-        }
-
-        var payload = new TickPayload
-        {
-            requestId = requestId,
-            time      = Time.time,
-            self      = new SelfData
-            {
-                x                 = transform.position.x,
-                y                 = transform.position.y,
-                z                 = transform.position.z,
-                rotY              = transform.eulerAngles.y,
-                playerInSight     = board.playerInSight,
-                closestPlayerDist = board.closestPlayerDist,
-            },
-            mood = new MoodData
-            {
-                fear      = board.mood.fear,
-                trust     = board.mood.trust,
-                curiosity = board.mood.curiosity,
-                social    = board.mood.social,
-                energy    = board.mood.energy,
-            },
-            health   = new HealthData { hunger = board.health.hunger },
-            entities = entities.ToArray(),
-        };
-
-        return JsonUtility.ToJson(payload);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  OUTBOUND HTTP  (coroutine)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    IEnumerator PostToBackend(string json)
+    IEnumerator PostAndPoll(string json)
     {
         var req = new UnityWebRequest(backendUrl, "POST");
         req.uploadHandler   = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
@@ -285,104 +166,80 @@ public class AgentMindBridge : MonoBehaviour
         yield return req.SendWebRequest();
 
         if (req.result != UnityWebRequest.Result.Success)
+        {
             Debug.LogWarning($"[AgentMindBridge] SendTick failed: {req.error}");
+            yield break;
+        }
+
+        var accepted = JsonUtility.FromJson<TickAccepted>(req.downloadHandler.text);
+        if (string.IsNullOrEmpty(accepted?.job_id))
+        {
+            Debug.LogWarning("[AgentMindBridge] 202 response missing job_id");
+            yield break;
+        }
+
+        if (logTraffic) Debug.Log($"[AgentMindBridge] job_id={accepted.job_id}");
+        yield return PollResult(accepted.job_id);
+    }
+
+    IEnumerator PollResult(string jobId)
+    {
+        string pollUrl = resultBaseUrl + jobId;
+        var    wait    = new WaitForSecondsRealtime(pollIntervalSeconds);
+
+        for (int attempt = 0; attempt < maxPollAttempts; attempt++)
+        {
+            yield return wait;
+
+            var get = UnityWebRequest.Get(pollUrl);
+            yield return get.SendWebRequest();
+
+            if (get.result != UnityWebRequest.Result.Success) continue;
+
+            var resp = JsonUtility.FromJson<PollResponse>(get.downloadHandler.text);
+
+            if (resp.status == "done")
+            {
+                if (logTraffic) Debug.Log($"[AgentMindBridge] job {jobId} done: {resp.action}");
+                ParseAndStore(resp);
+                yield break;
+            }
+
+            if (resp.status == "error")
+            {
+                Debug.LogWarning($"[AgentMindBridge] job {jobId} failed on backend");
+                yield break;
+            }
+        }
+
+        Debug.LogWarning($"[AgentMindBridge] job {jobId} timed out after {maxPollAttempts} polls");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  INBOUND HTTP LISTENER  (background thread)
+    //  RESPONSE PARSING  (main thread — Transform lookup safe here)
     // ─────────────────────────────────────────────────────────────────────────
 
-    void StartListener()
+    void ParseAndStore(PollResponse resp)
     {
-        try
-        {
-            _listener = new HttpListener();
-            _listener.Prefixes.Add($"http://localhost:{listenerPort}/");
-            _listener.Start();
-            new Thread(Listen) { IsBackground = true }.Start();
-            Debug.Log($"[AgentMindBridge] Listening on http://localhost:{listenerPort}/");
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[AgentMindBridge] Failed to start listener: {e.Message}");
-        }
-    }
-
-    void Listen()
-    {
-        while (_listener != null && _listener.IsListening)
-        {
-            try   { HandleHttp(_listener.GetContext()); }
-            catch (HttpListenerException) { break; }
-            catch (Exception e)           { Debug.LogError($"[AgentMindBridge] {e.Message}"); }
-        }
-    }
-
-    void HandleHttp(HttpListenerContext ctx)
-    {
-        var req  = ctx.Request;
-        var resp = ctx.Response;
-        resp.Headers.Add("Access-Control-Allow-Origin",  "*");
-        resp.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        resp.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
-
-        if (req.HttpMethod == "OPTIONS") { Send(resp, "{}"); return; }
-
-        switch (req.Url.AbsolutePath)
-        {
-            case "/action":
-                if (req.HttpMethod != "POST")
-                { resp.StatusCode = 405; Send(resp, "{\"error\":\"POST required\"}"); return; }
-                string body;
-                using (var sr = new StreamReader(req.InputStream)) body = sr.ReadToEnd();
-                if (logTraffic) Debug.Log($"[AgentMindBridge] /action: {body}");
-                ParseAndStore(JsonUtility.FromJson<ActionCallback>(body));
-                Send(resp, "{\"ok\":true}");
-                break;
-
-            case "/state":
-                Send(resp, _stateJson);
-                break;
-
-            case "/ping":
-                Send(resp, "{\"status\":\"ok\"}");
-                break;
-
-            default:
-                resp.StatusCode = 404;
-                Send(resp, "{\"error\":\"not found\"}");
-                break;
-        }
-    }
-
-    void Send(HttpListenerResponse resp, string json)
-    {
-        resp.ContentType = "application/json";
-        byte[] buf = Encoding.UTF8.GetBytes(json);
-        resp.OutputStream.Write(buf, 0, buf.Length);
-        resp.Close();
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  RESPONSE PARSING  (background thread)
-    //  Transform lookups must happen on the main thread — store key, resolve in Tick().
-    // ─────────────────────────────────────────────────────────────────────────
-
-    void ParseAndStore(ActionCallback cb)
-    {
-        if (cb == null || string.IsNullOrEmpty(cb.action) || cb.action == "wait")
-            return;
+        if (string.IsNullOrEmpty(resp.action) || resp.action == "wait") return;
 
         lock (_lock)
         {
-            _latestResponseId = string.IsNullOrEmpty(cb.requestId) ? "latest" : cb.requestId;
-            _latestIntent     = new LLMIntent
+            string action = resp.action;
+            if (action == "stop")  action = "idle";
+            if (action == "move")
             {
-                intent      = cb.action == "stop" ? "idle" : cb.action,
-                destination = new Vector3(cb.x, cb.y, cb.z),
-                target      = null,     // resolved on main thread
+                var dest = new Vector3(resp.x, resp.y, resp.z);
+                action = (dest != Vector3.zero) ? "go_to" : "wander";
+            }
+
+            _latestIntent = new LLMIntent
+            {
+                intent      = action,
+                destination = new Vector3(resp.x, resp.y, resp.z),
+                target      = null,
             };
-            _pendingTargetKey = cb.target ?? "";
+            _pendingTargetKey = resp.target ?? "";
         }
     }
 
@@ -390,43 +247,51 @@ public class AgentMindBridge : MonoBehaviour
     //  MAIN-THREAD HELPERS
     // ─────────────────────────────────────────────────────────────────────────
 
-    void ResolveFollowTarget()
+    // Called every frame from Tick() — resolves a pending named target to a
+    // Transform, then applies it to the intent (position for go_to, target for follow).
+    // GameObject.Find is safe here because we're on the main thread.
+    void ResolvePendingTarget()
     {
+        string pendingKey;
+        string pendingIntent;
+
         lock (_lock)
         {
             if (_latestIntent == null || string.IsNullOrEmpty(_pendingTargetKey)) return;
-            _targetMap.TryGetValue(_pendingTargetKey, out _latestIntent.target);
+            pendingKey    = _pendingTargetKey;
+            pendingIntent = _latestIntent.intent;
+        }
+
+        // Resolve: inspector list first, then scene search by name.
+        if (!_targetMap.TryGetValue(pendingKey, out Transform resolved))
+        {
+            var go = GameObject.Find(pendingKey);
+            if (go != null)
+            {
+                resolved = go.transform;
+                _targetMap[pendingKey] = resolved;   // cache for next time
+            }
+        }
+
+        lock (_lock)
+        {
+            if (_latestIntent == null || _pendingTargetKey != pendingKey) return;
+
+            if (resolved != null)
+            {
+                if (pendingIntent == "go_to")
+                    _latestIntent.destination = resolved.position;
+                else
+                    _latestIntent.target = resolved;
+            }
+            else
+            {
+                Debug.LogWarning($"[AgentMindBridge] target '{pendingKey}' not found in scene — falling back to wander");
+                if (pendingIntent == "go_to")
+                    _latestIntent.intent = "wander";
+            }
+
             _pendingTargetKey = "";
         }
-    }
-
-    void CacheMotorState()
-    {
-        var s = new MotorState
-        {
-            posX = transform.position.x,
-            posY = transform.position.y,
-            posZ = transform.position.z,
-            rotY = transform.eulerAngles.y,
-        };
-
-        if (_animal != null)
-        {
-            s.activeState  = _animal.ActiveState != null ? _animal.ActiveState.name : "none";
-            s.activeStance = _animal.ActiveStance.ToString();
-            s.grounded     = _animal.Grounded;
-            s.speed        = _animal.HorizontalSpeed;
-            s.sprint       = _animal.Sprint;
-        }
-
-        if (_aiControl != null)
-        {
-            s.aiActive      = _aiControl.Active;
-            s.hasArrived    = _aiControl.HasArrived;
-            s.remainingDist = _aiControl.RemainingDistance;
-            s.currentTarget = _aiControl.Target != null ? _aiControl.Target.name : "";
-        }
-
-        _stateJson = JsonUtility.ToJson(s);
     }
 }

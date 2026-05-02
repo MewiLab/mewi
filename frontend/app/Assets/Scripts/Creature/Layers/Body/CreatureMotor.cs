@@ -3,7 +3,6 @@ using UnityEngine.AI;
 using MalbersAnimations;
 using MalbersAnimations.Controller;
 using MalbersAnimations.Controller.AI;
-using MalbersAnimations.Scriptables;
 
 /// <summary>
 /// The "body" — reads the resolved intent from the blackboard each frame
@@ -90,10 +89,16 @@ public class CreatureMotor : MonoBehaviour
     public float wanderRetargetTime = 5f;
     public float fleeDistance        = 15f;
 
+    // ─── Debug / proof ───
+    [Header("Debug")]
+    [Tooltip("Log every destination my intent system issues, plus a 1-second heartbeat proving MAnimalAIControl is only following orders.")]
+    public bool logIntentProof = true;
+
     // ─── Internal ───
     string _currentIntent = "";
     float  _wanderTimer;
     bool   _hasArrived;
+    float  _proofTimer;
 
     // Set when we're holding an action-mode intent so OnModeEnd can clear it.
     bool _inActionIntent;
@@ -107,16 +112,40 @@ public class CreatureMotor : MonoBehaviour
         _board  = board;
         _config = config;
 
-        if (animal == null)    animal    = GetComponentInParent<MAnimal>();
-        if (aiControl == null) aiControl = GetComponentInChildren<MAnimalAIControl>();
+        if (animal == null)
+            animal = GetComponent<MAnimal>() ?? GetComponentInParent<MAnimal>() ?? GetComponentInChildren<MAnimal>();
 
-        if (animal == null)    { Debug.LogError("[CreatureMotor] No MAnimal found!");    return; }
-        if (aiControl == null) { Debug.LogError("[CreatureMotor] No MAnimalAIControl found!"); return; }
+        if (aiControl == null)
+            aiControl = GetComponent<MAnimalAIControl>()
+                     ?? GetComponentInParent<MAnimalAIControl>()
+                     ?? GetComponentInChildren<MAnimalAIControl>();
+
+#if UNITY_EDITOR
+        if (aiControl == null)
+        {
+            // Editor-only broad search so you can identify which GameObject holds it.
+            aiControl = FindFirstObjectByType<MAnimalAIControl>();
+            if (aiControl != null)
+                Debug.LogWarning($"[CreatureMotor] MAnimalAIControl found via scene search on '{aiControl.gameObject.name}'. Move CreatureMotor there or assign the field in the Inspector.");
+        }
+#endif
+
+        if (animal == null)    { Debug.LogError("[CreatureMotor] No MAnimal found! Place CreatureMotor on the animal root or assign it in the Inspector."); return; }
+        if (aiControl == null) { Debug.LogError("[CreatureMotor] No MAnimalAIControl found! Your cat prefab may not have AI set up — use the Malbers _AI prefab variant or add MAnimalAIControl manually."); return; }
 
         // Wire MAnimalAIControl → MAnimal if not set in Inspector.
         // Without this, its OnEnable throws NullRef trying to subscribe to animal events.
         if (aiControl.animal == null)
             aiControl.animal = animal;
+
+        // Prove the hierarchy is correct: NavMeshAgent must live on a child
+        // of the MAnimal GameObject or MAnimalAIControl.ResetAgentPosition
+        // will teleport the cat back to origin every frame.
+        var navAgent = aiControl.Agent;
+        if (navAgent != null && navAgent.transform == animal.transform)
+            Debug.LogError(
+                "[CreatureMotor] NavMeshAgent is on the MAnimal root — this will FREEZE the cat in place. " +
+                "Move the NavMeshAgent onto a child GameObject and reassign MAnimalAIControl.Agent.");
 
         // MAnimalBrain.StartNewState() hardcodes `enabled = true` on itself, so
         // unchecking it in the Inspector does nothing. Destroy it so it never
@@ -159,6 +188,10 @@ public class CreatureMotor : MonoBehaviour
         // via CalculatePath()+Move() the moment a mode animation finishes.
         // StopAI() here immediately overrides that so the creature doesn't drift.
         StopAI();
+
+        // The Mind slot issued this action; it's done — clear it so a stale
+        // "sit"/"eat"/etc. can't resurface if Tactical is ever cleared later.
+        _board?.ClearMindIntent();
         _board?.SetTacticalCurrent("idle");   // Brain will overwrite on its next tick
     }
 
@@ -187,6 +220,46 @@ public class CreatureMotor : MonoBehaviour
         }
 
         ExecuteIntent(intent);
+        LogProofHeartbeat();
+    }
+
+    // ═══════════════════════════════════════════════
+    //  PROOF HEARTBEAT
+    //  Once per second, dump the full chain so you can see that:
+    //    1. Your intent is what's active
+    //    2. The destination is the one MY code picked (wander/go_to/follow/etc)
+    //    3. The NavMeshAgent is following that destination (not inventing one)
+    //    4. The cat's position is actually advancing
+    // ═══════════════════════════════════════════════
+    void LogProofHeartbeat()
+    {
+        if (!logIntentProof) return;
+
+        _proofTimer += Time.deltaTime;
+        if (_proofTimer < 1f) return;
+        _proofTimer = 0f;
+
+        var agent = aiControl.Agent;
+
+        string agentInfo;
+        if (agent == null)
+            agentInfo = "agent=NULL";
+        else if (!agent.isActiveAndEnabled)
+            agentInfo = $"agentEnabled=False onNavMesh={agent.isOnNavMesh}";
+        else if (!agent.isOnNavMesh)
+            agentInfo = "agentEnabled=True onNavMesh=False (cat is off the baked NavMesh)";
+        else
+            agentInfo =
+                $"agentEnabled=True onNavMesh=True " +
+                $"hasPath={agent.hasPath} " +
+                $"remaining={agent.remainingDistance:F2} " +
+                $"desiredVel={agent.desiredVelocity.magnitude:F2}";
+
+        // Debug.Log(
+        //     $"[Motor:Proof] intent='{_currentIntent}' " +
+        //     $"catPos={transform.position} " +
+        //     $"destination={aiControl.DestinationPosition} " +
+        //     $"{agentInfo}");
     }
 
     // ═══════════════════════════════════════════════
@@ -199,12 +272,27 @@ public class CreatureMotor : MonoBehaviour
     }
 
     // ═══════════════════════════════════════════════
-    //  STOP HELPER
+    //  NAVIGATION HELPERS
     //
-    //  Calls Stop() to zero the agent and disable it.
-    //  We drive exclusively via SetDestination() so there is no persistent
-    //  target Transform to chase — no ClearTarget() needed.
+    //  Every destination/target handed to MAnimalAIControl comes through here.
+    //  MAnimalAIControl never invents a destination of its own — it only
+    //  pathfinds to whatever WE tell it. That is the proof that the cat is
+    //  driven by our intent system, not by Malbers.
     // ═══════════════════════════════════════════════
+
+    void NavigateTo(Vector3 destination)
+    {
+        aiControl.SetDestination(destination);
+        if (logIntentProof)
+            Debug.Log($"[Motor:Proof] intent='{_currentIntent}' → MY code called SetDestination({destination}). MAnimalAIControl will now pathfind.");
+    }
+
+    void NavigateToTarget(Transform t, bool alwaysFollow = false)
+    {
+        aiControl.SetTarget(t, alwaysFollow);
+        if (logIntentProof)
+            Debug.Log($"[Motor:Proof] intent='{_currentIntent}' → MY code called SetTarget({t.name}). MAnimalAIControl will now pathfind.");
+    }
 
     void StopAI()
     {
@@ -298,7 +386,7 @@ public class CreatureMotor : MonoBehaviour
                 if (sneakStance != null) animal.Stance = sneakStance;
                 SetSpeed(walkSpeedIndex);
                 if (_board.closestPlayer != null)
-                    aiControl.SetTarget(_board.closestPlayer);
+                    NavigateToTarget(_board.closestPlayer, true);   // alwaysFollow → Malbers auto-tracks
                 break;
 
             // ── LLM-driven navigation (written by AgentMindBridge) ───────────
@@ -306,14 +394,14 @@ public class CreatureMotor : MonoBehaviour
             case "go_to":
                 if (defaultStance != null) animal.Stance = defaultStance;
                 SetSpeed(trotSpeedIndex);
-                aiControl.SetDestination(intent.DirectionHint);
+                NavigateTo(intent.DirectionHint);
                 break;
 
             case "follow":
                 if (defaultStance != null) animal.Stance = defaultStance;
                 SetSpeed(trotSpeedIndex);
                 if (_board.followTarget != null)
-                    aiControl.SetTarget(_board.followTarget, true);
+                    NavigateToTarget(_board.followTarget, true);
                 else
                     Debug.LogWarning("[CreatureMotor] 'follow' intent fired but followTarget is null on blackboard.");
                 break;
@@ -321,8 +409,7 @@ public class CreatureMotor : MonoBehaviour
             // ── Reflex ───────────────────────────────────────────────────────
 
             case "flinch":
-                aiControl.Stop();
-                TriggerAction(startleAbilityIndex);
+                TriggerAction(startleAbilityIndex);   // TriggerAction already StopAI's
                 break;
 
             // ── Scripted actions (one-shot, auto-clear via OnModeEnd) ────────
@@ -356,13 +443,11 @@ public class CreatureMotor : MonoBehaviour
                 break;
 
             case "alert":
-                aiControl.Stop();
-                TriggerAction(alertAbilityIndex);
+                TriggerAction(alertAbilityIndex);       // TriggerAction already StopAI's
                 break;
 
             case "vocalize":
-                aiControl.Stop();
-                TriggerAction(vocalizeAbilityIndex);
+                TriggerAction(vocalizeAbilityIndex);    // TriggerAction already StopAI's
                 break;
 
             // ── Terminal ─────────────────────────────────────────────────────
@@ -400,18 +485,34 @@ public class CreatureMotor : MonoBehaviour
                 break;
 
             case "investigate":
-                if (_board.closestPlayer != null)
-                    aiControl.SetTarget(_board.closestPlayer);
-                break;
-
-            case "go_to":
-                // Once arrived, hand control back to Brain/Mind — don't stay frozen.
-                if (_hasArrived)
+                // Malbers handles moving-target tracking (alwaysFollow=true set in Enter).
+                // If the player vanished from sight, hand control back to the brain.
+                if (_board.closestPlayer == null)
                     _board.SetTacticalCurrent("idle");
                 break;
 
+            case "go_to":
+                // LLM-sourced one-shot: on arrival, clear Mind so the next tick
+                // can issue a fresh intent. Without ClearMindIntent, a stale
+                // "go_to" sits dormant behind Tactical.
+                if (_hasArrived)
+                {
+                    _board.ClearMindIntent();
+                    _board.SetTacticalCurrent("idle");
+                }
+                break;
+
+            case "follow":
+                // Target vanished → stop chasing nothing.
+                if (_board.followTarget == null)
+                {
+                    _board.ClearMindIntent();
+                    _board.SetTacticalCurrent("idle");
+                }
+                break;
+
             // All action intents are one-shot — nothing to poll per frame.
-            // OnModeEnd handles completion.
+            // OnModeEnd handles completion (and clears Mind).
         }
     }
 
@@ -440,7 +541,9 @@ public class CreatureMotor : MonoBehaviour
         randomDir.y = transform.position.y;
 
         if (NavMesh.SamplePosition(randomDir, out NavMeshHit hit, WanderRadius, NavMesh.AllAreas))
-            aiControl.SetDestination(hit.position);
+            NavigateTo(hit.position);
+        else
+            Debug.LogWarning($"[CreatureMotor] Wander → NavMesh.SamplePosition FAILED near {transform.position} radius={WanderRadius}. Is the NavMesh baked?");
     }
 
     void SetFleeDestination(Vector3 threatPosition)
@@ -452,6 +555,6 @@ public class CreatureMotor : MonoBehaviour
         Vector3 fleeTarget = transform.position + fleeDir * FleeDistance;
 
         if (NavMesh.SamplePosition(fleeTarget, out NavMeshHit hit, FleeDistance, NavMesh.AllAreas))
-            aiControl.SetDestination(hit.position);
+            NavigateTo(hit.position);
     }
 }

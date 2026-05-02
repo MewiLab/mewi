@@ -13,7 +13,8 @@ public struct SensoryEvent
     public float     timestamp;
     public Transform source;      // nullable — not every event has a transform
     public string    label;       // human-readable name, e.g. "BP_House_2"
-    public string    category;    // semantic class, e.g. "house", "lantern", "shelter"
+    public string    category;    // most-specific semantic class, e.g. "lantern" (first tag's last segment)
+    public string[]  tags;        // full hierarchical tag set, e.g. ["prop.light.lantern", "prop.fragile"]
 
     public enum SenseType
     {
@@ -26,7 +27,7 @@ public struct SensoryEvent
         NearbyObject       // generic — differentiated by label (GameObject name)
     }
 
-    public static SensoryEvent Create(SenseType t, Vector3 pos, float intensity, Transform src = null, string label = null, string category = null)
+    public static SensoryEvent Create(SenseType t, Vector3 pos, float intensity, Transform src = null, string label = null, string category = null, string[] tags = null)
     {
         return new SensoryEvent
         {
@@ -36,7 +37,8 @@ public struct SensoryEvent
             timestamp = Time.time,
             source    = src,
             label     = label ?? src?.name,
-            category  = category ?? "unknown"
+            category  = category ?? "unknown",
+            tags      = tags ?? System.Array.Empty<string>()
         };
     }
 

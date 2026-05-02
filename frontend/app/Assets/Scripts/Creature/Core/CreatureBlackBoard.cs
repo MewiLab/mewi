@@ -132,6 +132,20 @@ public class CreatureBlackboard : MonoBehaviour
     /// <summary>Recent sensory events for this frame, cleared each tick.</summary>
     public List<SensoryEvent> sensorEvents = new List<SensoryEvent>();
 
+    /// <summary>Semantic zones the cat currently stands in. Written by SmartZoneTracker.</summary>
+    [HideInInspector] public HashSet<string> currentZones = new HashSet<string>();
+
+    // ─────────────────────────────────────────────
+    // SPATIAL CONTEXT — written by ZoneScanner
+    //   Hierarchical "where am I" for the agent: largest enclosing zone first.
+    //   e.g. ["Harbor", "Boat_03", "Deck"]. Distinct from currentZones (flat
+    //   tag-based) — this answers "what kind of place?" hierarchically.
+    // ─────────────────────────────────────────────
+
+    [HideInInspector] public List<string>      locationHierarchy = new List<string>();
+    [HideInInspector] public ConfinementLevel  confinement       = ConfinementLevel.Open;
+    [HideInInspector] public string            surfaceMaterial   = "";
+
 
     // ─────────────────────────────────────────────
     // REFLEX — gaze override (not an intent, a parallel channel)

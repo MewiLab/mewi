@@ -1,7 +1,7 @@
 using UnityEngine;
 
 public class CreatureController : MonoBehaviour
-{   
+{
     [Header("config")]
     [Tooltip("Create via Assets > Create > Creature > Config")]
     public CreatureConfig  config;
@@ -13,19 +13,25 @@ public class CreatureController : MonoBehaviour
     CreatureMotor          _motor;
     CreatureAgent          _agent;
     AgentMindBridge        _mindBridge;
+    SnapshotManager        _snapshot;
+    SmartZoneTracker       _zoneTracker;
+    ZoneScanner            _zoneScanner;
 
     // Explicit dependency injection — we wire everything here so
     // initialization order is clear and testable without Unity magic.
     void Awake()
     {
-        _board      = GetComponent<CreatureBlackboard>();
-        _perception = GetComponent<CreaturePerception>();
-        _reflex     = GetComponent<CreatureReflexRunner>();
-        _brain      = GetComponent<CreatureBrain>();
-        _mind       = GetComponent<PeriodicMind>();
-        _motor      = GetComponent<CreatureMotor>();
-        _agent      = GetComponent<CreatureAgent>();
-        _mindBridge = GetComponent<AgentMindBridge>();
+        _board       = GetComponent<CreatureBlackboard>();
+        _perception  = GetComponent<CreaturePerception>();
+        _reflex      = GetComponent<CreatureReflexRunner>();
+        _brain       = GetComponent<CreatureBrain>();
+        _mind        = GetComponent<PeriodicMind>();
+        _motor       = GetComponent<CreatureMotor>();
+        _agent       = GetComponent<CreatureAgent>();
+        _mindBridge  = GetComponent<AgentMindBridge>();
+        _snapshot    = GetComponent<SnapshotManager>();
+        _zoneTracker = GetComponent<SmartZoneTracker>();
+        _zoneScanner = GetComponent<ZoneScanner>();
 
         if (config == null)
         {
@@ -38,7 +44,7 @@ public class CreatureController : MonoBehaviour
         {
             Debug.LogError("[CreatureController] Missing CreatureBlackboard component!");
             enabled = false;
-            return;            
+            return;
         }
 
         if (_perception != null)  _perception.Init(_board, config);
@@ -47,7 +53,10 @@ public class CreatureController : MonoBehaviour
         if (_mind != null)        _mind.Init(_board, config);
         if (_motor != null)       _motor.Init(_board, config);
         if (_agent != null)       _agent.Init(_board);
-        if (_mindBridge != null)  _mindBridge.Init();
+        if (_snapshot != null)    _snapshot.Init(_board);
+        if (_mindBridge != null)  _mindBridge.Init(_snapshot);
+        if (_zoneTracker != null) _zoneTracker.Init(_board);
+        if (_zoneScanner != null) _zoneScanner.Init(_board);
     }
 
     void Start()
@@ -60,11 +69,12 @@ public class CreatureController : MonoBehaviour
         _board.ClearFrameFlags();
         _board.ScoreDrives();
 
-        if (_mindBridge != null) _mindBridge.Tick();
-        if (_perception != null) _perception.Tick();
-        if (_reflex != null)     _reflex.Tick();
-        if (_brain != null)      _brain.Tick();
-        if (_motor != null)      _motor.Tick();
+        if (_mindBridge != null)  _mindBridge.Tick();
+        if (_perception != null)  _perception.Tick();
+        if (_zoneScanner != null) _zoneScanner.Tick();
+        if (_reflex != null)      _reflex.Tick();
+        if (_brain != null)       _brain.Tick();
+        if (_motor != null)       _motor.Tick();
 
         _board.UpdateDebugDisplay();
     }

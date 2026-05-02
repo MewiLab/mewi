@@ -9,8 +9,12 @@
 //   3. On reply  — apply the LLMIntent to the blackboard (ONLY place MindIntent is written)
 //   Mood decay runs every tick regardless so mood never freezes between LLM responses.
 //
+// Responsibility split for the LLM loop:
+//   PeriodicMind    — decides WHEN to send (timer)
+//   SnapshotManager — builds WHAT (iterates ISnapshotChannel registry)
+//   AgentMindBridge — does HOW (POST + poll + parse response)
+//
 // PeriodicMind is the sole writer to CreatureBlackboard.SetMindIntent().
-// AgentMindBridge reads the blackboard to build snapshots — it never writes it.
 
 using System.Collections;
 using UnityEngine;
