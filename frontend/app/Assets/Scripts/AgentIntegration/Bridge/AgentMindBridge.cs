@@ -1,4 +1,4 @@
-// AgentMindBridge.cs  (Creature/Layers/Mind/)
+// AgentMindBridge.cs  (AgentIntegration/Bridge/)
 //
 // Pure transport adapter for the PeriodicMind ↔ LLM backend loop.
 //

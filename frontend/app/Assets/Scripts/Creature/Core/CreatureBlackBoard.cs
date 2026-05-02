@@ -137,14 +137,12 @@ public class CreatureBlackboard : MonoBehaviour
 
     // ─────────────────────────────────────────────
     // SPATIAL CONTEXT — written by ZoneScanner
-    //   Hierarchical "where am I" for the agent: largest enclosing zone first.
-    //   e.g. ["Harbor", "Boat_03", "Deck"]. Distinct from currentZones (flat
-    //   tag-based) — this answers "what kind of place?" hierarchically.
+    //   Sorted outermost → innermost by collider volume.
+    //   SpatialChannel reads this to build the zones[] wire array.
+    //   Each ZoneVolume carries its own id, type, confinement, surface.
     // ─────────────────────────────────────────────
 
-    [HideInInspector] public List<string>      locationHierarchy = new List<string>();
-    [HideInInspector] public ConfinementLevel  confinement       = ConfinementLevel.Open;
-    [HideInInspector] public string            surfaceMaterial   = "";
+    [HideInInspector] public List<ZoneVolume> activeZones = new List<ZoneVolume>();
 
 
     // ─────────────────────────────────────────────

@@ -2,12 +2,12 @@
 //
 // The wire format sent to POST /api/v1/agent/tick.
 //
-// Each channel owns one slot of this payload (e.g. SelfChannel writes `self`,
-// SpatialChannel writes `spatial_context`). Adding a channel means adding a
+// Each channel owns one slot of this payload. Adding a channel means adding a
 // field here AND a class under Snapshot/Channels/.
 //
-// Kept in the Snapshot folder — neither AgentMindBridge nor PeriodicMind
-// reference these types directly. Only channels and SnapshotManager do.
+// Note on optional zone properties: JsonUtility always emits all declared
+// fields. ZoneEntry.confinement and ZoneEntry.surface will appear as "" when
+// not set. Python treats empty string as absent: `zone.get('confinement') or None`.
 
 using System;
 
@@ -52,10 +52,19 @@ public class EntityData
     public string   direction;
 }
 
+// Each entry in the zones array.
+// confinement / surface are optional — empty string means "not specified for this zone".
+[Serializable]
+public class ZoneEntry
+{
+    public string id;
+    public string type;
+    public string confinement;  // "Open" | "Semi" | "Confined" | ""
+    public string surface;      // material string | ""
+}
+
 [Serializable]
 public class SpatialData
 {
-    public string[] location_hierarchy;
-    public string   confinement;
-    public string   surface_material;
+    public ZoneEntry[] zones;
 }

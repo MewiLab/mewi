@@ -1,4 +1,4 @@
-// PeriodicMind.cs  (Creature/Layers/Mind/)
+// PeriodicMind.cs  (AgentIntegration/Bridge/)
 //
 // The "slow mind" — fires on a timer, updates mood, drives the Mind intent slot.
 //

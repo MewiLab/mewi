@@ -1,5 +1,3 @@
-// ConfinementLevel.cs
-//
 // Authored on every ZoneVolume — "how enclosed does this place feel?".
 // Used by reason node to bias behaviour: confined = wary in unfamiliar zones,
 // safe in familiar ones.
