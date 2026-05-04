@@ -65,19 +65,27 @@ See [ADR-001](frontend/docs/decisions/ADR-001-unity-creature-ai-architecture.md)
 
 ### Components
 
-| Component | Layer | Responsibility |
+| Component | Folder | Responsibility |
 |---|---|---|
-| `CreatureBlackboard` | Core | Shared data bus — mood, health, perception events, intent slots |
-| `CreaturePerception` | Perception | Physics-based sensing, writes `sensorEvents` to blackboard |
-| `CreatureReflexRunner` | Reflex | Frame-rate reflexes (flinch, gaze, avoidance) — writes `ReflexIntent` |
-| `CreatureBrain` | Tactical | FSM — reads blackboard conditions, writes `TacticalIntent` |
-| `PeriodicMind` | Mind | Slow timer loop; sole writer of `MindIntent`; runs `Simulated` or `LLM` mode |
-| `AgentMindBridge` | Mind | Pure transport — builds snapshots from blackboard, POSTs to backend, receives LLM responses |
-| `CreatureMotor` | Body | **Only** component that touches Malbers / NavMesh; reads `ResolveActiveIntent()` |
-| `CreatureController` | Core | Wires all layers via `Init()`, drives the `Update` tick order |
-| `AgentBridge` | Infrastructure | **Test harness only** — raw HTTP → direct motor dispatch, no blackboard |
+| `CreatureBlackboard` | `Creature/Core/` | Shared data bus — mood, health, perception events, intent slots |
+| `CreatureController` | `Creature/Core/` | Wires all components via `Init()`, drives the `Update` tick order |
+| `CreatureReflexRunner` | `Creature/Reflexes/` | Frame-rate reflexes (flinch, gaze, avoidance) — writes `ReflexIntent` |
+| `CreatureBrain` | `Creature/Tactical/` | FSM — reads blackboard conditions, writes `TacticalIntent` |
+| `CreatureMotor` | `Creature/Motor/` | **Only** component that touches Malbers / NavMesh; reads `ResolveActiveIntent()` |
+| `CreaturePerception` | `AgentIntegration/Perception/` | Physics-based sensing, writes `sensorEvents` to blackboard |
+| `SmartZoneTracker` | `AgentIntegration/Perception/` | Flat tag-based zone membership (`zone.*` SmartObject tags) |
+| `ZoneScanner` | `AgentIntegration/Perception/Spatial/` | Hierarchical place tracker — reads `ZoneVolume` triggers, writes `locationHierarchy` |
+| `PeriodicMind` | `AgentIntegration/Bridge/` | Slow timer loop; sole writer of `MindIntent`; runs `Simulated` or `LLM` mode |
+| `AgentMindBridge` | `AgentIntegration/Bridge/` | Pure transport — POSTs snapshots, parses LLM responses |
+| `SnapshotManager` | `AgentIntegration/Snapshot/` | Channel registry — iterates `ISnapshotChannel`s and produces tick JSON |
+| `AgentBridge` | `AgentIntegration/Bridge/` | **Test harness only** — raw HTTP → direct motor dispatch, no blackboard |
+| `SmartObject` / `ZoneVolume` | `Semantics/Markup/` | World markup — designer-placed tags and zone volumes |
 
-**Script locations**: `Assets/Scripts/Creature/` (layered), `Assets/Scripts/Infrastructure/` (test harness), `Assets/Scripts/Test/` (deprecated/test-only files)
+**Script layout** (peer top-level folders, dependency rule: `AgentIntegration` and `Creature` both depend on `Semantics/Markup`, never on each other):
+- `Creature/` — physical vessel and local logic (Core, Motor, Reflexes, Tactical)
+- `AgentIntegration/` — everything that talks to the Python backend (Perception, Snapshot channels, Bridge transport)
+- `Semantics/` — pure world markup (SmartObject baking + ZoneVolume) with no scanning logic
+- `Test/` — test harness scripts (CreatureAgent, CreatureMVPTest, AnimalControllerTest)
 
 ### Intent Priority (Subsumption)
 
@@ -95,7 +103,8 @@ Higher-priority layers suppress lower ones without any direct coupling.
       → checks AgentMindBridge.TryConsumeResponse() for a pending LLM reply
            → on hit: _board.SetMindIntent(intent)   ← only place MindIntent is written
       → calls AgentMindBridge.SendTick(_board)
-           → bridge reads blackboard, builds TickPayload JSON
+           → bridge asks SnapshotManager.BuildJson(id)
+                → manager iterates ISnapshotChannels (Self, Mood, Health, Entities, Spatial)
            → POST /api/v1/agent/tick to backend
 
 3. Backend runs LangGraph (perceive → remember → reason → act → reflect)

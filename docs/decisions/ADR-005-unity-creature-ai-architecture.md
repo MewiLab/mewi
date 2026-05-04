@@ -110,7 +110,7 @@ The motor and reflex layers are identical in both modes — they read the blackb
 
 ### 5. AgentBridge kept as test harness
 
-The original `AgentBridge.cs` (direct HTTP → motor dispatch, no blackboard) is retained in `Assets/Scripts/Infrastructure/` as a raw connectivity test. It is **not** used in production. Disable it when `AgentMindBridge` is active (they share port 8080).
+The original `AgentBridge.cs` (direct HTTP → motor dispatch, no blackboard) is retained in `Assets/Scripts/AgentIntegration/Bridge/` as a raw connectivity test. It is **not** used in production. Disable it when `AgentMindBridge` is active (they share port 8080).
 
 
 
@@ -121,31 +121,54 @@ Assets/Scripts/
 ├── Creature/
 │   ├── Core/
 │   │   ├── CreatureController.cs     ← wires all layers, drives Update tick
-│   │   ├── CreatureBlackboard.cs     ← shared state bus
+│   │   ├── CreatureBlackBoard.cs     ← shared state bus
 │   │   ├── CreatureConfig.cs         ← tuning values (ScriptableObject)
 │   │   ├── IntentMessage.cs          ← struct: intent + source + expiry + directionHint
+│   │   ├── SensoryEvent.cs
 │   │   ├── MoodModel.cs
 │   │   └── HealthModel.cs
-│   └── Layers/
-│       ├── Perception/
-│       │   └── CreaturePerception.cs ← physics sensing → blackboard.sensorEvents
-│       ├── Relax/
-│       │   ├── CreatureReflexRunner.cs
-│       │   ├── FlinchReflex.cs
-│       │   ├── GazeReflex.cs
-│       │   └── AvoidanceReflex.cs
-│       ├── Tactical/
-│       │   └── CreatureBrain.cs      ← FSM → TacticalIntent
-│       ├── Mind/
-│       │   ├── PeriodicMind.cs       ← timer, mood, sole MindIntent writer
-│       │   └── AgentMindBridge.cs    ← HTTP transport, snapshot builder, LLMIntent
-│       └── Body/
-│           └── CreatureMotor.cs      ← sole Malbers contact, reads resolved intent
-├── Infrastructure/
-│   └── AgentBridge.cs                ← test harness only (direct motor dispatch)
+│   ├── Motor/
+│   │   └── CreatureMotor.cs          ← sole Malbers contact, reads resolved intent
+│   ├── Reflexes/
+│   │   ├── CreatureReflexRunner.cs
+│   │   ├── FlinchReflex.cs
+│   │   ├── GazeReflex.cs
+│   │   ├── AvoidanceReflex.cs
+│   │   └── IReflex.cs
+│   └── Tactical/
+│       └── CreatureBrain.cs          ← FSM → TacticalIntent
+├── AgentIntegration/
+│   ├── Bridge/
+│   │   ├── PeriodicMind.cs           ← timer, mood decay, sole MindIntent writer
+│   │   ├── AgentMindBridge.cs        ← HTTP transport, LLMIntent producer
+│   │   ├── BackendConfig.cs          ← ScriptableObject: baseUrl + network tuning (ADR-006)
+│   │   ├── ApiRoutes.cs              ← central path registry (ADR-006)
+│   │   └── AgentBridge.cs            ← test harness only (direct motor dispatch, no blackboard)
+│   ├── Perception/
+│   │   ├── CreaturePerception.cs     ← physics sensing → blackboard.sensorEvents
+│   │   ├── SmartZoneTracker.cs       ← flat tag-based zone membership
+│   │   └── Spatial/
+│   │       └── ZoneScanner.cs        ← hierarchical place tracker, reads ZoneVolume triggers
+│   └── Snapshot/
+│       ├── ISnapshotChannel.cs
+│       ├── SnapshotManager.cs        ← iterates channels, produces tick JSON
+│       ├── SnapshotPayload.cs
+│       └── Channels/
+│           ├── SelfChannel.cs
+│           ├── MoodChannel.cs
+│           ├── HealthChannel.cs
+│           ├── EntitiesChannel.cs
+│           └── SpatialChannel.cs
 ├── Semantics/
-│   ├── SemanticZone.cs
-│   └── SemanticCategoryConfig.cs
+│   ├── Markup/
+│   │   ├── SmartObject.cs
+│   │   ├── SemanticCategoryConfig.cs
+│   │   └── Spatial/
+│   │       ├── ZoneVolume.cs
+│   │       ├── ZoneType.cs
+│   │       └── ConfinementLevel.cs
+│   └── Editor/
+│       └── SmartObjectBaker.cs
 └── Test/
     ├── CreatureAgent.cs              ← deprecated outbound-only sender, kept for reference
     ├── CreatureMVPTest.cs
@@ -186,7 +209,7 @@ Assets/Scripts/
 - Blackboard is a shared mutable object — callers must respect ownership rules (not enforced by the type system).
 - `PeriodicMind` polls for a response every Think() cycle regardless of whether one is expected; adds minor overhead.
 - "Latest wins" requestId matching means a very slow backend response could be silently discarded by a newer tick. Acceptable for v1; fix with strict matching once backend echoes IDs.
-- `AgentMindBridge` reads the blackboard to build snapshots — breaks the pure "one writer per slot" principle for reads. Reads are safe; only writes are restricted.
+- `SnapshotManager` reads the blackboard (via `ISnapshotChannel` implementations) to build the tick payload — reads are safe, but it does traverse blackboard state outside the strict writer-per-slot model.
 
 
 

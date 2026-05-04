@@ -39,12 +39,7 @@ public class AgentMindBridge : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
 
     [Header("Backend")]
-    public string backendUrl    = "http://localhost:8000/api/v1/agent/tick";
-    public string resultBaseUrl = "http://localhost:8000/api/v1/agent/tick/result/";
-
-    [Header("Polling")]
-    public float pollIntervalSeconds = 1.5f;
-    public int   maxPollAttempts     = 20;    // ~30 s cap
+    public BackendConfig config;
 
     [Header("Debug")]
     public bool logTraffic = true;
@@ -159,7 +154,7 @@ public class AgentMindBridge : MonoBehaviour
 
     IEnumerator PostAndPoll(string json)
     {
-        var req = new UnityWebRequest(backendUrl, "POST");
+        var req = new UnityWebRequest(ApiRoutes.Resolve(config, ApiRoutes.AgentTick), "POST");
         req.uploadHandler   = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
@@ -184,10 +179,10 @@ public class AgentMindBridge : MonoBehaviour
 
     IEnumerator PollResult(string jobId)
     {
-        string pollUrl = resultBaseUrl + jobId;
-        var    wait    = new WaitForSecondsRealtime(pollIntervalSeconds);
+        string pollUrl = ApiRoutes.Resolve(config, ApiRoutes.AgentTickResult) + jobId;
+        var    wait    = new WaitForSecondsRealtime(config.pollIntervalSeconds);
 
-        for (int attempt = 0; attempt < maxPollAttempts; attempt++)
+        for (int attempt = 0; attempt < config.maxPollAttempts; attempt++)
         {
             yield return wait;
 
@@ -212,7 +207,7 @@ public class AgentMindBridge : MonoBehaviour
             }
         }
 
-        Debug.LogWarning($"[AgentMindBridge] job {jobId} timed out after {maxPollAttempts} polls");
+        Debug.LogWarning($"[AgentMindBridge] job {jobId} timed out after {config.maxPollAttempts} polls");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
