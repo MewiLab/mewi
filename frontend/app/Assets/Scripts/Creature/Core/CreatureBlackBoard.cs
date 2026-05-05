@@ -7,7 +7,8 @@ using UnityEngine;
 /// </summary>
 public class CreatureBlackboard : MonoBehaviour
 {
-
+    [Header("Identity")]
+    [SerializeField] string creatureId = "";
 
     [Header("Intent slots (read-only in Inspector)")]
     [SerializeField] string _debugReflexSlot   = "—";
@@ -18,6 +19,16 @@ public class CreatureBlackboard : MonoBehaviour
     IntentMessage? _reflexIntent;
     IntentMessage? _tacticalIntent;
     IntentMessage? _mindIntent;
+
+    public string CreatureId
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(creatureId))
+                creatureId = gameObject.name;
+            return creatureId;
+        }
+    }
 
     public IntentMessage? ReflexIntent  => _reflexIntent?.IsActive == true ? _reflexIntent : null;
     public IntentMessage? TacticalIntent => _tacticalIntent?.IsActive == true ? _tacticalIntent : null;
@@ -34,9 +45,14 @@ public class CreatureBlackboard : MonoBehaviour
         _tacticalIntent = IntentMessage.Create(intent, LayerSource.Tactical, -1f, directionHint);
     }
 
-    public void SetMindIntent(string intent, Vector3 directionHint = default)
+    public void SetMindIntent(
+        string intent,
+        Vector3 directionHint = default,
+        string commandId = "",
+        string requestId = "",
+        string targetKey = "")
     {
-        _mindIntent = IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint);
+        _mindIntent = IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint, commandId, requestId, targetKey);
         LogEvent($"mind suggests: {intent}");
     }
 

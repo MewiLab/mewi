@@ -6,6 +6,7 @@ public static class ApiRoutes
 {
     public const string AgentTick       = "/api/v1/agent/tick";
     public const string AgentTickResult = "/api/v1/agent/tick/result/";  // append job_id
+    public const string AgentReport     = "/api/v1/agent/report";
 
     public static string Resolve(BackendConfig cfg, string path) =>
         cfg.baseUrl.TrimEnd('/') + path;

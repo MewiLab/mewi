@@ -30,6 +30,21 @@ public struct IntentMessage
     public Vector3 DirectionHint; 
 
     /// <summary>
+    /// LLM command correlation id. Empty for local/reflex/tactical intents.
+    /// </summary>
+    public string CommandId;
+
+    /// <summary>
+    /// Backend tick request that produced this command. Empty for local intents.
+    /// </summary>
+    public string RequestId;
+
+    /// <summary>
+    /// Original named target key from the backend, if any.
+    /// </summary>
+    public string TargetKey;
+
+    /// <summary>
     /// Is this slot still active? Checks expiry if duration is positive.
     /// </summary>
     public bool IsActive => Duration < 0f || (Time.time - SetTime) < Duration; 
@@ -43,7 +58,14 @@ public struct IntentMessage
     /// <summary>
     /// Factory method to cleanly generate an IntentMessage.
     /// </summary>
-    public static IntentMessage Create(string intent, LayerSource source, float duration = -1f, Vector3 directionHint = default)
+    public static IntentMessage Create(
+        string intent,
+        LayerSource source,
+        float duration = -1f,
+        Vector3 directionHint = default,
+        string commandId = "",
+        string requestId = "",
+        string targetKey = "")
     {
         return new IntentMessage
         {
@@ -52,6 +74,9 @@ public struct IntentMessage
             SetTime       = Time.time,
             Duration      = duration,
             DirectionHint = directionHint,
+            CommandId     = commandId ?? "",
+            RequestId     = requestId ?? "",
+            TargetKey     = targetKey ?? "",
         };
     }
 

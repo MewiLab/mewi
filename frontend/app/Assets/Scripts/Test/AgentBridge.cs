@@ -1,4 +1,5 @@
-// AgentBridge.cs — Attach to your cat GameObject in Unity
+// AgentBridge.cs — TEST-ONLY legacy harness.
+// Do not attach to production NPC prefabs. Production LLM NPCs use AgentMindBridge.
 // Receives HTTP commands from the Python backend and routes them to either:
 //   • MAnimalAIControl + NavMesh  (go_to, follow, wander, stop)
 //   • MInputLink / MAnimal        (button presses, legacy axis)
@@ -23,6 +24,7 @@ using MalbersAnimations.Controller;
 using MalbersAnimations.Controller.AI;
 using MalbersAnimations.InputSystem;
 
+[AddComponentMenu("")]
 public class AgentBridge : MonoBehaviour
 {
     [Header("Settings")]
@@ -105,6 +107,13 @@ public class AgentBridge : MonoBehaviour
 
     void Start()
     {
+        if (HasProductionBridgeInHierarchy())
+        {
+            Debug.LogError("[AgentBridge] Test-only AgentBridge is on the same hierarchy as AgentMindBridge. Disabling AgentBridge to avoid dual-control.");
+            enabled = false;
+            return;
+        }
+
         // Auto-find references if not wired in Inspector
         if (animal    == null) animal    = GetComponentInParent<MAnimal>();
         if (inputLink == null) inputLink = GetComponentInParent<MInputLink>() ?? GetComponent<MInputLink>();
@@ -141,6 +150,12 @@ public class AgentBridge : MonoBehaviour
     void OnDestroy()
     {
         _listener?.Stop();
+    }
+
+    bool HasProductionBridgeInHierarchy()
+    {
+        var root = transform.root;
+        return root.GetComponentInChildren<AgentMindBridge>(true) != null;
     }
 
     void Update()

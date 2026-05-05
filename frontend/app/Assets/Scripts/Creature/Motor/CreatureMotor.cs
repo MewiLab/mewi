@@ -41,6 +41,7 @@ public class CreatureMotor : MonoBehaviour
     // ─── Set by CreatureController.Init ───
     CreatureBlackboard _board;
     CreatureConfig     _config;
+    HttpActionReporter _reporter;
 
     // ─── Malbers references ───
     [Header("Malbers References")]
@@ -56,6 +57,9 @@ public class CreatureMotor : MonoBehaviour
     // Defaults match the Malbers preset. Override in the Inspector if your list differs.
     [Header("Action Ability Indices (match MAnimal Action mode list order)")]
     public int startleAbilityIndex  = 1;   // Stun / startle
+    public int scratchAbilityIndex  = 0;   // Scratch (set index in Inspector)
+    public int lookAroundAbilityIndex = 0; // Look around (set index in Inspector)
+    public int nodHeadAbilityIndex  = 0;   // Nod head (set index in Inspector)
     public int eatAbilityIndex      = 2;   // Eat
     public int drinkAbilityIndex    = 7;   // Drink
     public int sitAbilityIndex      = 8;   // Seat / Sit
@@ -96,6 +100,8 @@ public class CreatureMotor : MonoBehaviour
 
     // ─── Internal ───
     string _currentIntent = "";
+    string _currentCommandId = "";
+    string _currentRequestId = "";
     float  _wanderTimer;
     bool   _hasArrived;
     float  _proofTimer;
@@ -111,6 +117,7 @@ public class CreatureMotor : MonoBehaviour
     {
         _board  = board;
         _config = config;
+        _reporter = GetComponent<HttpActionReporter>();
 
         if (animal == null)
             animal = GetComponent<MAnimal>() ?? GetComponentInParent<MAnimal>() ?? GetComponentInChildren<MAnimal>();
@@ -191,6 +198,7 @@ public class CreatureMotor : MonoBehaviour
 
         // The Mind slot issued this action; it's done — clear it so a stale
         // "sit"/"eat"/etc. can't resurface if Tactical is ever cleared later.
+        ReportCurrent("succeeded", "");
         _board?.ClearMindIntent();
         _board?.SetTacticalCurrent("idle");   // Brain will overwrite on its next tick
     }
@@ -211,12 +219,30 @@ public class CreatureMotor : MonoBehaviour
         HandleGaze();
 
         IntentMessage intent = _board.ResolveActiveIntent();
+        string commandId = intent.CommandId ?? "";
 
-        if (intent.Intent != _currentIntent)
+        if (intent.Intent != _currentIntent || commandId != _currentCommandId)
         {
             ExitIntent(_currentIntent);
-            EnterIntent(intent);
+            bool entered = EnterIntent(intent);
             _currentIntent = intent.Intent;
+            _currentCommandId = commandId;
+            _currentRequestId = intent.RequestId ?? "";
+
+            if (!entered)
+            {
+                Report(intent, "failed", "Malbers refused or command is invalid");
+                if (intent.Source == LayerSource.Mind)
+                    _board.ClearMindIntent();
+                _currentIntent = "";
+                _currentCommandId = "";
+                _currentRequestId = "";
+                return;
+            }
+
+            Report(intent, "started", "");
+            if (intent.Intent == "stop_moving" || intent.Intent == "stop")
+                Report(intent, "succeeded", "");
         }
 
         ExecuteIntent(intent);
@@ -309,20 +335,20 @@ public class CreatureMotor : MonoBehaviour
     //  OnModeEnd (above) automatically clears the intent when the clip finishes.
     // ═══════════════════════════════════════════════
 
-    void TriggerAction(int abilityIndex)
+    bool TriggerAction(int abilityIndex)
     {
         if (actionMode == null || abilityIndex <= 0)
         {
             Debug.LogWarning($"[CreatureMotor] TriggerAction: actionMode not set or abilityIndex = {abilityIndex}");
-            return;
+            return false;
         }
 
         StopAI();
-        _inActionIntent = true;
 
-        animal.Mode_Pin(actionMode);
-        animal.Mode_Pin_Ability(abilityIndex);
-        animal.Mode_Pin_Input(true);
+        bool activated = animal.Mode_TryActivate(actionMode.ID, abilityIndex);
+        _inActionIntent = activated;
+
+        return activated;
     }
 
     // ═══════════════════════════════════════════════
@@ -355,7 +381,7 @@ public class CreatureMotor : MonoBehaviour
     }
 
     /// <summary>Setup when ENTERING an intent (like MAnimalBrain Start_AIState).</summary>
-    void EnterIntent(IntentMessage intent)
+    bool EnterIntent(IntentMessage intent)
     {
         Debug.Log($"[Motor] Intent: {_currentIntent} → {intent.Intent}");
         _hasArrived = false;
@@ -368,26 +394,26 @@ public class CreatureMotor : MonoBehaviour
                 StopAI();
                 if (defaultStance != null) animal.Stance = defaultStance;
                 SetSpeed(walkSpeedIndex);
-                break;
+                return true;
 
             case "wander":
                 if (defaultStance != null) animal.Stance = defaultStance;
                 SetSpeed(trotSpeedIndex);
                 PickWanderTarget();
-                break;
+                return true;
 
             case "flee":
                 SetSpeed(runSpeedIndex);
                 animal.Sprint = true;
                 SetFleeDestination(intent.DirectionHint);
-                break;
+                return true;
 
             case "investigate":
                 if (sneakStance != null) animal.Stance = sneakStance;
                 SetSpeed(walkSpeedIndex);
                 if (_board.closestPlayer != null)
                     NavigateToTarget(_board.closestPlayer, true);   // alwaysFollow → Malbers auto-tracks
-                break;
+                return true;
 
             // ── LLM-driven navigation (written by AgentMindBridge) ───────────
 
@@ -395,60 +421,70 @@ public class CreatureMotor : MonoBehaviour
                 if (defaultStance != null) animal.Stance = defaultStance;
                 SetSpeed(trotSpeedIndex);
                 NavigateTo(intent.DirectionHint);
-                break;
+                return true;
 
             case "follow":
                 if (defaultStance != null) animal.Stance = defaultStance;
                 SetSpeed(trotSpeedIndex);
                 if (_board.followTarget != null)
+                {
                     NavigateToTarget(_board.followTarget, true);
+                    return true;
+                }
                 else
+                {
                     Debug.LogWarning("[CreatureMotor] 'follow' intent fired but followTarget is null on blackboard.");
-                break;
+                    return false;
+                }
+
+            case "stop_moving":
+            case "stop":
+                StopAI();
+                _board?.ClearMindIntent();
+                return true;
 
             // ── Reflex ───────────────────────────────────────────────────────
 
             case "flinch":
-                TriggerAction(startleAbilityIndex);   // TriggerAction already StopAI's
-                break;
+                return TriggerAction(startleAbilityIndex);
+
+            case "scratch":
+                return TriggerAction(scratchAbilityIndex);
+
+            case "look_around":
+                return TriggerAction(lookAroundAbilityIndex);
+
+            case "nod_head":
+                return TriggerAction(nodHeadAbilityIndex);
 
             // ── Scripted actions (one-shot, auto-clear via OnModeEnd) ────────
 
             case "eat":
-                TriggerAction(eatAbilityIndex);
-                break;
+                return TriggerAction(eatAbilityIndex);
 
             case "drink":
-                TriggerAction(drinkAbilityIndex);
-                break;
+                return TriggerAction(drinkAbilityIndex);
 
             case "sit":
-                TriggerAction(sitAbilityIndex);
-                break;
+                return TriggerAction(sitAbilityIndex);
 
             case "lie":
-                TriggerAction(lieAbilityIndex);
-                break;
+                return TriggerAction(lieAbilityIndex);
 
             case "sleep":
-                TriggerAction(sleepAbilityIndex);
-                break;
+                return TriggerAction(sleepAbilityIndex);
 
             case "groom":
-                TriggerAction(groomAbilityIndex);
-                break;
+                return TriggerAction(groomAbilityIndex);
 
             case "smell":
-                TriggerAction(smellAbilityIndex);
-                break;
+                return TriggerAction(smellAbilityIndex);
 
             case "alert":
-                TriggerAction(alertAbilityIndex);       // TriggerAction already StopAI's
-                break;
+                return TriggerAction(alertAbilityIndex);
 
             case "vocalize":
-                TriggerAction(vocalizeAbilityIndex);    // TriggerAction already StopAI's
-                break;
+                return TriggerAction(vocalizeAbilityIndex);
 
             // ── Terminal ─────────────────────────────────────────────────────
 
@@ -456,15 +492,20 @@ public class CreatureMotor : MonoBehaviour
                 aiControl.SetActive(false);
                 animal.Sprint = false;
                 if (deathState != null)
+                {
                     animal.State_Force(deathState);
+                    return true;
+                }
                 else
+                {
                     Debug.LogWarning("[CreatureMotor] 'die' intent fired but no deathState assigned.");
-                break;
+                    return false;
+                }
 
             default:
                 Debug.LogWarning($"[Motor] Unknown intent: {intent.Intent}");
                 aiControl.Stop();
-                break;
+                return false;
         }
     }
 
@@ -497,6 +538,7 @@ public class CreatureMotor : MonoBehaviour
                 // "go_to" sits dormant behind Tactical.
                 if (_hasArrived)
                 {
+                    Report(intent, "succeeded", "");
                     _board.ClearMindIntent();
                     _board.SetTacticalCurrent("idle");
                 }
@@ -506,6 +548,7 @@ public class CreatureMotor : MonoBehaviour
                 // Target vanished → stop chasing nothing.
                 if (_board.followTarget == null)
                 {
+                    Report(intent, "failed", "follow target disappeared");
                     _board.ClearMindIntent();
                     _board.SetTacticalCurrent("idle");
                 }
@@ -556,5 +599,35 @@ public class CreatureMotor : MonoBehaviour
 
         if (NavMesh.SamplePosition(fleeTarget, out NavMeshHit hit, FleeDistance, NavMesh.AllAreas))
             NavigateTo(hit.position);
+    }
+
+    void ReportCurrent(string status, string reason)
+    {
+        if (string.IsNullOrEmpty(_currentCommandId)) return;
+
+        Report(new IntentMessage
+        {
+            Intent = _currentIntent,
+            CommandId = _currentCommandId,
+            RequestId = _currentRequestId,
+            Source = LayerSource.Mind,
+        }, status, reason);
+    }
+
+    void Report(IntentMessage intent, string status, string reason)
+    {
+        if (_reporter == null || string.IsNullOrEmpty(intent.CommandId) || _board == null)
+            return;
+
+        _reporter.Report(new ActionReport
+        {
+            agent_id  = _board.CreatureId,
+            commandId = intent.CommandId,
+            requestId = intent.RequestId ?? "",
+            action    = intent.Intent,
+            status    = status,
+            reason    = reason ?? "",
+            time      = Time.time,
+        });
     }
 }

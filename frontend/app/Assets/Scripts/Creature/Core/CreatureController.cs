@@ -56,7 +56,6 @@ public class CreatureController : MonoBehaviour
         if (_motor != null)       _motor.Init(_board, config);
         if (_agent != null)       _agent.Init(_board);
         if (_snapshot != null)    _snapshot.Init(_board);
-        if (_mindBridge != null)  _mindBridge.Init();
         if (_zoneTracker != null) _zoneTracker.Init(_board);
         if (_zoneScanner != null) _zoneScanner.Init(_board);
     }
@@ -75,11 +74,13 @@ public class CreatureController : MonoBehaviour
         _board.ClearFrameFlags();
         _board.ScoreDrives();
 
-        if (_mindBridge != null)  _mindBridge.Tick();
         if (_perception != null)  _perception.Tick();
         if (_zoneScanner != null) _zoneScanner.Tick();
-        if (_reflex != null)      _reflex.Tick();
-        if (_brain != null)       _brain.Tick();
+
+        bool llmOnly = _mind != null && _mind.mode == MindMode.LLM;
+        if (!llmOnly && _reflex != null) _reflex.Tick();
+        if (!llmOnly && _brain != null)  _brain.Tick();
+
         if (_motor != null)       _motor.Tick();
 
         _board.UpdateDebugDisplay();

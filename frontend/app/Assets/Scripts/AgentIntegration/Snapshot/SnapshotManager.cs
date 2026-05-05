@@ -72,7 +72,9 @@ public class SnapshotManager : MonoBehaviour
 
         var payload = new SnapshotPayload
         {
+            agent_id  = _board.CreatureId,
             requestId = requestId,
+            commandId = _board.MindIntent.HasValue ? _board.MindIntent.Value.CommandId : "",
             time      = Time.time,
         };
 

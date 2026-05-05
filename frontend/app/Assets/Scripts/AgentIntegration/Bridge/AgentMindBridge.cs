@@ -6,7 +6,6 @@
 //   SendTick(json)        — POST + poll, store latest LLMIntent. Fire and forget.
 //                           Cancels any in-flight request (latest-wins backpressure).
 //   TryConsume(out intent)— PeriodicMind polls each Think(); returns and clears.
-//   Tick()                — main-thread named-target resolution.
 //
 // NOT responsible for:
 //   • Building the snapshot (SnapshotManager owns that)
@@ -15,7 +14,6 @@
 
 using UnityEngine;
 using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using UnityEngine.Networking;
@@ -29,21 +27,16 @@ public class AgentMindBridge : MonoBehaviour
     [Header("Debug")]
     public bool logTraffic = true;
 
-    [Header("Named Targets (resolved for 'follow' intent)")]
-    public List<NamedTarget> namedTargets = new List<NamedTarget>();
+    public int FailedTickCount => _failedTickCount;
 
-    [Serializable]
-    public class NamedTarget
-    {
-        public string    key;
-        public Transform target;
-    }
+    bool _warnedMoveDeprecated;
+    int  _failedTickCount;
 
     public class LLMIntent
     {
         public string    intent;
         public Vector3   destination;
-        public Transform target;
+        public string    targetKey;
     }
 
     [Serializable] class TickAccepted { public string job_id; }
@@ -56,24 +49,11 @@ public class AgentMindBridge : MonoBehaviour
         public string target = "";
     }
 
-    Dictionary<string, Transform> _targetMap;
-
     // Single writer: RunTickAsync after SwitchToMainThread.
-    // Single reader: TryConsume / ResolvePendingTarget on main thread.
+    // Single reader: TryConsume on main thread.
     LLMIntent _latestIntent;
-    string    _pendingTargetKey;
 
     CancellationTokenSource _cts;
-
-    public void Init()
-    {
-        _targetMap = new Dictionary<string, Transform>(StringComparer.OrdinalIgnoreCase);
-        foreach (var nt in namedTargets)
-            if (nt.target != null) _targetMap[nt.key] = nt.target;
-    }
-
-    /// <summary>Main-thread per-frame work: resolve any pending named target.</summary>
-    public void Tick() => ResolvePendingTarget();
 
     /// <summary>
     /// Send a pre-built snapshot JSON. Cancels any in-flight request first
@@ -128,6 +108,7 @@ public class AgentMindBridge : MonoBehaviour
         catch (OperationCanceledException) { /* superseded by newer tick */ }
         catch (Exception e)
         {
+            MarkFailedTick();
             Debug.LogWarning($"[AgentMindBridge] tick failed: {e.Message}");
         }
     }
@@ -146,13 +127,26 @@ public class AgentMindBridge : MonoBehaviour
 
         if (req.result != UnityWebRequest.Result.Success)
         {
+            MarkFailedTick();
             Debug.LogWarning($"[AgentMindBridge] POST failed: {req.error}");
             return null;
         }
 
-        var accepted = JsonUtility.FromJson<TickAccepted>(req.downloadHandler.text);
+        TickAccepted accepted;
+        try
+        {
+            accepted = JsonUtility.FromJson<TickAccepted>(req.downloadHandler.text);
+        }
+        catch (Exception e)
+        {
+            MarkFailedTick();
+            Debug.LogWarning($"[AgentMindBridge] failed to parse tick response: {e.Message}");
+            return null;
+        }
+
         if (string.IsNullOrEmpty(accepted?.job_id))
         {
+            MarkFailedTick();
             Debug.LogWarning("[AgentMindBridge] 202 response missing job_id");
             return null;
         }
@@ -175,7 +169,18 @@ public class AgentMindBridge : MonoBehaviour
 
             if (get.result != UnityWebRequest.Result.Success) continue;
 
-            var resp = JsonUtility.FromJson<PollResponse>(get.downloadHandler.text);
+            PollResponse resp;
+            try
+            {
+                resp = JsonUtility.FromJson<PollResponse>(get.downloadHandler.text);
+            }
+            catch (Exception e)
+            {
+                MarkFailedTick();
+                Debug.LogWarning($"[AgentMindBridge] failed to parse poll response: {e.Message}");
+                return null;
+            }
+
             if (resp.status == "done")
             {
                 if (logTraffic) Debug.Log($"[AgentMindBridge] job {jobId} done: {resp.action}");
@@ -183,11 +188,13 @@ public class AgentMindBridge : MonoBehaviour
             }
             if (resp.status == "error")
             {
+                MarkFailedTick();
                 Debug.LogWarning($"[AgentMindBridge] job {jobId} failed on backend");
                 return null;
             }
         }
 
+        MarkFailedTick();
         Debug.LogWarning($"[AgentMindBridge] job {jobId} timed out after {config.maxPollAttempts} polls");
         return null;
     }
@@ -200,52 +207,25 @@ public class AgentMindBridge : MonoBehaviour
     {
         if (string.IsNullOrEmpty(resp.action) || resp.action == "wait") return;
 
-        string action = resp.action;
-        if (action == "stop") action = "idle";
+        string action = resp.action.Trim().ToLowerInvariant();
+        if (action == "stop") action = "stop_moving";
         if (action == "move")
         {
-            var dest = new Vector3(resp.x, resp.y, resp.z);
-            action = (dest != Vector3.zero) ? "go_to" : "wander";
+            if (!_warnedMoveDeprecated)
+            {
+                _warnedMoveDeprecated = true;
+                Debug.LogWarning("[AgentMindBridge] backend emitted deprecated action 'move'; normalizing to 'go_to'.");
+            }
+            action = "go_to";
         }
 
         _latestIntent = new LLMIntent
         {
             intent      = action,
             destination = new Vector3(resp.x, resp.y, resp.z),
-            target      = null,
+            targetKey   = resp.target ?? "",
         };
-        _pendingTargetKey = resp.target ?? "";
     }
 
-    // Resolve a named target string to a Transform. GameObject.Find is safe
-    // here because Tick() runs on the main thread.
-    void ResolvePendingTarget()
-    {
-        if (_latestIntent == null || string.IsNullOrEmpty(_pendingTargetKey)) return;
-
-        string key = _pendingTargetKey;
-
-        if (!_targetMap.TryGetValue(key, out Transform resolved))
-        {
-            var go = GameObject.Find(key);
-            if (go != null)
-            {
-                resolved = go.transform;
-                _targetMap[key] = resolved;   // cache
-            }
-        }
-
-        if (resolved != null)
-        {
-            if (_latestIntent.intent == "go_to") _latestIntent.destination = resolved.position;
-            else                                  _latestIntent.target      = resolved;
-        }
-        else
-        {
-            Debug.LogWarning($"[AgentMindBridge] target '{key}' not found — falling back to wander");
-            if (_latestIntent.intent == "go_to") _latestIntent.intent = "wander";
-        }
-
-        _pendingTargetKey = "";
-    }
+    void MarkFailedTick() => Interlocked.Increment(ref _failedTickCount);
 }

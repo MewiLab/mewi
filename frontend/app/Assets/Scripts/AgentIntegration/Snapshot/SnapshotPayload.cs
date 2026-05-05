@@ -14,7 +14,9 @@ using System;
 [Serializable]
 public class SnapshotPayload
 {
+    public string         agent_id;
     public string         requestId;
+    public string         commandId;
     public float          time;
 
     public SelfData       self;

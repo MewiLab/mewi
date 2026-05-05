@@ -22,18 +22,24 @@ using UnityEngine;
 public enum MindMode { Simulated, LLM }
 
 [RequireComponent(typeof(AgentMindBridge))]
+[RequireComponent(typeof(HttpActionReporter))]
 public class PeriodicMind : MonoBehaviour
 {
     CreatureBlackboard _board;
     CreatureConfig     _config;
     [SerializeField] AgentMindBridge _bridge;
     [SerializeField] SnapshotManager _snapshotManager;
+    [SerializeField] NamedTargetRegistry _targetRegistry;
+    [SerializeField] HttpActionReporter _reporter;
 
     [Header("Mind Mode")]
     public MindMode mode = MindMode.Simulated;
 
     bool _running;
     int  _tickCounter;
+    int  _commandCounter;
+    int  _lastObservedBridgeFailureCount;
+    string _lastRequestId = "";
 
     public void Init(CreatureBlackboard board, CreatureConfig config)
     {
@@ -41,6 +47,10 @@ public class PeriodicMind : MonoBehaviour
         _config = config;
         if (_bridge == null)          _bridge          = GetComponent<AgentMindBridge>();
         if (_snapshotManager == null) _snapshotManager = GetComponent<SnapshotManager>();
+        if (_targetRegistry == null)  _targetRegistry  = FindFirstObjectByType<NamedTargetRegistry>();
+        if (_reporter == null)        _reporter        = GetComponent<HttpActionReporter>();
+        if (_reporter != null && _bridge != null)
+            _reporter.UseConfig(_bridge.config);
 
         if (mode == MindMode.LLM)
         {
@@ -157,15 +167,114 @@ public class PeriodicMind : MonoBehaviour
             ApplyLLMResponse(intent);
 
         string requestId = $"t{_tickCounter++:X8}";
+        _lastRequestId   = requestId;
         string json      = _snapshotManager.BuildJson(requestId);
         _bridge.SendTick(json);
+
+        LogBridgeFailures();
     }
 
     void ApplyLLMResponse(AgentMindBridge.LLMIntent intent)
     {
-        _board.followTarget = intent.target;
-        _board.SetMindIntent(intent.intent, intent.destination);
-        Debug.Log($"[Mind/LLM] applied: {intent.intent}");
+        if (intent == null || string.IsNullOrWhiteSpace(intent.intent))
+            return;
+
+        string action = intent.intent.Trim().ToLowerInvariant();
+        string targetKey = NormalizeKey(intent.targetKey);
+        Vector3 destination = intent.destination;
+        Transform resolvedTarget = null;
+
+        if (!string.IsNullOrWhiteSpace(targetKey))
+        {
+            if (_targetRegistry == null || !_targetRegistry.TryResolve(targetKey, out resolvedTarget))
+            {
+                Report("", action, "rejected", $"unknown target '{targetKey}'");
+                Debug.LogWarning($"[Mind/LLM] rejected {action}: unknown target '{targetKey}'");
+                return;
+            }
+
+            if (action == "go_to")
+                destination = resolvedTarget.position;
+        }
+
+        if (action == "follow" && resolvedTarget == null)
+        {
+            Report("", action, "rejected", "follow requires a named target");
+            Debug.LogWarning("[Mind/LLM] rejected follow: missing target");
+            return;
+        }
+
+        if (action == "go_to" && resolvedTarget == null && destination == Vector3.zero)
+        {
+            Report("", action, "rejected", "go_to requires a target or non-zero destination");
+            Debug.LogWarning("[Mind/LLM] rejected go_to: missing target and destination");
+            return;
+        }
+
+        var previous = _board.MindIntent;
+        if (IsDuplicate(previous, action, targetKey, destination))
+            return;
+
+        if (previous.HasValue && !string.IsNullOrEmpty(previous.Value.CommandId))
+            Report(
+                previous.Value.CommandId,
+                previous.Value.Intent,
+                "cancelled",
+                "replaced by newer LLM command",
+                previous.Value.RequestId);
+
+        string commandId = $"{_board.CreatureId}:{_commandCounter++:X8}";
+
+        // LLM-only phase: do not let old tactical decisions mask accepted LLM commands.
+        _board.ClearTacticalIntent();
+        _board.followTarget = action == "follow" ? resolvedTarget : null;
+        _board.SetMindIntent(action, destination, commandId, _lastRequestId, targetKey);
+
+        Report(commandId, action, "accepted", "");
+        Debug.Log($"[Mind/LLM] accepted {action} ({commandId})");
+    }
+
+    bool IsDuplicate(IntentMessage? current, string action, string targetKey, Vector3 destination)
+    {
+        if (!current.HasValue || !current.Value.IsActive) return false;
+
+        var existing = current.Value;
+        if (!string.Equals(existing.Intent, action, System.StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (!string.Equals(NormalizeKey(existing.TargetKey), targetKey, System.StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return Vector3.SqrMagnitude(existing.DirectionHint - destination) < 0.01f;
+    }
+
+    static string NormalizeKey(string key) => string.IsNullOrWhiteSpace(key) ? "" : key.Trim();
+
+    void LogBridgeFailures()
+    {
+        if (_bridge == null) return;
+
+        int failed = _bridge.FailedTickCount;
+        if (failed <= _lastObservedBridgeFailureCount) return;
+
+        Debug.LogWarning($"[PeriodicMind] observed {failed - _lastObservedBridgeFailureCount} new LLM bridge failure(s); total={failed}");
+        _lastObservedBridgeFailureCount = failed;
+    }
+
+    void Report(string commandId, string action, string status, string reason, string requestId = null)
+    {
+        if (_reporter == null || _board == null) return;
+
+        _reporter.Report(new ActionReport
+        {
+            agent_id  = _board.CreatureId,
+            commandId = commandId ?? "",
+            requestId = requestId ?? _lastRequestId,
+            action    = action ?? "",
+            status    = status,
+            reason    = reason ?? "",
+            time      = Time.time,
+        });
     }
 
     string SelectIntentLocal(MoodModel mood)
