@@ -1,9 +1,11 @@
 # ADR-009: LLM Intent Resolution, Lifecycle Reporting, and Multi-Agent Identity
 
-**Status:** Proposed
+**Status:** Accepted (implemented; Phase 4 transport superseded by ADR-012)
 **Date:** 2026-05-05
 **Deciders:** vanillasky
-**Relates to:** ADR-005 (Unity client architecture), ADR-007 (Periodic Tick), ADR-008 (Bridge sync)
+**Relates to:** ADR-005 (Unity client architecture), ADR-007 (Periodic Tick), ADR-008 (Bridge sync), ADR-010 (hardening), ADR-012 (transport)
+
+> **Current-code note (2026-05-06):** The identity, target-resolution, command lifecycle, and LLM-only command path described here are implemented in the Unity client. Only Phase 4's generic "future transport upgrade" note has been superseded: ADR-012 now owns the WebSocket transport decision. This ADR is therefore **not** globally superseded.
 
 ## Context
 
@@ -153,6 +155,101 @@ Every cat owns its own `PeriodicMind`, `SnapshotManager`, `AgentMindBridge`, and
 **Phase 4 - Future transport upgrade**
 
 - Add WebSocket reporting if HTTP report volume becomes measurable at multi-cat scale.
+
+**Superseded by ADR-012.** ADR-012 replaces this open-ended Phase 4 note with a concrete multiplexed WebSocket transport design. The command identity and lifecycle report semantics in this ADR remain current.
+
+## Mermaid Workflows
+
+### LLM Tick and Command Acceptance
+
+```mermaid
+sequenceDiagram
+    participant PM as PeriodicMind
+    participant SM as SnapshotManager
+    participant Bridge as AgentMindBridge
+    participant Backend
+    participant Registry as NamedTargetRegistry
+    participant Board as CreatureBlackboard
+    participant Reporter as HttpActionReporter
+
+    loop Every mind tick
+        PM->>Bridge: TryConsume()
+        alt Intent available
+            Bridge-->>PM: LLMIntent(action, destination, targetKey)
+            PM->>Registry: TryResolve(targetKey)
+            alt Valid command
+                PM->>PM: commandId = creatureId + counter
+                PM->>Board: SetMindIntent(action, destination, commandId, requestId, targetKey)
+                PM->>Reporter: accepted
+            else Invalid target or command shape
+                PM->>Reporter: rejected
+            end
+        else No response yet
+            Bridge-->>PM: none
+        end
+
+        PM->>SM: BuildJson(requestId)
+        SM-->>PM: snapshot with agent_id + commandId
+        PM->>Bridge: SendTick(json)
+        Bridge->>Backend: POST /api/v1/agent/tick
+        Backend-->>Bridge: 202 job_id
+        Bridge->>Backend: GET /api/v1/agent/tick/result/{job_id}
+        Backend-->>Bridge: done / pending / error
+    end
+```
+
+### Command Lifecycle Reporting
+
+```mermaid
+flowchart TD
+    Intent["LLMIntent consumed"] --> Validate{"Valid action and target?"}
+    Validate -->|no| Rejected["Report rejected"]
+    Validate -->|yes| Previous{"Previous Mind command?"}
+    Previous -->|yes| Cancelled["Report cancelled for previous command"]
+    Previous -->|no| Accept
+    Cancelled --> Accept["Write Mind intent"]
+    Accept --> Accepted["Report accepted"]
+    Accepted --> Motor["CreatureMotor observes command"]
+    Motor --> Started["Report started"]
+    Started --> Outcome{"Execution outcome"}
+    Outcome -->|Arrived or mode ended| Succeeded["Report succeeded"]
+    Outcome -->|Malbers/NavMesh refused| Failed["Report failed"]
+```
+
+### Per-Cat Identity Contract
+
+```mermaid
+flowchart LR
+    subgraph Cat["One Unity cat"]
+        Board["CreatureBlackboard\nCreatureId"]
+        PM["PeriodicMind\nrequestId + commandId"]
+        Snapshot["SnapshotPayload\nagent_id"]
+        Reporter["ActionReport\nagent_id + commandId"]
+    end
+
+    Backend["Backend agent router"]
+    State["Per-agent LangGraph state"]
+
+    Board --> PM
+    PM --> Snapshot
+    PM --> Reporter
+    Snapshot -->|"POST tick"| Backend
+    Reporter -->|"POST report"| Backend
+    Backend -->|"route by agent_id"| State
+```
+
+### Target Resolution Boundary
+
+```mermaid
+flowchart TD
+    Backend["Backend result\naction + targetKey"] --> Bridge["AgentMindBridge\nparse transport DTO only"]
+    Bridge --> PM["PeriodicMind\naccept/reject owner"]
+    PM --> Registry["NamedTargetRegistry\nscene semantics"]
+    Registry --> Target{"Target found?"}
+    Target -->|yes| Board["CreatureBlackboard\nMindIntent + followTarget for follow only"]
+    Target -->|no| Reject["HttpActionReporter\nrejected"]
+    Board --> Motor["CreatureMotor\nMalbers execution"]
+```
 
 ## Alternatives Considered
 

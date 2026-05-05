@@ -1,9 +1,11 @@
 # ADR-010: Multi-Agent Hardening and Bridge/Mind Cleanup
 
-**Status:** Proposed
+**Status:** Accepted (implemented; backend-pressure deferral superseded by ADR-012)
 **Date:** 2026-05-05
 **Deciders:** vanillasky
-**Relates to:** ADR-007 (Periodic Tick), ADR-008 (Bridge sync), ADR-009 (LLM Intent / Multi-Agent)
+**Relates to:** ADR-007 (Periodic Tick), ADR-008 (Bridge sync), ADR-009 (LLM Intent / Multi-Agent), ADR-012 (transport)
+
+> **Current-code note (2026-05-06):** Items 2-7 are implemented in the Unity client: the empty bridge tick is gone, `followTarget` is bound only to `follow`, bridge failures are counted, `move` is normalized to `go_to`, duplicate Mind commands are dropped, and the legacy `AgentBridge` lives under `Assets/Scripts/Test/` with a test-only guard. Item 1 is now superseded by ADR-012, which owns the concrete transport/backpressure upgrade.
 
 ## Context
 
@@ -26,6 +28,8 @@ This ADR keeps the surface in line with ADR-009 (`AgentMindBridge` stays pure tr
 ### 1. Backend pressure — defer to Phase 4
 
 Out of scope for this ADR. Telemetry first: log per-cat tick latency in `HttpActionReporter` aggregate counters before promoting WebSocket from ADR-009 Phase 4 to a real change. Documenting here only so the issue is not lost.
+
+**Superseded by ADR-012.** ADR-012 replaces this deferral with the multiplexed WebSocket transport decision. The cleanup and guardrail decisions below remain current.
 
 ### 2. Remove the empty `AgentMindBridge.Tick()`
 
@@ -80,9 +84,108 @@ This makes "the LLM bridge is the only bridge on production NPCs" structurally e
 
 No changes. ADR-009 payloads remain authoritative.
 
+## Mermaid Workflows
+
+### Hardening Scope
+
+```mermaid
+flowchart TD
+    ADR009["ADR-009\nLLM identity + reports"] --> Audit["Code walk-through for 5-50 cats"]
+    Audit --> Pressure["1. Polling pressure"]
+    Audit --> Stub["2. Empty bridge Tick"]
+    Audit --> Follow["3. Stale followTarget"]
+    Audit --> Failures["4. Invisible bridge failures"]
+    Audit --> Move["5. Deprecated move verb"]
+    Audit --> Dedupe["6. Duplicate Mind commands"]
+    Audit --> Legacy["7. Legacy AgentBridge location"]
+
+    Pressure -.-> ADR012["ADR-012\nWebSocket transport"]
+    Stub --> Cleanup["Remove dead call path"]
+    Follow --> Cleanup
+    Failures --> Cleanup
+    Move --> Cleanup
+    Dedupe --> Cleanup
+    Legacy --> Cleanup
+```
+
+### Bridge Failure Visibility
+
+```mermaid
+sequenceDiagram
+    participant PM as PeriodicMind
+    participant Bridge as AgentMindBridge
+    participant Backend
+
+    PM->>Bridge: SendTick(snapshot)
+    Bridge->>Backend: POST /api/v1/agent/tick
+    alt POST fails
+        Bridge->>Bridge: FailedTickCount++
+    else POST accepted
+        Backend-->>Bridge: job_id
+        loop Poll result
+            Bridge->>Backend: GET result
+            alt status error / timeout / parse error
+                Bridge->>Bridge: FailedTickCount++
+            else status done
+                Bridge->>Bridge: ParseAndStore(LLMIntent)
+            end
+        end
+    end
+    PM->>Bridge: read FailedTickCount
+    PM->>PM: log delta warning
+```
+
+### Move Deprecation and Command Dedupe
+
+```mermaid
+flowchart TD
+    Response["Backend poll response"] --> Parse["AgentMindBridge.ParseAndStore"]
+    Parse --> Move{"action == move?"}
+    Move -->|yes| Warn["One-shot deprecation warning"]
+    Warn --> GoTo["Normalize action to go_to"]
+    Move -->|no| Alias{"action == stop?"}
+    Alias -->|yes| Stop["Normalize to stop_moving"]
+    Alias -->|no| Store["Store LLMIntent"]
+    GoTo --> Store
+    Stop --> Store
+    Store --> PM["PeriodicMind.ApplyLLMResponse"]
+    PM --> Compare{"Same action, targetKey,\nand destination within tolerance?"}
+    Compare -->|yes| Drop["Drop silently\nno commandId, no cancelled"]
+    Compare -->|no| Accept["Cancel previous if needed\nthen accept new Mind command"]
+```
+
+### Follow Target Ownership
+
+```mermaid
+flowchart TD
+    Intent["Accepted LLMIntent"] --> Kind{"action"}
+    Kind -->|follow| Resolve["Resolve targetKey"]
+    Resolve --> HasTarget{"target found?"}
+    HasTarget -->|yes| SetFollow["board.followTarget = resolvedTarget"]
+    HasTarget -->|no| Reject["Report rejected"]
+    Kind -->|go_to with targetKey| ResolveGoTo["Resolve targetKey to destination"]
+    ResolveGoTo --> ClearFollow["board.followTarget = null"]
+    Kind -->|other action| ClearFollow
+    SetFollow --> Mind["SetMindIntent"]
+    ClearFollow --> Mind
+```
+
+### Legacy Test Harness Guard
+
+```mermaid
+flowchart TD
+    AgentBridge["Assets/Scripts/Test/AgentBridge.cs\nAddComponentMenu hidden"] --> Start["Awake / Start"]
+    Start --> Check{"AgentMindBridge in same hierarchy?"}
+    Check -->|yes| Disable["Log error and disable AgentBridge"]
+    Check -->|no| Harness["Run local direct-control test harness"]
+
+    NPC["Production NPC prefab"] --> Uses["Use AgentMindBridge"]
+    NPC --> Avoids["Do not use AgentBridge"]
+```
+
 ## Phasing
 
-Items 2–7 land as small, localized edits across `AgentMindBridge`, `PeriodicMind`, `CreatureController`, and the legacy `AgentBridge`. Item 1 stays open as Phase 4 telemetry work.
+Items 2-7 land as small, localized edits across `AgentMindBridge`, `PeriodicMind`, `CreatureController`, and the legacy `AgentBridge`. Item 1 no longer stays open here; ADR-012 owns the follow-up transport/backpressure work.
 
 ## Consequences
 
