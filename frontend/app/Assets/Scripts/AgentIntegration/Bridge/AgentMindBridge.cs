@@ -2,42 +2,27 @@
 //
 // Pure transport adapter for the PeriodicMind ↔ LLM backend loop.
 //
-// Responsibilities (and ONLY these):
-//   Outbound — SendTick(board)
-//              Asks SnapshotManager to build the wire JSON, then POSTs it.
-//              Returns a requestId the caller uses to match the response.
-//              Does NOT know about channels, mood, spatial, etc.
-//
-//   Inbound  — PostAndPoll coroutine POSTs the tick and receives a job_id (202).
-//              PollResult coroutine polls GET /agent/tick/result/{job_id} until
-//              the backend writes a "done" or "error" result to Redis.
-//              Parses the response into an LLMIntent and stores it.
-//
-//   Query    — TryConsumeResponse(requestId, out LLMIntent)
-//              PeriodicMind polls this each Think() cycle.
-//              Returns true and clears the intent on match.
+// Contract:
+//   SendTick(json)        — POST + poll, store latest LLMIntent. Fire and forget.
+//                           Cancels any in-flight request (latest-wins backpressure).
+//   TryConsume(out intent)— PeriodicMind polls each Think(); returns and clears.
+//   Tick()                — main-thread named-target resolution.
 //
 // NOT responsible for:
-//   • Building the snapshot (SnapshotManager)
+//   • Building the snapshot (SnapshotManager owns that)
 //   • Writing the blackboard (PeriodicMind is the sole Mind-slot writer)
 //   • Deciding which intent to apply (PeriodicMind owns that)
-//
-// requestId matching uses "latest wins" for v1.
-// TODO: tighten to strict ID match once the backend echoes requestId.
 
 using UnityEngine;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using UnityEngine.Networking;
+using Cysharp.Threading.Tasks;
 
 public class AgentMindBridge : MonoBehaviour
 {
-    // ─────────────────────────────────────────────────────────────────────────
-    //  INSPECTOR
-    // ─────────────────────────────────────────────────────────────────────────
-
     [Header("Backend")]
     public BackendConfig config;
 
@@ -47,16 +32,12 @@ public class AgentMindBridge : MonoBehaviour
     [Header("Named Targets (resolved for 'follow' intent)")]
     public List<NamedTarget> namedTargets = new List<NamedTarget>();
 
-    [System.Serializable]
+    [Serializable]
     public class NamedTarget
     {
         public string    key;
         public Transform target;
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  OUTPUT TYPE — produced here, consumed by PeriodicMind
-    // ─────────────────────────────────────────────────────────────────────────
 
     public class LLMIntent
     {
@@ -65,228 +46,206 @@ public class AgentMindBridge : MonoBehaviour
         public Transform target;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  INBOUND WIRE FORMATS
-    // ─────────────────────────────────────────────────────────────────────────
-
     [Serializable] class TickAccepted { public string job_id; }
 
-    // Flat layout — mirrors the ActionCallback the backend used to POST directly.
-    // "status" is added; action/x/y/z/target are the same fields.
     [Serializable] class PollResponse
     {
         public string status = "";
         public string action = "";
         public float  x, y, z;
-        public string target    = "";
-        public string requestId = "";
+        public string target = "";
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  PRIVATE STATE
-    // ─────────────────────────────────────────────────────────────────────────
 
     Dictionary<string, Transform> _targetMap;
-    SnapshotManager               _snapshot;
 
-    readonly object _lock = new object();
+    // Single writer: RunTickAsync after SwitchToMainThread.
+    // Single reader: TryConsume / ResolvePendingTarget on main thread.
+    LLMIntent _latestIntent;
+    string    _pendingTargetKey;
 
-    LLMIntent _latestIntent = null;
-    string    _pendingTargetKey = "";
+    CancellationTokenSource _cts;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  INIT
-    // ─────────────────────────────────────────────────────────────────────────
-
-    public void Init(SnapshotManager snapshot)
+    public void Init()
     {
-        _snapshot  = snapshot;
         _targetMap = new Dictionary<string, Transform>(StringComparer.OrdinalIgnoreCase);
         foreach (var nt in namedTargets)
-            if (nt.target != null)
-                _targetMap[nt.key] = nt.target;
-
-        if (_snapshot == null)
-            Debug.LogError("[AgentMindBridge] No SnapshotManager — SendTick will fail. Add SnapshotManager to the cat root.");
+            if (nt.target != null) _targetMap[nt.key] = nt.target;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  TICK  (called by CreatureController.Update — main thread)
-    // ─────────────────────────────────────────────────────────────────────────
-
+    /// <summary>Main-thread per-frame work: resolve any pending named target.</summary>
     public void Tick() => ResolvePendingTarget();
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  PUBLIC API — called by PeriodicMind
-    // ─────────────────────────────────────────────────────────────────────────
-
-    public string SendTick(CreatureBlackboard board)
+    /// <summary>
+    /// Send a pre-built snapshot JSON. Cancels any in-flight request first
+    /// so only the latest tick survives.
+    /// </summary>
+    public void SendTick(string json)
     {
-        if (_snapshot == null)
+        if (string.IsNullOrEmpty(json))
         {
-            Debug.LogError("[AgentMindBridge] SendTick aborted — SnapshotManager not wired.");
-            return null;
+            Debug.LogWarning("[AgentMindBridge] SendTick called with empty json");
+            return;
         }
 
-        string id   = Guid.NewGuid().ToString("N")[..8];
-        string json = _snapshot.BuildJson(id);
-
-        if (logTraffic) Debug.Log($"[AgentMindBridge] SendTick id={id}");
-        StartCoroutine(PostAndPoll(json));
-        return id;
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        RunTickAsync(json, _cts.Token).Forget();
     }
 
-    public bool TryConsumeResponse(string requestId, out LLMIntent intent)
+    public bool TryConsume(out LLMIntent intent)
     {
-        lock (_lock)
-        {
-            if (_latestIntent == null) { intent = null; return false; }
+        intent = _latestIntent;
+        _latestIntent = null;
+        return intent != null;
+    }
 
-            intent        = _latestIntent;
-            _latestIntent = null;
-            return true;
+    void OnDisable()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  ASYNC PIPELINE  (POST → poll → parse)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    async UniTaskVoid RunTickAsync(string json, CancellationToken ct)
+    {
+        try
+        {
+            string jobId = await PostTickAsync(json, ct);
+            if (string.IsNullOrEmpty(jobId)) return;
+
+            var resp = await PollResultAsync(jobId, ct);
+            if (resp == null) return;
+
+            // We may resume on a worker thread after I/O — marshal back before
+            // touching shared state.
+            await UniTask.SwitchToMainThread(ct);
+            ParseAndStore(resp);
+        }
+        catch (OperationCanceledException) { /* superseded by newer tick */ }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[AgentMindBridge] tick failed: {e.Message}");
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  OUTBOUND + POLL COROUTINES
-    // ─────────────────────────────────────────────────────────────────────────
-
-    IEnumerator PostAndPoll(string json)
+    async UniTask<string> PostTickAsync(string json, CancellationToken ct)
     {
-        var req = new UnityWebRequest(ApiRoutes.Resolve(config, ApiRoutes.AgentTick), "POST");
+        using var req = new UnityWebRequest(
+            ApiRoutes.Resolve(config, ApiRoutes.AgentTick), "POST");
         req.uploadHandler   = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
-        yield return req.SendWebRequest();
+        if (config.requestTimeoutSeconds > 0)
+            req.timeout = Mathf.CeilToInt(config.requestTimeoutSeconds);
+
+        await req.SendWebRequest().ToUniTask(cancellationToken: ct);
 
         if (req.result != UnityWebRequest.Result.Success)
         {
-            Debug.LogWarning($"[AgentMindBridge] SendTick failed: {req.error}");
-            yield break;
+            Debug.LogWarning($"[AgentMindBridge] POST failed: {req.error}");
+            return null;
         }
 
         var accepted = JsonUtility.FromJson<TickAccepted>(req.downloadHandler.text);
         if (string.IsNullOrEmpty(accepted?.job_id))
         {
             Debug.LogWarning("[AgentMindBridge] 202 response missing job_id");
-            yield break;
+            return null;
         }
 
         if (logTraffic) Debug.Log($"[AgentMindBridge] job_id={accepted.job_id}");
-        yield return PollResult(accepted.job_id);
+        return accepted.job_id;
     }
 
-    IEnumerator PollResult(string jobId)
+    async UniTask<PollResponse> PollResultAsync(string jobId, CancellationToken ct)
     {
-        string pollUrl = ApiRoutes.Resolve(config, ApiRoutes.AgentTickResult) + jobId;
-        var    wait    = new WaitForSecondsRealtime(config.pollIntervalSeconds);
+        string url = ApiRoutes.Resolve(config, ApiRoutes.AgentTickResult) + jobId;
+        int    intervalMs = Mathf.Max(50, Mathf.RoundToInt(config.pollIntervalSeconds * 1000f));
 
-        for (int attempt = 0; attempt < config.maxPollAttempts; attempt++)
+        for (int i = 0; i < config.maxPollAttempts; i++)
         {
-            yield return wait;
+            await UniTask.Delay(intervalMs, DelayType.Realtime, cancellationToken: ct);
 
-            var get = UnityWebRequest.Get(pollUrl);
-            yield return get.SendWebRequest();
+            using var get = UnityWebRequest.Get(url);
+            await get.SendWebRequest().ToUniTask(cancellationToken: ct);
 
             if (get.result != UnityWebRequest.Result.Success) continue;
 
             var resp = JsonUtility.FromJson<PollResponse>(get.downloadHandler.text);
-
             if (resp.status == "done")
             {
                 if (logTraffic) Debug.Log($"[AgentMindBridge] job {jobId} done: {resp.action}");
-                ParseAndStore(resp);
-                yield break;
+                return resp;
             }
-
             if (resp.status == "error")
             {
                 Debug.LogWarning($"[AgentMindBridge] job {jobId} failed on backend");
-                yield break;
+                return null;
             }
         }
 
         Debug.LogWarning($"[AgentMindBridge] job {jobId} timed out after {config.maxPollAttempts} polls");
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  RESPONSE PARSING  (main thread — Transform lookup safe here)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    void ParseAndStore(PollResponse resp)
-    {
-        if (string.IsNullOrEmpty(resp.action) || resp.action == "wait") return;
-
-        lock (_lock)
-        {
-            string action = resp.action;
-            if (action == "stop")  action = "idle";
-            if (action == "move")
-            {
-                var dest = new Vector3(resp.x, resp.y, resp.z);
-                action = (dest != Vector3.zero) ? "go_to" : "wander";
-            }
-
-            _latestIntent = new LLMIntent
-            {
-                intent      = action,
-                destination = new Vector3(resp.x, resp.y, resp.z),
-                target      = null,
-            };
-            _pendingTargetKey = resp.target ?? "";
-        }
+        return null;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     //  MAIN-THREAD HELPERS
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Called every frame from Tick() — resolves a pending named target to a
-    // Transform, then applies it to the intent (position for go_to, target for follow).
-    // GameObject.Find is safe here because we're on the main thread.
-    void ResolvePendingTarget()
+    void ParseAndStore(PollResponse resp)
     {
-        string pendingKey;
-        string pendingIntent;
+        if (string.IsNullOrEmpty(resp.action) || resp.action == "wait") return;
 
-        lock (_lock)
+        string action = resp.action;
+        if (action == "stop") action = "idle";
+        if (action == "move")
         {
-            if (_latestIntent == null || string.IsNullOrEmpty(_pendingTargetKey)) return;
-            pendingKey    = _pendingTargetKey;
-            pendingIntent = _latestIntent.intent;
+            var dest = new Vector3(resp.x, resp.y, resp.z);
+            action = (dest != Vector3.zero) ? "go_to" : "wander";
         }
 
-        // Resolve: inspector list first, then scene search by name.
-        if (!_targetMap.TryGetValue(pendingKey, out Transform resolved))
+        _latestIntent = new LLMIntent
         {
-            var go = GameObject.Find(pendingKey);
+            intent      = action,
+            destination = new Vector3(resp.x, resp.y, resp.z),
+            target      = null,
+        };
+        _pendingTargetKey = resp.target ?? "";
+    }
+
+    // Resolve a named target string to a Transform. GameObject.Find is safe
+    // here because Tick() runs on the main thread.
+    void ResolvePendingTarget()
+    {
+        if (_latestIntent == null || string.IsNullOrEmpty(_pendingTargetKey)) return;
+
+        string key = _pendingTargetKey;
+
+        if (!_targetMap.TryGetValue(key, out Transform resolved))
+        {
+            var go = GameObject.Find(key);
             if (go != null)
             {
                 resolved = go.transform;
-                _targetMap[pendingKey] = resolved;   // cache for next time
+                _targetMap[key] = resolved;   // cache
             }
         }
 
-        lock (_lock)
+        if (resolved != null)
         {
-            if (_latestIntent == null || _pendingTargetKey != pendingKey) return;
-
-            if (resolved != null)
-            {
-                if (pendingIntent == "go_to")
-                    _latestIntent.destination = resolved.position;
-                else
-                    _latestIntent.target = resolved;
-            }
-            else
-            {
-                Debug.LogWarning($"[AgentMindBridge] target '{pendingKey}' not found in scene — falling back to wander");
-                if (pendingIntent == "go_to")
-                    _latestIntent.intent = "wander";
-            }
-
-            _pendingTargetKey = "";
+            if (_latestIntent.intent == "go_to") _latestIntent.destination = resolved.position;
+            else                                  _latestIntent.target      = resolved;
         }
+        else
+        {
+            Debug.LogWarning($"[AgentMindBridge] target '{key}' not found — falling back to wander");
+            if (_latestIntent.intent == "go_to") _latestIntent.intent = "wander";
+        }
+
+        _pendingTargetKey = "";
     }
 }

@@ -17,8 +17,10 @@ public class CreatureController : MonoBehaviour
     SmartZoneTracker       _zoneTracker;
     ZoneScanner            _zoneScanner;
 
-    // Explicit dependency injection — we wire everything here so
-    // initialization order is clear and testable without Unity magic.
+
+    /// <summary>
+    /// DI, Initialization order is clear and testable without Unity magic.
+    /// </summary>
     void Awake()
     {
         _board       = GetComponent<CreatureBlackboard>();
@@ -54,11 +56,15 @@ public class CreatureController : MonoBehaviour
         if (_motor != null)       _motor.Init(_board, config);
         if (_agent != null)       _agent.Init(_board);
         if (_snapshot != null)    _snapshot.Init(_board);
-        if (_mindBridge != null)  _mindBridge.Init(_snapshot);
+        if (_mindBridge != null)  _mindBridge.Init();
         if (_zoneTracker != null) _zoneTracker.Init(_board);
         if (_zoneScanner != null) _zoneScanner.Init(_board);
     }
 
+    /// <summary>
+    /// PeriodicMind has its own timer
+    /// It drives itself via a coroutine (WaitForSecondsRealtime) rather than Update()
+    /// </summary>
     void Start()
     {
         if (_mind != null) _mind.StartThinking();

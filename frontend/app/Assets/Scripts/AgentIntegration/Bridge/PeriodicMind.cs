@@ -1,51 +1,54 @@
-// PeriodicMind.cs  (AgentIntegration/Bridge/)
-//
-// The "slow mind" — fires on a timer, updates mood, drives the Mind intent slot.
-//
-// In Simulated mode: rule-based mood + intent, fully local.
-// In LLM mode:
-//   1. Each tick — send a perception snapshot via AgentMindBridge.SendTick(_board)
-//   2. Each tick — check AgentMindBridge.TryConsumeResponse() for a reply
-//   3. On reply  — apply the LLMIntent to the blackboard (ONLY place MindIntent is written)
-//   Mood decay runs every tick regardless so mood never freezes between LLM responses.
-//
-// Responsibility split for the LLM loop:
-//   PeriodicMind    — decides WHEN to send (timer)
-//   SnapshotManager — builds WHAT (iterates ISnapshotChannel registry)
-//   AgentMindBridge — does HOW (POST + poll + parse response)
-//
-// PeriodicMind is the sole writer to CreatureBlackboard.SetMindIntent().
+/*
+    The "slow mind": fires on a timer, updates mood, drives the Mind intent slot.
 
+    Modes:
+      Simulated — rule-based mood + intent, fully local.
+      LLM       — every tick:
+                    1. consume any pending response from the bridge
+                    2. build a fresh snapshot via SnapshotManager
+                    3. hand it to AgentMindBridge.SendTick (latest-wins backpressure)
+                  mood decay still runs each tick so it never freezes between replies.
+
+    Responsibility split (Option A — orchestrator-knows-all):
+      PeriodicMind    — WHEN  (timer, owns the loop)
+      SnapshotManager — WHAT  (channel registry → JSON)
+      AgentMindBridge — HOW   (POST + poll + parse, async)
+
+    PeriodicMind is the sole writer to CreatureBlackboard.SetMindIntent().
+*/
 using System.Collections;
 using UnityEngine;
 
 public enum MindMode { Simulated, LLM }
 
+[RequireComponent(typeof(AgentMindBridge))]
 public class PeriodicMind : MonoBehaviour
 {
-    // ─── Injected by CreatureController ──────────────────────────────────────
     CreatureBlackboard _board;
     CreatureConfig     _config;
-    AgentMindBridge    _bridge;
+    [SerializeField] AgentMindBridge _bridge;
+    [SerializeField] SnapshotManager _snapshotManager;
 
     [Header("Mind Mode")]
     public MindMode mode = MindMode.Simulated;
 
-    bool   _running;
-    string _pendingId;   // requestId of the last tick sent; null when idle
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  INIT / LIFECYCLE
-    // ─────────────────────────────────────────────────────────────────────────
+    bool _running;
+    int  _tickCounter;
 
     public void Init(CreatureBlackboard board, CreatureConfig config)
     {
         _board  = board;
         _config = config;
-        _bridge = GetComponent<AgentMindBridge>();
+        if (_bridge == null)          _bridge          = GetComponent<AgentMindBridge>();
+        if (_snapshotManager == null) _snapshotManager = GetComponent<SnapshotManager>();
 
-        if (_bridge == null && mode == MindMode.LLM)
-            Debug.LogWarning("[PeriodicMind] LLM mode requires AgentMindBridge on the same GameObject.");
+        if (mode == MindMode.LLM)
+        {
+            if (_bridge == null)
+                Debug.LogError("[PeriodicMind] LLM mode needs AgentMindBridge on the same GameObject.");
+            if (_snapshotManager == null)
+                Debug.LogError("[PeriodicMind] LLM mode needs SnapshotManager on the same GameObject.");
+        }
     }
 
     public void StartThinking()
@@ -63,17 +66,13 @@ public class PeriodicMind : MonoBehaviour
 
     IEnumerator ThinkLoop()
     {
+        var wait = new WaitForSecondsRealtime(_config.mindTickInterval);
         while (_running)
         {
-            // we can cache the obejct
-            yield return new WaitForSecondsRealtime(_config.mindTickInterval);
+            yield return wait;
             Think();
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  THINK  (called on timer — not every frame)
-    // ─────────────────────────────────────────────────────────────────────────
 
     void Think()
     {
@@ -82,21 +81,15 @@ public class PeriodicMind : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  MOOD  (always runs — keeps mood alive between LLM responses)
+    //  MOOD
     // ─────────────────────────────────────────────────────────────────────────
 
     void UpdateMood()
     {
         switch (mode)
         {
-            case MindMode.Simulated:
-                UpdateMoodFull();
-                break;
-            case MindMode.LLM:
-                // Full mood update will come from the LLM response eventually.
-                // Decay-only ensures mood doesn't freeze while waiting.
-                UpdateMoodDecayOnly();
-                break;
+            case MindMode.Simulated: UpdateMoodFull();      break;
+            case MindMode.LLM:       UpdateMoodDecayOnly(); break;
         }
     }
 
@@ -108,13 +101,13 @@ public class PeriodicMind : MonoBehaviour
         mood.trust = Mathf.MoveTowards(mood.trust, 0.3f, _config.trustDecayRate);
 
         string events = _board.GetRecentEventsSummary();
-        if (events.Contains("startled"))  { mood.fear += 0.15f; mood.trust -= 0.1f; }
+        if (events.Contains("startled")) { mood.fear += 0.15f; mood.trust -= 0.1f; }
         if (events.Contains("fed") || events.Contains("food")) { mood.trust += 0.1f; mood.social += 0.05f; }
 
         if (_board.playerInSight && _board.closestPlayerDist < _config.personalSpaceRadius)
         {
             if (mood.trust < 0.4f) mood.fear   += 0.1f;
-            else                   mood.social  += 0.05f;
+            else                   mood.social += 0.05f;
         }
 
         mood.energy -= 0.02f;
@@ -125,8 +118,8 @@ public class PeriodicMind : MonoBehaviour
     void UpdateMoodDecayOnly()
     {
         MoodModel mood = _board.mood;
-        mood.fear  = Mathf.MoveTowards(mood.fear,  0.2f, _config.fearDecayRate);
-        mood.trust = Mathf.MoveTowards(mood.trust, 0.3f, _config.trustDecayRate);
+        mood.fear   = Mathf.MoveTowards(mood.fear,  0.2f, _config.fearDecayRate);
+        mood.trust  = Mathf.MoveTowards(mood.trust, 0.3f, _config.trustDecayRate);
         mood.energy -= 0.02f;
         mood.Clamp();
     }
@@ -151,36 +144,23 @@ public class PeriodicMind : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  LLM TICK  (send + consume pattern)
-    //
-    //  Each Think() cycle:
-    //    1. Check whether the previous tick got a response → apply to blackboard.
-    //    2. Send a fresh tick regardless (always want the latest LLM read).
-    //
-    //  Sending a new tick replaces _pendingId, so stale responses are naturally
-    //  discarded by TryConsumeResponse (latest-wins in v1).
-    // ─────────────────────────────────────────────────────────────────────────
-
+    /*
+        // 1. Drain any response the bridge has waiting.
+        // 2. Build a fresh snapshot and hand it off — the bridge cancels its
+        //    in-flight request, so latest-wins is enforced at the transport layer.
+    */
     void TickLLM()
     {
-        if (_bridge == null) return;
+        if (_bridge == null || _snapshotManager == null) return;
 
-        // 1. Consume response from previous tick (if arrived)
-        if (_pendingId != null && _bridge.TryConsumeResponse(_pendingId, out var intent))
-        {
+        if (_bridge.TryConsume(out var intent))
             ApplyLLMResponse(intent);
-            _pendingId = null;
-        }
 
-        // 2. Send a new tick — bridge reads the blackboard and builds the snapshot
-        _pendingId = _bridge.SendTick(_board);
+        string requestId = $"t{_tickCounter++:X8}";
+        string json      = _snapshotManager.BuildJson(requestId);
+        _bridge.SendTick(json);
     }
 
-    /// <summary>
-    /// Apply a validated LLM response to the blackboard.
-    /// This is the ONLY place SetMindIntent is called outside Simulated mode.
-    /// </summary>
     void ApplyLLMResponse(AgentMindBridge.LLMIntent intent)
     {
         _board.followTarget = intent.target;
@@ -188,17 +168,13 @@ public class PeriodicMind : MonoBehaviour
         Debug.Log($"[Mind/LLM] applied: {intent.intent}");
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  LOCAL INTENT SELECTION  (Simulated mode only)
-    // ─────────────────────────────────────────────────────────────────────────
-
     string SelectIntentLocal(MoodModel mood)
     {
-        if (mood.fear > 0.7f)                                              return "flee";
-        if (mood.curiosity > 0.6f && _board.playerInSight)                 return "investigate";
-        if (_board.GetCurrentHunger() > 0.5f)                              return "wander";
+        if (mood.fear > 0.7f)                                                return "flee";
+        if (mood.curiosity > 0.6f && _board.playerInSight)                   return "investigate";
+        if (_board.GetCurrentHunger() > 0.5f)                                return "wander";
         if (mood.social > 0.6f && mood.trust > 0.5f && _board.playerInSight) return "investigate";
-        if (mood.energy < 0.3f)                                            return "idle";
+        if (mood.energy < 0.3f)                                              return "idle";
         return "wander";
     }
 }
