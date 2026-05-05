@@ -490,3 +490,7 @@ frontend/app/[Uu]ser[Ss]ettings/
 *.csproj
 *.sln
 *.slnx
+
+
+CLAUDE.md
+.claude/
