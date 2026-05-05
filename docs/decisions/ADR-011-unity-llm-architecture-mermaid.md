@@ -28,10 +28,10 @@ flowchart LR
     Malbers["Malbers Animal Controller\nMAnimal + MAnimalAIControl"]
 
     User --> Unity
-    Unity -->|snapshot JSON\nPOST /api/v1/agent/tick| Backend
+    Unity -->|"snapshot JSON\nPOST /api/v1/agent/tick"| Backend
     Backend --> LLM
     LLM --> Backend
-    Backend -->|job result\nGET /api/v1/agent/tick/result/{job_id}| Unity
+    Backend -->|"job result\nGET /api/v1/agent/tick/result/{job_id}"| Unity
     Unity -->|resolve target keys| Scene
     Unity -->|execute command| Malbers
     Unity -->|ActionReport\nPOST /api/v1/agent/report| Backend
