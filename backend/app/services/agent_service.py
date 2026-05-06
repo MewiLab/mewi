@@ -36,6 +36,7 @@ Thread safety:
 
 from __future__ import annotations
 
+import uuid as _uuid_mod
 from datetime import datetime, timezone
 from typing import Any
 
@@ -118,6 +119,24 @@ class AgentService:
         # attribute pins the identity so BackgroundTask assertions can use `is`.
         self._enforce_fifo_limit = self._enforce_fifo_limit  # type: ignore[method-assign]
 
+    # ── UUID helper ─────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _to_db_id(creature_id: str) -> str:
+        """
+        Return a valid UUID string for Supabase FK columns.
+
+        If creature_id is already a well-formed UUID it is returned unchanged.
+        Non-UUID identifiers (e.g. "default", "cat_1") are deterministically
+        mapped to UUID v5 so the same logical creature always resolves to the
+        same DB row across restarts.
+        """
+        try:
+            _uuid_mod.UUID(creature_id)
+            return creature_id
+        except ValueError:
+            return str(_uuid_mod.uuid5(_uuid_mod.NAMESPACE_DNS, creature_id))
+
     # ── Public API ──────────────────────────────────────────────────────────
 
     async def run_full_tick_flow(
@@ -127,12 +146,17 @@ class AgentService:
         background_tasks: BackgroundTasks,
     ) -> dict[str, Any]:
         """
-        Full tick pipeline — called once per Unity frame.
+        10-to-1 aggregation tick pipeline.
 
-        register → buffer → [flush+fifo] → state update → AI graph → persist (bg)
+        Ticks 1-9: append to in-memory buffer, return immediately with
+          {"status": "buffering", "count": N} — zero LLM / DB cost.
+
+        Tick 10 (flush): semantic summary → perception_snapshots INSERT →
+          LangGraph reasoning → behavior_decisions INSERT (background).
 
         Raises RuntimeError when graph/agent are absent (misconfigured DI).
-        All DB side-effects are best-effort and never block the HTTP response.
+        _to_db_id() ensures every FK value is a valid UUID regardless of
+        what string Unity sends as creature_id.
         """
         if self._graph is None or self._agent is None:
             raise RuntimeError(
@@ -140,36 +164,46 @@ class AgentService:
                 "use the full constructor via AgentServiceDep"
             )
 
-        logger.debug("EDD snapshot  creature=%s  payload=%s", creature_id, payload)
+        # Resolve a stable UUID for every Supabase FK column.
+        db_id = self._to_db_id(creature_id)
 
-        # Step 1 — guarantee FK rows exist before any insert
-        self._ensure_creature_registered(creature_id)
-
-        # Step 2 — append this snapshot to the shared in-memory buffer
+        # ── Step 1: append to in-memory buffer (zero DB / LLM cost) ──────────
         buffer = self.buffers.setdefault(creature_id, [])
         buffer.append(payload)
+        count = len(buffer)
 
-        # Step 3 — flush when the aggregation window is full
-        if len(buffer) >= self._aggregation_limit:
-            if self._supabase is None:
-                # No persistence target: discard the window so the buffer does
-                # not grow unbounded, but schedule NO background tasks.
-                logger.warning(
-                    "Buffer full for creature %s but Supabase unavailable — "
-                    "clearing without persist",
-                    creature_id,
-                )
-                buffer.clear()
-            else:
-                snapshot_id = self._flush_buffer(creature_id, buffer.copy())
-                buffer.clear()
-                self._last_snapshot_ids[creature_id] = snapshot_id
-                background_tasks.add_task(self._enforce_fifo_limit, creature_id)
+        # ── Step 2: early return while the aggregation window is filling ──────
+        if count < self._aggregation_limit:
+            logger.debug(
+                "Buffering  creature=%s  %d/%d",
+                creature_id, count, self._aggregation_limit,
+            )
+            return {"status": "buffering", "count": count}
 
-        # Step 4 — sync Unity-pushed state values to creature_states
-        self._update_creature_states(creature_id, payload)
+        # ── Flush tick: buffer has reached the aggregation limit ──────────────
 
-        # Step 5 — run the AI reasoning graph
+        # Step 3 — guarantee FK rows exist before any INSERT
+        self._ensure_creature_registered(db_id)
+
+        # Step 4 — copy & clear buffer; persist semantic summary + raw payloads
+        snapshot_batch = buffer.copy()
+        buffer.clear()
+
+        if self._supabase is not None:
+            snapshot_id = self._flush_buffer(db_id, snapshot_batch)
+            self._last_snapshot_ids[creature_id] = snapshot_id
+            background_tasks.add_task(self._enforce_fifo_limit, db_id)
+        else:
+            logger.warning(
+                "Buffer full for creature %s but Supabase unavailable — "
+                "clearing without persist",
+                creature_id,
+            )
+
+        # Step 5 — sync Unity-pushed state values to creature_states
+        self._update_creature_states(db_id, payload)
+
+        # Step 6 — run the AI reasoning graph (last payload as representative)
         await self._set_status(creature_id, "thinking")
         try:
             await self._hydrate_if_empty(creature_id)
@@ -189,11 +223,11 @@ class AgentService:
         finally:
             await self._set_status(creature_id, "idle")
 
-        # Step 6 — non-blocking persistence (runs after HTTP response is sent)
+        # Step 7 — non-blocking persistence (runs after HTTP response is sent)
         if self._supabase is not None:
             background_tasks.add_task(
                 self._save_behavior_decision,
-                creature_id=creature_id,
+                creature_id=db_id,
                 snapshot_id=self._last_snapshot_ids.get(creature_id),
                 result=result,
             )
@@ -202,8 +236,8 @@ class AgentService:
             )
 
         logger.debug(
-            "EDD result  creature=%s  tick=%s  action=%s",
-            creature_id, result.get("tick"), result.get("action_result"),
+            "Flush  creature=%s  db_id=%s  tick=%s  action=%s",
+            creature_id, db_id, result.get("tick"), result.get("action_result"),
         )
         return result
 
