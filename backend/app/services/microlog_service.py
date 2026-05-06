@@ -27,8 +27,8 @@ class MicrologService:
         pending = self._repo.get_unembedded(limit=limit)
         if not pending:
             return 0
-        for microlog in pending:
-            vector = self._embedder.embed_text(microlog.content)
-            self._repo.update(microlog.id, patch={"embedding": vector})
+        for row in pending:
+            vector = self._embedder.embed_text(row["content"])
+            self._repo.update_embedding(row["id"], vector)
         logger.info("Embedded %d micrologs", len(pending))
         return len(pending)

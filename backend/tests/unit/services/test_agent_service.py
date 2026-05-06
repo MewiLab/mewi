@@ -44,12 +44,15 @@ def mock_background_tasks():
 
 @pytest.fixture
 def svc(settings, mock_redis, mock_supabase, mock_agent, mock_graph):
+    # aggregation_limit=1 so every single tick is a flush — tests that call
+    # run_tick once can still exercise the full LLM / persist pipeline.
     return AgentService(
         redis=mock_redis,
         settings=settings,
         agent=mock_agent,
         graph=mock_graph,
         supabase=mock_supabase,
+        aggregation_limit=1,
     )
 
 
@@ -213,6 +216,7 @@ class TestRunTick:
             agent=empty_agent,
             graph=mock_graph,
             supabase=mock_supabase,
+            aggregation_limit=1,  # force every tick to flush so hydrate is reached
         )
         with patch(
             "app.services.agent_service.hydrate_agent", new_callable=AsyncMock
@@ -349,7 +353,9 @@ def svc_agg(settings, mock_redis, per_table_supabase, mock_agent, mock_graph):
 class TestBufferAggregation:
     """Verify the X-to-1 snapshot compression pipeline."""
 
-    CREATURE = "creature-buffer-001"
+    # Must be a well-formed UUID so _to_db_id() returns it unchanged and DB
+    # row assertions can compare creature_id directly against this constant.
+    CREATURE = "d3e4f5a6-b7c8-4d9e-af10-b1c2d3e4f5a6"
 
     async def test_buffer_grows_without_flush(self, svc_agg, per_table_supabase):
         """2 ticks with limit=3 → buffer grows, no perception_snapshots insert yet."""

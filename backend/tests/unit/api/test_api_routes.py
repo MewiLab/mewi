@@ -168,11 +168,18 @@ class TestAgentRoutes:
 
     # ── Single-tick: new nested schema ────────────────────────────────────────
 
-    def test_agent_tick_returns_200_with_action(self, client):
+    def test_agent_tick_returns_200_with_action(
+        self, client, mock_redis_dep, fake_settings, mock_db
+    ):
         """
         POST /agent/tick/{creature_id} with the new nested Unity schema.
         creature_id is now a path parameter — not in the body.
+
+        Uses aggregation_limit=1 so the very first tick is a flush tick and
+        the LLM result is returned immediately (no buffering response).
         """
+        from app.services.agent_service import AgentService
+
         mock_graph = AsyncMock()
         mock_graph.ainvoke.return_value = {
             "tick": 1,
@@ -183,16 +190,24 @@ class TestAgentRoutes:
         mock_agent.memory.tick_count = 1
         mock_agent.body.available_actions = ["wait", "move"]
 
-        client.app.dependency_overrides[get_graph] = lambda: mock_graph
-        client.app.dependency_overrides[get_agent] = lambda: mock_agent
+        def _single_tick_svc():
+            return AgentService(
+                redis=mock_redis_dep,
+                settings=fake_settings,
+                agent=mock_agent,
+                graph=mock_graph,
+                supabase=mock_db,
+                aggregation_limit=1,
+            )
+
+        client.app.dependency_overrides[get_agent_service] = _single_tick_svc
 
         resp = client.post(
             f"/api/v1/agent/tick/{FAKE_CREATURE_ID}",
             json=_nested_unity_payload(0),
         )
 
-        client.app.dependency_overrides.pop(get_graph, None)
-        client.app.dependency_overrides.pop(get_agent, None)
+        client.app.dependency_overrides.pop(get_agent_service, None)
 
         assert resp.status_code == 200
         data = resp.json()

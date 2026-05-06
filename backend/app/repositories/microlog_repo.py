@@ -84,3 +84,18 @@ class MicrologRepository:
             .execute()
         )
         return response.data
+
+    def get_unembedded(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Return micrologs that are missing an embedding vector."""
+        response = (
+            self._db.table(TABLE)
+            .select("*")
+            .is_("embedding", "null")
+            .limit(limit)
+            .execute()
+        )
+        return response.data or []
+
+    def update_embedding(self, log_id: str, vector: list) -> None:
+        """Write an embedding vector to an existing microlog row."""
+        self._db.table(TABLE).update({"embedding": vector}).eq("id", log_id).execute()
