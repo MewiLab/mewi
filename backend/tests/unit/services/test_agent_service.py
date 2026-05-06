@@ -148,10 +148,11 @@ class TestRunTick:
                 payload={},
                 background_tasks=mock_background_tasks,
             )
-        # run_full_tick_flow schedules 2 background tasks:
-        #    1. _save_behavior_decision  (DB write for the AI decision)
-        #    2. persist_tick              (serialise tick to agent_tick_history)
-        assert mock_background_tasks.add_task.call_count == 2
+        # A flush tick schedules 3 background tasks:
+        #    1. _enforce_fifo_limit      (prune oldest perception_snapshots)
+        #    2. _save_behavior_decision  (DB write for the AI decision)
+        #    3. persist_tick             (serialise tick to agent_tick_history)
+        assert mock_background_tasks.add_task.call_count == 3
         mock_background_tasks.add_task.assert_any_call(
             mock_persist, svc._agent, mock_supabase, mock_redis, FAKE_CREATURE_ID
         )
