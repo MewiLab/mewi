@@ -2,8 +2,9 @@
 Simulate Unity Client Traffic — Semantic Aggregation Pipeline Verification
 ===========================================================================
 
-Sends 20 ticks per creature to the running local FastAPI backend and verifies
-that the 10-to-1 semantic compression pipeline is working correctly.
+Generates realistic tick payloads via an LLM scenario generator, sends them
+to the running local FastAPI backend, and verifies the 10-to-1 semantic
+compression pipeline.
 
 Prerequisites
 -------------
@@ -19,37 +20,37 @@ From the ``backend/`` directory:
 
     uv run python tests/integration/simulate_unity_traffic.py
 
-Or with a plain Python interpreter (when deps are already installed):
-
-    python tests/integration/simulate_unity_traffic.py
-
 Expected output
 ---------------
 Ticks  1–9  and 11–19  →  {"status": "buffering", "buffered_count": N}
 Ticks 10 and 20         →  Full AI reasoning + action payload  (flush tick)
 
-After tick 20 the GET /status/{creature_id} endpoint is queried to confirm
+The LLM-generated payloads carry real mood/entity context, so the agent's
+reasoning on flush ticks should now reflect the scenario (fearful response,
+avoidance, etc.) rather than the previous generic "environment is safe."
+
+After tick 20 the GET /status/{creature_id} endpoint is called to confirm
 that the real-time state was persisted correctly in Redis.
 """
 
 from __future__ import annotations
 
-import math
 import time
-import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import requests
+
+from tests.integration.payload_generator import generate_scenario_ticks
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 BASE_URL    = "http://localhost:8000/api/v1/agent"
 TICK_COUNT  = 20
-BUFFER_SIZE = 10          # must match the backend BUFFER_SIZE setting
-TICK_DELAY  = 0.15        # seconds between ticks — avoids hammering the server
+BUFFER_SIZE = 10
+TICK_DELAY  = 0.15        # seconds between ticks
 
-# ANSI colour helpers (silently ignored on terminals without colour support)
+# ANSI colour helpers
 GREEN  = "\033[92m"
 YELLOW = "\033[93m"
 CYAN   = "\033[96m"
@@ -58,101 +59,45 @@ BOLD   = "\033[1m"
 RESET  = "\033[0m"
 
 
-# ── Creature personality profiles ─────────────────────────────────────────────
+# ── Scenario definitions ──────────────────────────────────────────────────────
 
 @dataclass
-class CreatureProfile:
-    creature_id:   str
-    label:         str
-    base_mood:     dict[str, float]
-    base_location: dict[str, float]
-    base_action:   str
-    entities:      list[dict[str, Any]] = field(default_factory=list)
+class Scenario:
+    creature_id: str
+    label:       str
+    description: str
 
 
-CREATURES: list[CreatureProfile] = [
-    CreatureProfile(
-        creature_id   = "cat_anxious",
-        label         = "Anxious Cat",
-        base_mood     = {
-            "fear": 0.80, "trust": 0.10,
-            "curiosity": 0.35, "social": 0.15, "energy": 0.65,
-        },
-        base_location = {"x": 2.0, "y": 0.0, "z": 1.5},
-        base_action   = "crouch",
-        entities      = [
-            {"id": "human_stranger", "tags": ["human", "unknown"], "distance": 2.8, "direction": "north"},
-            {"id": "loud_appliance", "tags": ["object", "noisy"],  "distance": 4.0, "direction": "east"},
-        ],
+SCENARIOS: list[Scenario] = [
+    Scenario(
+        creature_id = "cat_anxious",
+        label       = "Anxious Cat",
+        description = (
+            "A highly anxious cat is crouching in a corner of a living room. "
+            "A loud, unknown human is walking closer from the north, now at 4 m and closing. "
+            "The cat's fear rises steadily. By tick 10 the human is at 1.5 m and the cat "
+            "considers fleeing south toward a hiding spot. "
+            "By tick 20 the cat has retreated and the human has moved away."
+        ),
     ),
-    CreatureProfile(
-        creature_id   = "cat_avoidant",
-        label         = "Avoidant Cat",
-        base_mood     = {
-            "fear": 0.45, "trust": 0.05,
-            "curiosity": 0.20, "social": 0.05, "energy": 0.85,
-        },
-        base_location = {"x": 8.0, "y": 0.0, "z": 6.0},
-        base_action   = "walk",
-        entities      = [
-            {"id": "human_owner", "tags": ["human", "familiar"], "distance": 5.5, "direction": "south"},
-            {"id": "window",      "tags": ["object", "exit"],    "distance": 1.2, "direction": "west"},
-        ],
+    Scenario(
+        creature_id = "cat_avoidant",
+        label       = "Avoidant Cat",
+        description = (
+            "A naturally avoidant cat is sitting near a window exit, watching its familiar owner "
+            "from across the room (5 m south). The owner is moving slowly toward the cat. "
+            "The cat's trust is low but stable; curiosity increases slightly as the owner "
+            "crouches down. By tick 15 the owner is at 2 m and the cat considers approaching. "
+            "By tick 20 the cat takes a tentative step forward."
+        ),
     ),
 ]
-
-
-# ── Payload factory ────────────────────────────────────────────────────────────
-
-def build_payload(profile: CreatureProfile, tick_index: int) -> dict[str, Any]:
-    """
-    Build a TickPayload-compatible dict with small per-tick variations to
-    simulate genuine movement and mood fluctuation.
-
-    JSON keys use Field aliases from tick.py:
-      "requestId" → request_id
-      "self"      → self_state
-    """
-    t = tick_index
-
-    loc = profile.base_location
-    location = {
-        "x": round(loc["x"] + math.sin(t * 0.4) * 0.3, 3),
-        "y": round(loc["y"], 3),
-        "z": round(loc["z"] + math.cos(t * 0.3) * 0.25, 3),
-    }
-
-    bm = profile.base_mood
-    mood = {
-        "fear":      round(max(0.0, min(1.0, bm["fear"]      + math.sin(t * 0.7) * 0.06)), 3),
-        "trust":     round(max(0.0, min(1.0, bm["trust"]     + math.cos(t * 0.5) * 0.04)), 3),
-        "curiosity": round(max(0.0, min(1.0, bm["curiosity"] + math.sin(t * 0.3) * 0.05)), 3),
-        "social":    round(max(0.0, min(1.0, bm["social"]    + math.cos(t * 0.6) * 0.03)), 3),
-        "energy":    round(max(0.0, min(1.0, bm["energy"]    - t * 0.01)),                  3),
-    }
-
-    # Entities drift slightly closer each tick (approaching scenario)
-    entities = [
-        {**e, "distance": round(max(0.5, e["distance"] - t * 0.04), 2)}
-        for e in profile.entities
-    ]
-
-    return {
-        "requestId": str(uuid.uuid4()),
-        "self": {
-            "location":       location,
-            "current_action": profile.base_action,
-        },
-        "mood":     mood,
-        "health":   {"hunger": round(min(1.0, t * 0.04), 3)},
-        "entities": entities,
-    }
 
 
 # ── Logging helpers ────────────────────────────────────────────────────────────
 
 def _header(text: str) -> None:
-    bar = "═" * 60
+    bar = "═" * 62
     print(f"\n{BOLD}{CYAN}{bar}{RESET}")
     print(f"{BOLD}{CYAN}  {text}{RESET}")
     print(f"{BOLD}{CYAN}{bar}{RESET}")
@@ -161,7 +106,7 @@ def _header(text: str) -> None:
 def _log_tick(tick_num: int, is_flush: bool, elapsed_s: float, resp: dict[str, Any]) -> None:
     ms = elapsed_s * 1000
     if is_flush:
-        reasoning = (resp.get("reasoning") or "")[:100]
+        reasoning = (resp.get("reasoning") or "")[:120]
         action    = resp.get("action") or {}
         detail    = f"action={action}  reasoning='{reasoning}…'"
         colour, tag = GREEN, "FLUSH "
@@ -188,16 +133,16 @@ def _check_flush(tick_num: int, resp: dict[str, Any]) -> bool:
 
 # ── Core simulation ────────────────────────────────────────────────────────────
 
-def simulate_creature(profile: CreatureProfile, session: requests.Session) -> None:
-    _header(f"{profile.label}  (id={profile.creature_id})")
+def simulate_scenario(scenario: Scenario, ticks: list[dict], session: requests.Session) -> None:
+    _header(f"{scenario.label}  (id={scenario.creature_id})")
+    print(f"  Scenario: {scenario.description[:90]}…\n")
 
-    tick_url   = f"{BASE_URL}/tick/{profile.creature_id}"
-    status_url = f"{BASE_URL}/status/{profile.creature_id}"
+    tick_url   = f"{BASE_URL}/tick/{scenario.creature_id}"
+    status_url = f"{BASE_URL}/status/{scenario.creature_id}"
 
     buffer_passed = flush_passed = 0
 
-    for i in range(1, TICK_COUNT + 1):
-        payload  = build_payload(profile, i)
+    for i, payload in enumerate(ticks[:TICK_COUNT], start=1):
         is_flush = (i % BUFFER_SIZE == 0)
 
         t0 = time.perf_counter()
@@ -207,10 +152,11 @@ def simulate_creature(profile: CreatureProfile, session: requests.Session) -> No
             resp = r.json()
         except requests.exceptions.ConnectionError:
             print(f"\n{RED}[ERROR] Cannot reach {tick_url}{RESET}")
-            print(f"{RED}        Start the server first:  uv run uvicorn app.main:app --reload{RESET}\n")
+            print(f"{RED}        Start the server:  uv run uvicorn app.main:app --reload{RESET}\n")
             return
         except requests.exceptions.HTTPError as exc:
-            print(f"\n{RED}[ERROR] HTTP {exc.response.status_code} on tick {i}: {exc.response.text[:300]}{RESET}\n")
+            print(f"\n{RED}[ERROR] HTTP {exc.response.status_code} on tick {i}: "
+                  f"{exc.response.text[:300]}{RESET}\n")
             return
         except Exception as exc:
             print(f"\n{RED}[ERROR] tick {i}: {type(exc).__name__}: {exc}{RESET}\n")
@@ -247,15 +193,26 @@ def simulate_creature(profile: CreatureProfile, session: requests.Session) -> No
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    print(f"\n{BOLD}Unity Traffic Simulator — 10-to-1 Semantic Aggregation Test{RESET}")
+    print(f"\n{BOLD}Unity Traffic Simulator — LLM-Driven Scenario Edition{RESET}")
     print(f"Base URL  : {BASE_URL}")
     print(f"Ticks/cat : {TICK_COUNT}  (flush every {BUFFER_SIZE} ticks)")
-    print(f"Creatures : {', '.join(c.creature_id for c in CREATURES)}")
+    print(f"Creatures : {', '.join(s.creature_id for s in SCENARIOS)}")
+    print(f"\n{BOLD}Step 1 — Generating payloads via LLM…{RESET}")
+
+    # Generate all scenario payloads upfront so we don't mix generation
+    # latency with HTTP timing during the actual simulation.
+    scenario_ticks: list[tuple[Scenario, list[dict]]] = []
+    for scenario in SCENARIOS:
+        print(f"\n  [{scenario.creature_id}]")
+        ticks = generate_scenario_ticks(scenario.description, count=TICK_COUNT)
+        scenario_ticks.append((scenario, ticks))
+
+    print(f"\n{BOLD}Step 2 — Sending ticks to backend…{RESET}")
 
     with requests.Session() as session:
         session.headers["Content-Type"] = "application/json"
-        for profile in CREATURES:
-            simulate_creature(profile, session)
+        for scenario, ticks in scenario_ticks:
+            simulate_scenario(scenario, ticks, session)
 
     print(f"\n{BOLD}{GREEN}Simulation complete.{RESET}\n")
 

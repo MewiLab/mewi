@@ -57,27 +57,68 @@ def make_reason_node(agent: CreatureAgent, llm: LLMProvider):
     Receives an LLMProvider — doesn't know or care which backend it is.
     Reads perception + memory, produces a chosen_action.
     """
+
+    def _intensity(v: float) -> str:
+        return "HIGH" if v >= 0.7 else "low" if v <= 0.3 else "moderate"
+
+    def _fmt_mood(mood: dict) -> str:
+        keys = ("fear", "trust", "curiosity", "social", "energy")
+        return "\n".join(
+            f"  {k:<10} {mood.get(k, 0.0):.2f}  [{_intensity(mood.get(k, 0.0))}]"
+            for k in keys
+        )
+
+    def _fmt_entities(entities: list) -> str:
+        if not entities:
+            return "  (none visible)"
+        lines = []
+        for e in entities:
+            tags = ", ".join(e.get("tags") or []) or "unknown"
+            lines.append(
+                f"  • {e.get('id', '?'):20s}  tags=[{tags}]"
+                f"  dist={e.get('distance', '?')}m  dir={e.get('direction', '?')}"
+            )
+        return "\n".join(lines)
+
     async def reason(state: AgentGraphState) -> dict[str, Any]:
-        perception = state.get("perception", {})
+        raw        = state.get("raw_payload", {})
         memory_ctx = state.get("memory_context", {})
-        actions    = state.get("available_actions", [])
+        actions    = state.get("available_actions", []) or ["move", "stop", "wait"]
+
+        # Pull the rich sensor fields that SnapshotManager cannot see
+        # (it expects environment_snapshot/creature_snapshot keys; Unity sends
+        # self/mood/health/entities).  Reading raw_payload bypasses that mismatch.
+        mood      = raw.get("mood", {})
+        health    = raw.get("health", {})
+        self_st   = raw.get("self", {})
+        loc       = self_st.get("location", {})
+        entities  = raw.get("entities", [])
 
         system_prompt = (
-            "You are the brain of a cat navigating a 3D environment. "
-            "Based on what you perceive and remember, choose ONE action to take. "
+            "You are the brain of a cat navigating a 3D environment.\n"
+            "Your decisions MUST be driven by your current mood and what you sense nearby.\n"
+            "High fear → avoid or hide. High curiosity → approach. Low energy → rest.\n"
+            "Entities that are close (<3 m) and approaching demand an immediate response.\n\n"
             "Respond with ONLY a JSON object — no extra text:\n"
-            "  {\"action\": \"<name>\", \"kwargs\": {}, \"reasoning\": \"<why>\"}\n\n"
+            '  {"action": "<name>", "kwargs": {}, "reasoning": "<why>"}\n\n'
             f"Available actions: {actions}\n\n"
-            "For the 'move' action kwargs must be:\n"
-            "  x: float  (-1 = strafe left,  0 = straight,  1 = strafe right)\n"
-            "  y: float  (-1 = backward,      0 = stop,      1 = forward)\n"
-            "  hold: float  (seconds to keep moving, default 0.3)\n"
-            "Example move: {\"action\": \"move\", \"kwargs\": {\"x\": 0, \"y\": 1, \"hold\": 0.4}, \"reasoning\": \"...\"}\n"
-            "For button actions (Sprint, Jump, Attack1 …) kwargs may include hold: float.\n"
+            "For 'move': kwargs = "
+            '{"x": <-1..1 left/right>, "y": <-1..1 back/fwd>, "hold": <seconds>}\n'
+            "For button actions (Sprint, Jump …): kwargs may include hold: float.\n"
         )
+
         user_content = (
-            f"Current perception:\n{perception}\n\n"
-            f"Recent memory:\n{memory_ctx}\n"
+            "=== Position ===\n"
+            f"  x={loc.get('x', 0.0):.2f}  y={loc.get('y', 0.0):.2f}  z={loc.get('z', 0.0):.2f}\n"
+            f"  current_action: {self_st.get('current_action', 'idle')}\n\n"
+            "=== Mood ===\n"
+            f"{_fmt_mood(mood)}\n\n"
+            "=== Health ===\n"
+            f"  hunger     {health.get('hunger', 0.0):.2f}  [{_intensity(health.get('hunger', 0.0))}]\n\n"
+            "=== Nearby entities ===\n"
+            f"{_fmt_entities(entities)}\n\n"
+            "=== Recent memory ===\n"
+            f"{memory_ctx}\n"
         )
 
         response = await llm.ainvoke([
