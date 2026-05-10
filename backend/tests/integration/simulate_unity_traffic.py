@@ -3,8 +3,8 @@ Simulate Unity Client Traffic — Semantic Aggregation Pipeline Verification
 ===========================================================================
 
 Generates realistic tick payloads via an LLM scenario generator, sends them
-to the running local FastAPI backend, and verifies the 10-to-1 semantic
-compression pipeline.
+to the running local FastAPI backend, verifies the 10-to-1 semantic compression
+pipeline, and prints a latency report for the Unity frontend team.
 
 Prerequisites
 -------------
@@ -20,23 +20,22 @@ From the ``backend/`` directory:
 
     uv run python tests/integration/simulate_unity_traffic.py
 
-Expected output
----------------
+Output
+------
 Ticks  1–9  and 11–19  →  {"status": "buffering", "buffered_count": N}
 Ticks 10 and 20         →  Full AI reasoning + action payload  (flush tick)
 
-The LLM-generated payloads carry real mood/entity context, so the agent's
-reasoning on flush ticks should now reflect the scenario (fearful response,
-avoidance, etc.) rather than the previous generic "environment is safe."
-
-After tick 20 the GET /status/{creature_id} endpoint is called to confirm
-that the real-time state was persisted correctly in Redis.
+A latency summary is printed at the end with Min / Max / Avg / P95 for:
+  • Buffer ticks  — pure in-memory, no DB
+  • Flush ticks   — LLM reasoning + Supabase writes (the expensive path)
+  • GET /status   — Redis read round-trip
 """
 
 from __future__ import annotations
 
+import statistics
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import requests
@@ -94,6 +93,35 @@ SCENARIOS: list[Scenario] = [
 ]
 
 
+# ── Latency collector ─────────────────────────────────────────────────────────
+
+@dataclass
+class LatencyRecord:
+    """Accumulated HTTP round-trip times (ms) per operation type."""
+    buffer_ms: list[float] = field(default_factory=list)  # ticks 1-9, 11-19
+    flush_ms:  list[float] = field(default_factory=list)  # ticks 10, 20  (LLM + DB write)
+    status_ms: list[float] = field(default_factory=list)  # GET /status   (Redis read)
+
+    def merge(self, other: "LatencyRecord") -> None:
+        self.buffer_ms.extend(other.buffer_ms)
+        self.flush_ms.extend(other.flush_ms)
+        self.status_ms.extend(other.status_ms)
+
+
+def _stats(samples: list[float]) -> dict[str, float]:
+    if not samples:
+        return {"min": 0, "max": 0, "avg": 0, "p95": 0, "n": 0}
+    s = sorted(samples)
+    p95_idx = max(0, int(len(s) * 0.95) - 1)
+    return {
+        "min": s[0],
+        "max": s[-1],
+        "avg": statistics.mean(s),
+        "p95": s[p95_idx],
+        "n":   len(s),
+    }
+
+
 # ── Logging helpers ────────────────────────────────────────────────────────────
 
 def _header(text: str) -> None:
@@ -103,8 +131,7 @@ def _header(text: str) -> None:
     print(f"{BOLD}{CYAN}{bar}{RESET}")
 
 
-def _log_tick(tick_num: int, is_flush: bool, elapsed_s: float, resp: dict[str, Any]) -> None:
-    ms = elapsed_s * 1000
+def _log_tick(tick_num: int, is_flush: bool, elapsed_ms: float, resp: dict[str, Any]) -> None:
     if is_flush:
         reasoning = (resp.get("reasoning") or "")[:120]
         action    = resp.get("action") or {}
@@ -114,7 +141,7 @@ def _log_tick(tick_num: int, is_flush: bool, elapsed_s: float, resp: dict[str, A
         detail    = f"buffered_count={resp.get('buffered_count', '?')}"
         colour, tag = YELLOW, "BUFFER"
 
-    print(f"  [{colour}{tag}{RESET}] tick={tick_num:>2}  ({ms:>7.1f} ms)  {detail}")
+    print(f"  [{colour}{tag}{RESET}] tick={tick_num:>2}  ({elapsed_ms:>7.1f} ms)  {detail}")
 
 
 def _check_buffer(tick_num: int, resp: dict[str, Any]) -> bool:
@@ -133,13 +160,19 @@ def _check_flush(tick_num: int, resp: dict[str, Any]) -> bool:
 
 # ── Core simulation ────────────────────────────────────────────────────────────
 
-def simulate_scenario(scenario: Scenario, ticks: list[dict], session: requests.Session) -> None:
+def simulate_scenario(
+    scenario: Scenario,
+    ticks: list[dict],
+    session: requests.Session,
+) -> LatencyRecord:
+    """Run one creature's 20-tick scenario and return raw latency samples."""
     _header(f"{scenario.label}  (id={scenario.creature_id})")
     print(f"  Scenario: {scenario.description[:90]}…\n")
 
     tick_url   = f"{BASE_URL}/tick/{scenario.creature_id}"
     status_url = f"{BASE_URL}/status/{scenario.creature_id}"
 
+    record = LatencyRecord()
     buffer_passed = flush_passed = 0
 
     for i, payload in enumerate(ticks[:TICK_COUNT], start=1):
@@ -153,23 +186,25 @@ def simulate_scenario(scenario: Scenario, ticks: list[dict], session: requests.S
         except requests.exceptions.ConnectionError:
             print(f"\n{RED}[ERROR] Cannot reach {tick_url}{RESET}")
             print(f"{RED}        Start the server:  uv run uvicorn app.main:app --reload{RESET}\n")
-            return
+            return record
         except requests.exceptions.HTTPError as exc:
             print(f"\n{RED}[ERROR] HTTP {exc.response.status_code} on tick {i}: "
                   f"{exc.response.text[:300]}{RESET}\n")
-            return
+            return record
         except Exception as exc:
             print(f"\n{RED}[ERROR] tick {i}: {type(exc).__name__}: {exc}{RESET}\n")
-            return
+            return record
         finally:
-            elapsed = time.perf_counter() - t0
+            elapsed_ms = (time.perf_counter() - t0) * 1000
 
-        _log_tick(i, is_flush, elapsed, resp)
+        _log_tick(i, is_flush, elapsed_ms, resp)
 
         if is_flush:
+            record.flush_ms.append(elapsed_ms)
             if _check_flush(i, resp):
                 flush_passed += 1
         else:
+            record.buffer_ms.append(elapsed_ms)
             if _check_buffer(i, resp):
                 buffer_passed += 1
 
@@ -180,14 +215,77 @@ def simulate_scenario(scenario: Scenario, ticks: list[dict], session: requests.S
     print(f"\n  Buffering checks : {buffer_passed}/{expected_buffer}")
     print(f"  Flush checks     : {flush_passed}/{expected_flush}")
 
-    # ── Confirm Redis state via GET /status ────────────────────────────────
+    # ── GET /status — Redis read round-trip ───────────────────────────────────
     print(f"\n  {BOLD}Querying real-time status from Redis…{RESET}")
     try:
-        r = session.get(status_url, timeout=10)
+        t0 = time.perf_counter()
+        r  = session.get(status_url, timeout=10)
         r.raise_for_status()
-        print(f"  {GREEN}GET /status → {r.json()}{RESET}")
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        record.status_ms.append(elapsed_ms)
+        print(f"  {GREEN}GET /status → {r.json()}  ({elapsed_ms:.1f} ms){RESET}")
     except Exception as exc:
         print(f"  {RED}GET /status failed: {exc}{RESET}")
+
+    return record
+
+
+# ── Latency report ─────────────────────────────────────────────────────────────
+
+def _print_report(total: LatencyRecord) -> None:
+    buf = _stats(total.buffer_ms)
+    flu = _stats(total.flush_ms)
+    sts = _stats(total.status_ms)
+
+    W = 58
+    bar    = "═" * W
+    divider= "─" * W
+
+    def row(label: str, value: str) -> str:
+        return f"  {label:<28}{value}"
+
+    def ms_row(label: str, v: float) -> str:
+        return row(label, f"{v:>8.1f} ms")
+
+    print(f"\n{BOLD}{CYAN}╔{bar}╗{RESET}")
+    print(f"{BOLD}{CYAN}║{'  LATENCY REPORT FOR UNITY TEAM':^{W}}║{RESET}")
+    print(f"{BOLD}{CYAN}╠{bar}╣{RESET}")
+
+    # Buffer ticks
+    print(f"{BOLD}{CYAN}║{'  Buffer ticks  (in-memory, no DB)':^{W}}║{RESET}")
+    print(f"{CYAN}║  {divider}║{RESET}")
+    print(f"{CYAN}║{row('  Samples', f'{buf[\"n\"]:>8}'):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  Min', buf['min']):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  Max', buf['max']):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  Avg', buf['avg']):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  P95', buf['p95']):>{W+2}}║{RESET}")
+
+    print(f"{BOLD}{CYAN}╠{bar}╣{RESET}")
+
+    # Flush ticks
+    print(f"{BOLD}{CYAN}║{'  Flush ticks  (LLM reasoning + Supabase writes)':^{W}}║{RESET}")
+    print(f"{CYAN}║  {divider}║{RESET}")
+    print(f"{CYAN}║{row('  Samples', f'{flu[\"n\"]:>8}'):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  Min', flu['min']):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  Max', flu['max']):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  Avg', flu['avg']):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  P95', flu['p95']):>{W+2}}║{RESET}")
+    print(f"{CYAN}║  {'Note: most of this is LLM time. Server logs show':^{W-2}}║{RESET}")
+    print(f"{CYAN}║  {'[DB WRITE] lines for pure Supabase latency.':^{W-2}}║{RESET}")
+
+    print(f"{BOLD}{CYAN}╠{bar}╣{RESET}")
+
+    # GET /status
+    print(f"{BOLD}{CYAN}║{'  GET /status  (Redis read round-trip)':^{W}}║{RESET}")
+    print(f"{CYAN}║  {divider}║{RESET}")
+    print(f"{CYAN}║{row('  Samples', f'{sts[\"n\"]:>8}'):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  Min', sts['min']):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  Max', sts['max']):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  Avg', sts['avg']):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{ms_row('  P95', sts['p95']):>{W+2}}║{RESET}")
+    print(f"{CYAN}║  {'(Unity polls this endpoint for animation state)':^{W-2}}║{RESET}")
+
+    print(f"{BOLD}{CYAN}╚{bar}╝{RESET}\n")
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
@@ -199,8 +297,6 @@ def main() -> None:
     print(f"Creatures : {', '.join(s.creature_id for s in SCENARIOS)}")
     print(f"\n{BOLD}Step 1 — Generating payloads via LLM…{RESET}")
 
-    # Generate all scenario payloads upfront so we don't mix generation
-    # latency with HTTP timing during the actual simulation.
     scenario_ticks: list[tuple[Scenario, list[dict]]] = []
     for scenario in SCENARIOS:
         print(f"\n  [{scenario.creature_id}]")
@@ -209,12 +305,15 @@ def main() -> None:
 
     print(f"\n{BOLD}Step 2 — Sending ticks to backend…{RESET}")
 
+    total = LatencyRecord()
     with requests.Session() as session:
         session.headers["Content-Type"] = "application/json"
         for scenario, ticks in scenario_ticks:
-            simulate_scenario(scenario, ticks, session)
+            record = simulate_scenario(scenario, ticks, session)
+            total.merge(record)
 
-    print(f"\n{BOLD}{GREEN}Simulation complete.{RESET}\n")
+    print(f"\n{BOLD}{GREEN}Simulation complete.{RESET}")
+    _print_report(total)
 
 
 if __name__ == "__main__":

@@ -36,6 +36,7 @@ Thread safety:
 
 from __future__ import annotations
 
+import time
 import uuid as _uuid_mod
 from datetime import datetime, timezone
 from typing import Any
@@ -303,7 +304,9 @@ class AgentService:
         )
 
         try:
+            _t0 = time.perf_counter()
             resp = self._supabase.table("perception_snapshots").insert(row).execute()
+            _ms = (time.perf_counter() - _t0) * 1000
         except Exception:
             logger.exception(
                 "perception_snapshots INSERT raised — creature=%s  "
@@ -326,8 +329,9 @@ class AgentService:
 
         new_id = resp.data[0].get("id")
         logger.info(
-            "perception_snapshot saved: id=%s  creature=%s  snapshots=%d  summary=%r",
-            new_id, creature_id, len(snapshots), summary[:80],
+            "[DB WRITE] perception_snapshots INSERT %.1f ms — "
+            "id=%s  creature=%s  snapshots=%d  summary=%r",
+            _ms, new_id, creature_id, len(snapshots), summary[:80],
         )
         return new_id
 
@@ -457,9 +461,15 @@ class AgentService:
             return
         try:
             patch["updated_at"] = datetime.now(timezone.utc).isoformat()
+            _t0 = time.perf_counter()
             self._supabase.table("creature_states").update(patch).eq(
                 "creature_id", creature_id
             ).execute()
+            _ms = (time.perf_counter() - _t0) * 1000
+            logger.info(
+                "[DB WRITE] creature_states UPDATE %.1f ms — creature=%s  fields=%s",
+                _ms, creature_id, sorted(k for k in patch if k != "updated_at"),
+            )
         except Exception:
             logger.exception("Failed to update creature_states for %s", creature_id)
 
@@ -482,7 +492,14 @@ class AgentService:
                 "raw_brain_output": result,
                 "status":           "completed",
             }
+            _t0 = time.perf_counter()
             self._supabase.table("behavior_decisions").insert(row).execute()
+            _ms = (time.perf_counter() - _t0) * 1000
+            logger.info(
+                "[DB WRITE] behavior_decisions INSERT %.1f ms — "
+                "creature=%s  decision=%s",
+                _ms, creature_id, action.get("action", "idle"),
+            )
         except Exception:
             logger.exception(
                 "Failed to save behavior_decision for creature %s", creature_id

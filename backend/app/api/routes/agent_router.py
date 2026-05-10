@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 from app.api.deps import AgentDep, AgentServiceDep, RedisDep, SettingsDep
@@ -57,8 +59,12 @@ async def agent_tick(
 @router.get("/status/{creature_id}")
 async def get_agent_status(creature_id: str, redis: RedisDep):
     """Query the creature's current real-time status (used by Unity to drive animations)."""
+    _t0 = time.perf_counter()
     raw = await redis.get(f"agent_status:{creature_id}")
+    _ms = (time.perf_counter() - _t0) * 1000
     agent_status = (raw.decode() if isinstance(raw, bytes) else raw) or "idle"
+    logger.info("[DB READ] Redis GET agent_status %.1f ms — creature=%s  status=%s",
+                _ms, creature_id, agent_status)
     return {
         "creature_id": creature_id,
         "status":      agent_status,
