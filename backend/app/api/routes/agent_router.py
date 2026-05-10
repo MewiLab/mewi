@@ -29,7 +29,12 @@ async def agent_tick(
     `creature_id` is taken from the URL path so the sensor payload stays
     schema-clean.  The service buffers N snapshots then persists a single
     semantic summary row (X-to-1 compression).
+
+    latency_ms in the response is the total server wall time for this tick.
+    Buffer ticks are typically <10 ms; flush ticks include LLM reasoning
+    and Supabase writes so expect 2 000–5 000 ms.
     """
+    _t0 = time.perf_counter()
     try:
         result = await service.run_full_tick_flow(
             creature_id,
@@ -46,13 +51,16 @@ async def agent_tick(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error: {type(exc).__name__} - {exc}",
         )
+    finally:
+        latency_ms = round((time.perf_counter() - _t0) * 1000, 1)
 
     return TickResponse(
-        tick=result.get("tick"),
-        action=result.get("action_result"),
-        reasoning=result.get("reasoning"),
-        status=result.get("status"),
-        buffered_count=result.get("count"),
+        tick           = result.get("tick"),
+        action         = result.get("action_result"),
+        reasoning      = result.get("reasoning"),
+        status         = result.get("status"),
+        buffered_count = result.get("count"),
+        latency_ms     = latency_ms,
     )
 
 

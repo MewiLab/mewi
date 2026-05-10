@@ -251,10 +251,13 @@ def _print_report(total: LatencyRecord) -> None:
     print(f"{BOLD}{CYAN}║{'  LATENCY REPORT FOR UNITY TEAM':^{W}}║{RESET}")
     print(f"{BOLD}{CYAN}╠{bar}╣{RESET}")
 
+    # Pre-extract counts to avoid backslash-in-f-string syntax error (Python < 3.12)
+    buf_n, flu_n, sts_n = str(buf["n"]), str(flu["n"]), str(sts["n"])
+
     # Buffer ticks
     print(f"{BOLD}{CYAN}║{'  Buffer ticks  (in-memory, no DB)':^{W}}║{RESET}")
     print(f"{CYAN}║  {divider}║{RESET}")
-    print(f"{CYAN}║{row('  Samples', f'{buf[\"n\"]:>8}'):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{row('  Samples', buf_n.rjust(8)):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Min', buf['min']):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Max', buf['max']):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Avg', buf['avg']):>{W+2}}║{RESET}")
@@ -265,7 +268,7 @@ def _print_report(total: LatencyRecord) -> None:
     # Flush ticks
     print(f"{BOLD}{CYAN}║{'  Flush ticks  (LLM reasoning + Supabase writes)':^{W}}║{RESET}")
     print(f"{CYAN}║  {divider}║{RESET}")
-    print(f"{CYAN}║{row('  Samples', f'{flu[\"n\"]:>8}'):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{row('  Samples', flu_n.rjust(8)):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Min', flu['min']):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Max', flu['max']):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Avg', flu['avg']):>{W+2}}║{RESET}")
@@ -278,7 +281,7 @@ def _print_report(total: LatencyRecord) -> None:
     # GET /status
     print(f"{BOLD}{CYAN}║{'  GET /status  (Redis read round-trip)':^{W}}║{RESET}")
     print(f"{CYAN}║  {divider}║{RESET}")
-    print(f"{CYAN}║{row('  Samples', f'{sts[\"n\"]:>8}'):>{W+2}}║{RESET}")
+    print(f"{CYAN}║{row('  Samples', sts_n.rjust(8)):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Min', sts['min']):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Max', sts['max']):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Avg', sts['avg']):>{W+2}}║{RESET}")
