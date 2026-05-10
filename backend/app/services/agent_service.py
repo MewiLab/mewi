@@ -36,6 +36,7 @@ Thread safety:
 
 from __future__ import annotations
 
+import time
 import uuid as _uuid_mod
 from datetime import datetime, timezone
 from typing import Any
@@ -183,7 +184,9 @@ class AgentService:
         # ── Flush tick: buffer has reached the aggregation limit ──────────────
 
         # Step 3 — guarantee FK rows exist before any INSERT
-        self._ensure_creature_registered(db_id)
+        # Pass both the stable UUID (db_id) and the original alias (creature_id)
+        # so the creatures.name column stores the human-readable identifier.
+        self._ensure_creature_registered(db_id, creature_id)
 
         # Step 4 — copy & clear buffer; persist semantic summary + raw payloads
         snapshot_batch = buffer.copy()
@@ -265,33 +268,72 @@ class AgentService:
         """
         Generate a semantic summary for `snapshots` and persist ONE row to
         perception_snapshots.  Returns the new row's UUID, or None on failure.
+
+        Failure modes logged explicitly:
+          - SemanticService raises (summary generation error)
+          - Supabase insert raises (FK violation, column mismatch, network)
+          - Supabase insert succeeds but returns empty data (RLS silent rejection)
         """
         if self._supabase is None:
             return None
+
         try:
             summary = self._semantic.generate_summary(snapshots)
-            last    = snapshots[-1]
-            loc     = last.get("self", {}).get("location", {})
-            row = {
-                "creature_id":  creature_id,
-                "request_id":   last.get("requestId", ""),
-                "summary_text": summary,
-                "raw_payloads": snapshots,
-                "pos_x":        loc.get("x", 0.0),
-                "pos_y":        loc.get("y", 0.0),
-                "pos_z":        loc.get("z", 0.0),
-            }
-            resp = self._supabase.table("perception_snapshots").insert(row).execute()
-            if resp.data:
-                new_id = resp.data[0].get("id")
-                logger.info(
-                    "Aggregated %d snapshots → row %s (creature=%s)",
-                    len(snapshots), new_id, creature_id,
-                )
-                return new_id
         except Exception:
-            logger.exception("Failed to flush buffer for creature %s", creature_id)
-        return None
+            logger.exception(
+                "SemanticService.generate_summary failed for creature=%s", creature_id
+            )
+            return None
+
+        last = snapshots[-1]
+        loc  = last.get("self", {}).get("location", {})
+        row  = {
+            "creature_id":  creature_id,
+            "request_id":   last.get("requestId", ""),
+            "summary_text": summary,
+            "raw_payloads": snapshots,
+            "pos_x":        loc.get("x", 0.0),
+            "pos_y":        loc.get("y", 0.0),
+            "pos_z":        loc.get("z", 0.0),
+        }
+
+        logger.debug(
+            "Inserting perception_snapshot: creature=%s  summary_len=%d  "
+            "entities_in_last_tick=%d",
+            creature_id, len(summary), len(last.get("entities", [])),
+        )
+
+        try:
+            _t0 = time.perf_counter()
+            resp = self._supabase.table("perception_snapshots").insert(row).execute()
+            _ms = (time.perf_counter() - _t0) * 1000
+        except Exception:
+            logger.exception(
+                "perception_snapshots INSERT raised — creature=%s  "
+                "Likely cause: FK violation (creature not registered) or "
+                "column schema mismatch.",
+                creature_id,
+            )
+            return None
+
+        if not resp.data:
+            logger.error(
+                "perception_snapshots INSERT returned no data for creature=%s. "
+                "Possible causes: Supabase RLS policy blocked the write, or the "
+                "response was empty despite no exception. "
+                "Row attempted: creature_id=%s  request_id=%s  summary_text=%r",
+                creature_id, creature_id,
+                row["request_id"], summary[:120],
+            )
+            return None
+
+        new_id = resp.data[0].get("id")
+        logger.info(
+            "[DB WRITE] perception_snapshots INSERT %.1f ms — "
+            "id=%s  creature=%s  snapshots=%d  summary=%r",
+            _ms, new_id, creature_id, len(snapshots), summary[:80],
+        )
+        return new_id
 
     def _enforce_fifo_limit(self, creature_id: str, limit: int = 100) -> None:
         """
@@ -324,54 +366,81 @@ class AgentService:
 
     # ── Private: DB helpers ─────────────────────────────────────────────────
 
-    def _ensure_creature_registered(self, creature_id: str) -> None:
+    def _ensure_creature_registered(self, db_id: str, alias: str) -> None:
         """
         Guarantee a creatures row + creature_states row exist before any FK
-        writes.  SELECT first to avoid clobbering existing state values.
+        write to perception_snapshots or behavior_decisions.
 
-        NOTE: try/except intentionally removed so raw DB exceptions are visible
-        in logs.  Restore the except block once the root cause is confirmed.
+        Args:
+            db_id:  UUID string (from _to_db_id) used as the PK in every table.
+            alias:  Original human-readable creature_id (e.g. "cat_anxious")
+                    stored in creatures.name so the row is identifiable in the DB.
         """
         if self._supabase is None:
             return
 
-        resp = (
-            self._supabase.table("creature_states")
-            .select("creature_id")
-            .eq("creature_id", creature_id)
-            .limit(1)
-            .execute()
-        )
-        if resp.data:
-            return
+        try:
+            resp = (
+                self._supabase.table("creature_states")
+                .select("creature_id")
+                .eq("creature_id", db_id)
+                .limit(1)
+                .execute()
+            )
+            if resp.data:
+                return  # already registered — nothing to do
 
-        logger.info("Auto-registering new creature: %s", creature_id)
+            logger.info(
+                "Auto-registering new creature: alias=%r  db_id=%s", alias, db_id
+            )
 
-        now_iso = datetime.now(timezone.utc).isoformat()
+            now_iso = datetime.now(timezone.utc).isoformat()
 
-        creature_resp = self._supabase.table("creatures").upsert(
-            {
-                "id":         creature_id,
-                "species":    "cat",
-                "name":       f"cat-{creature_id[:8]}",
-                "created_at": now_iso,
-            },
-            on_conflict="id",
-        ).execute()
-        logger.info("creatures upsert response: %s", creature_resp.data)
+            creature_resp = self._supabase.table("creatures").upsert(
+                {
+                    "id":         db_id,    # stable UUID derived from alias
+                    "species":    "cat",
+                    "name":       alias,    # human-readable alias stored for reference
+                    "created_at": now_iso,
+                },
+                on_conflict="id",
+            ).execute()
 
-        states_resp = self._supabase.table("creature_states").upsert(
-            {
-                "creature_id": creature_id,
-                "hunger":    0.0,
-                "energy":    1.0,
-                "mood":      0.0,
-                "curiosity": 0.5,
-                "fear":      0.0,
-            },
-            on_conflict="creature_id",
-        ).execute()
-        logger.info("creature_states upsert response: %s", states_resp.data)
+            if not creature_resp.data:
+                logger.error(
+                    "creatures upsert returned no data — possible RLS or schema "
+                    "mismatch.  alias=%r  db_id=%s", alias, db_id
+                )
+            else:
+                logger.info("creatures upsert OK: %s", creature_resp.data)
+
+            states_resp = self._supabase.table("creature_states").upsert(
+                {
+                    "creature_id": db_id,
+                    "hunger":    0.0,
+                    "energy":    1.0,
+                    "mood":      0.0,
+                    "curiosity": 0.5,
+                    "fear":      0.0,
+                },
+                on_conflict="creature_id",
+            ).execute()
+
+            if not states_resp.data:
+                logger.error(
+                    "creature_states upsert returned no data — possible RLS or "
+                    "FK violation.  alias=%r  db_id=%s", alias, db_id
+                )
+            else:
+                logger.info("creature_states upsert OK: %s", states_resp.data)
+
+        except Exception:
+            logger.exception(
+                "Failed to register creature alias=%r db_id=%s — "
+                "subsequent FK writes will fail",
+                alias, db_id,
+            )
+            raise  # re-raise so the caller (run_full_tick_flow) surfaces a 503
 
     def _update_creature_states(
         self, creature_id: str, payload: dict[str, Any]
@@ -392,9 +461,15 @@ class AgentService:
             return
         try:
             patch["updated_at"] = datetime.now(timezone.utc).isoformat()
+            _t0 = time.perf_counter()
             self._supabase.table("creature_states").update(patch).eq(
                 "creature_id", creature_id
             ).execute()
+            _ms = (time.perf_counter() - _t0) * 1000
+            logger.info(
+                "[DB WRITE] creature_states UPDATE %.1f ms — creature=%s  fields=%s",
+                _ms, creature_id, sorted(k for k in patch if k != "updated_at"),
+            )
         except Exception:
             logger.exception("Failed to update creature_states for %s", creature_id)
 
@@ -417,7 +492,14 @@ class AgentService:
                 "raw_brain_output": result,
                 "status":           "completed",
             }
+            _t0 = time.perf_counter()
             self._supabase.table("behavior_decisions").insert(row).execute()
+            _ms = (time.perf_counter() - _t0) * 1000
+            logger.info(
+                "[DB WRITE] behavior_decisions INSERT %.1f ms — "
+                "creature=%s  decision=%s",
+                _ms, creature_id, action.get("action", "idle"),
+            )
         except Exception:
             logger.exception(
                 "Failed to save behavior_decision for creature %s", creature_id
