@@ -9,11 +9,11 @@ Usage
 -----
 From backend/:
 
-    uv run python tests/integration/payload_generator.py
+    uv run python scripts/payload_generator.py
 
-Or import in other test scripts:
+Or import in other scripts:
 
-    from tests.integration.payload_generator import generate_scenario_ticks
+    from scripts.payload_generator import generate_scenario_ticks
 
     ticks = generate_scenario_ticks(
         "A cat hiding under a sofa while a vacuum cleaner approaches loudly.",
@@ -29,8 +29,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-# Allow `uv run python tests/integration/payload_generator.py` from backend/
-sys.path.insert(0, str(Path(__file__).parents[2]))
+# Allow running directly from backend/
+sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from langchain_core.messages import HumanMessage, SystemMessage
 

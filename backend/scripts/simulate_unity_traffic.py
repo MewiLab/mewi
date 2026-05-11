@@ -18,29 +18,42 @@ How to run
 ----------
 From the ``backend/`` directory:
 
-    uv run python tests/integration/simulate_unity_traffic.py
+    # Fast mode — sinusoidal stubs, no LLM token cost (recommended for dev)
+    uv run python scripts/simulate_unity_traffic.py --no-llm
+
+    # Full mode — LLM generates realistic scenario payloads
+    uv run python scripts/simulate_unity_traffic.py
 
 Output
 ------
-Ticks  1–9  and 11–19  →  {"status": "buffering", "buffered_count": N}
-Ticks 10 and 20         →  Full AI reasoning + action payload  (flush tick)
+Ticks  1–9  and 11–19  →  HTTP 200  {"status": "buffering"}
+Ticks 10 and 20         →  HTTP 202  {"status": "processing"}  (flush queued)
+                            Poll GET /status/{id} until is_thinking == false
 
 A latency summary is printed at the end with Min / Max / Avg / P95 for:
   • Buffer ticks  — pure in-memory, no DB
-  • Flush ticks   — LLM reasoning + Supabase writes (the expensive path)
+  • Flush ticks   — immediate 202 response (pipeline runs in background)
   • GET /status   — Redis read round-trip
 """
 
 from __future__ import annotations
 
+import argparse
 import statistics
+import sys
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import requests
 
-from tests.integration.payload_generator import generate_scenario_ticks
+sys.path.insert(0, str(Path(__file__).parents[1]))
+
+from scripts.payload_generator import (
+    generate_scenario_ticks,
+    _sinusoidal_fallback,
+)
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -98,9 +111,9 @@ SCENARIOS: list[Scenario] = [
 @dataclass
 class LatencyRecord:
     """Accumulated HTTP round-trip times (ms) per operation type."""
-    buffer_ms: list[float] = field(default_factory=list)  # ticks 1-9, 11-19
-    flush_ms:  list[float] = field(default_factory=list)  # ticks 10, 20  (LLM + DB write)
-    status_ms: list[float] = field(default_factory=list)  # GET /status   (Redis read)
+    buffer_ms: list[float] = field(default_factory=list)
+    flush_ms:  list[float] = field(default_factory=list)
+    status_ms: list[float] = field(default_factory=list)
 
     def merge(self, other: "LatencyRecord") -> None:
         self.buffer_ms.extend(other.buffer_ms)
@@ -155,7 +168,6 @@ def _check_buffer(tick_num: int, resp: dict[str, Any]) -> bool:
 
 
 def _check_flush(tick_num: int, resp: dict[str, Any]) -> bool:
-    # Flush ticks now return 202 with status="processing"; action arrives later via /status poll.
     ok = resp.get("status") in ("processing", "ok") or resp.get("action") is not None
     if not ok:
         print(f"  {RED}[WARN] tick {tick_num}: expected flush (processing/action), got {resp}{RESET}")
@@ -242,8 +254,8 @@ def _print_report(total: LatencyRecord) -> None:
     sts = _stats(total.status_ms)
 
     W = 58
-    bar    = "═" * W
-    divider= "─" * W
+    bar     = "═" * W
+    divider = "─" * W
 
     def row(label: str, value: str) -> str:
         return f"  {label:<28}{value}"
@@ -255,10 +267,8 @@ def _print_report(total: LatencyRecord) -> None:
     print(f"{BOLD}{CYAN}║{'  LATENCY REPORT FOR UNITY TEAM':^{W}}║{RESET}")
     print(f"{BOLD}{CYAN}╠{bar}╣{RESET}")
 
-    # Pre-extract counts to avoid backslash-in-f-string syntax error (Python < 3.12)
     buf_n, flu_n, sts_n = str(buf["n"]), str(flu["n"]), str(sts["n"])
 
-    # Buffer ticks
     print(f"{BOLD}{CYAN}║{'  Buffer ticks  (in-memory, no DB)':^{W}}║{RESET}")
     print(f"{CYAN}║  {divider}║{RESET}")
     print(f"{CYAN}║{row('  Samples', buf_n.rjust(8)):>{W+2}}║{RESET}")
@@ -269,20 +279,18 @@ def _print_report(total: LatencyRecord) -> None:
 
     print(f"{BOLD}{CYAN}╠{bar}╣{RESET}")
 
-    # Flush ticks
-    print(f"{BOLD}{CYAN}║{'  Flush ticks  (LLM reasoning + Supabase writes)':^{W}}║{RESET}")
+    print(f"{BOLD}{CYAN}║{'  Flush ticks  (202 Accepted — pipeline in background)':^{W}}║{RESET}")
     print(f"{CYAN}║  {divider}║{RESET}")
     print(f"{CYAN}║{row('  Samples', flu_n.rjust(8)):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Min', flu['min']):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Max', flu['max']):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  Avg', flu['avg']):>{W+2}}║{RESET}")
     print(f"{CYAN}║{ms_row('  P95', flu['p95']):>{W+2}}║{RESET}")
-    print(f"{CYAN}║  {'Note: most of this is LLM time. Server logs show':^{W-2}}║{RESET}")
-    print(f"{CYAN}║  {'[DB WRITE] lines for pure Supabase latency.':^{W-2}}║{RESET}")
+    print(f"{CYAN}║  {'LLM reasoning runs after response. Check server logs':^{W-2}}║{RESET}")
+    print(f"{CYAN}║  {'for [FLUSH DONE] to see action + reasoning output.':^{W-2}}║{RESET}")
 
     print(f"{BOLD}{CYAN}╠{bar}╣{RESET}")
 
-    # GET /status
     print(f"{BOLD}{CYAN}║{'  GET /status  (Redis read round-trip)':^{W}}║{RESET}")
     print(f"{CYAN}║  {divider}║{RESET}")
     print(f"{CYAN}║{row('  Samples', sts_n.rjust(8)):>{W+2}}║{RESET}")
@@ -298,17 +306,34 @@ def _print_report(total: LatencyRecord) -> None:
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    print(f"\n{BOLD}Unity Traffic Simulator — LLM-Driven Scenario Edition{RESET}")
+    parser = argparse.ArgumentParser(description="Unity Traffic Simulator")
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Skip LLM payload generation; use deterministic sinusoidal stubs instead. "
+             "Saves ~4 LLM calls per run — useful when testing backend pipeline only.",
+    )
+    args = parser.parse_args()
+
+    mode = "Sinusoidal (no LLM)" if args.no_llm else "LLM-Driven"
+    print(f"\n{BOLD}Unity Traffic Simulator — {mode} Edition{RESET}")
     print(f"Base URL  : {BASE_URL}")
     print(f"Ticks/cat : {TICK_COUNT}  (flush every {BUFFER_SIZE} ticks)")
     print(f"Creatures : {', '.join(s.creature_id for s in SCENARIOS)}")
-    print(f"\n{BOLD}Step 1 — Generating payloads via LLM…{RESET}")
 
     scenario_ticks: list[tuple[Scenario, list[dict]]] = []
-    for scenario in SCENARIOS:
-        print(f"\n  [{scenario.creature_id}]")
-        ticks = generate_scenario_ticks(scenario.description, count=TICK_COUNT)
-        scenario_ticks.append((scenario, ticks))
+    if args.no_llm:
+        print(f"\n{BOLD}Step 1 — Generating payloads via sinusoidal fallback (0 LLM calls)…{RESET}")
+        for scenario in SCENARIOS:
+            ticks = _sinusoidal_fallback(TICK_COUNT)
+            print(f"  [{scenario.creature_id}] {TICK_COUNT} stubs ready.")
+            scenario_ticks.append((scenario, ticks))
+    else:
+        print(f"\n{BOLD}Step 1 — Generating payloads via LLM…{RESET}")
+        for scenario in SCENARIOS:
+            print(f"\n  [{scenario.creature_id}]")
+            ticks = generate_scenario_ticks(scenario.description, count=TICK_COUNT)
+            scenario_ticks.append((scenario, ticks))
 
     print(f"\n{BOLD}Step 2 — Sending ticks to backend…{RESET}")
 
