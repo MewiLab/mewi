@@ -5,11 +5,27 @@ Uses shared fixtures from tests/conftest.py:
   settings, mock_redis, mock_supabase
 """
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.services.agent_service import AgentService
 from app.services.semantic_service import SemanticService
+
+
+async def _exec_bg_pipeline(bg_mock):
+    """Execute every async background task that was registered via add_task.
+
+    Flush ticks now schedule ``_run_flush_pipeline`` as a BackgroundTask and
+    return 202 immediately.  Tests that need to assert on pipeline side-effects
+    (DB writes, Redis status changes, graph invocations) must call this helper
+    after triggering the flush so the pipeline actually runs before any asserts.
+    """
+    for call in list(bg_mock.add_task.call_args_list):
+        fn = call.args[0]
+        fn_args = call.args[1:]
+        if asyncio.iscoroutinefunction(fn):
+            await fn(*fn_args)
 
 
 FAKE_CREATURE_ID = "creature-abc-123"
@@ -111,76 +127,54 @@ class TestSetStatus:
 
 class TestRunTick:
     async def test_sets_thinking_then_idle(self, svc, mock_redis):
-        await svc.run_tick(
-            creature_id=FAKE_CREATURE_ID,
-            payload={"raw": "data"},
-            background_tasks=MagicMock(),
-        )
+        bg = MagicMock()
+        await svc.run_tick(creature_id=FAKE_CREATURE_ID, payload={"raw": "data"}, background_tasks=bg)
+        await _exec_bg_pipeline(bg)
         statuses = [c.args[1] for c in mock_redis.set.call_args_list]
         assert statuses[0] == "thinking"
         assert statuses[-1] == "idle"
 
     async def test_invokes_graph_with_correct_state(self, svc, mock_graph, mock_agent):
-        await svc.run_tick(
-            creature_id=FAKE_CREATURE_ID,
-            payload={"raw": "data"},
-            background_tasks=MagicMock(),
-        )
+        bg = MagicMock()
+        await svc.run_tick(creature_id=FAKE_CREATURE_ID, payload={"raw": "data"}, background_tasks=bg)
+        await _exec_bg_pipeline(bg)
         payload = mock_graph.ainvoke.call_args.args[0]
         assert payload["tick"] == mock_agent.memory.tick_count
         assert payload["available_actions"] == mock_agent.body.available_actions
 
-    async def test_returns_graph_result(self, svc):
+    async def test_returns_processing_on_flush(self, svc):
+        # Flush ticks now return 202 Accepted immediately; the graph result
+        # arrives later via background pipeline → Unity polls GET /status.
         result = await svc.run_tick(
             creature_id=FAKE_CREATURE_ID,
             payload={},
             background_tasks=MagicMock(),
         )
-        assert result["tick"] == FAKE_GRAPH_RESULT["tick"]
-        assert result["action_result"] == FAKE_GRAPH_RESULT["action_result"]
+        assert result["status"] == "processing"
 
-    async def test_schedules_persist_as_background_task(
-        self, svc, mock_background_tasks, mock_supabase, mock_redis
+    async def test_schedules_flush_pipeline_as_background_task(
+        self, svc, mock_background_tasks
     ):
-        with patch("app.services.agent_service.persist_tick") as mock_persist:
-            await svc.run_tick(
-                creature_id=FAKE_CREATURE_ID,
-                payload={},
-                background_tasks=mock_background_tasks,
-            )
-        # A flush tick schedules 3 background tasks:
-        #    1. _enforce_fifo_limit      (prune oldest perception_snapshots)
-        #    2. _save_behavior_decision  (DB write for the AI decision)
-        #    3. persist_tick             (serialise tick to agent_tick_history)
-        assert mock_background_tasks.add_task.call_count == 3
-        mock_background_tasks.add_task.assert_any_call(
-            mock_persist, svc._agent, mock_supabase, mock_redis, FAKE_CREATURE_ID
+        # A flush tick now schedules exactly ONE background task: _run_flush_pipeline.
+        # All DB writes and LLM reasoning happen inside that single async task.
+        await svc.run_tick(
+            creature_id=FAKE_CREATURE_ID,
+            payload={},
+            background_tasks=mock_background_tasks,
         )
+        assert mock_background_tasks.add_task.call_count == 1
+        assert mock_background_tasks.add_task.call_args.args[0] is svc._run_flush_pipeline
 
     async def test_restores_idle_on_graph_failure(self, svc, mock_graph, mock_redis):
-        """
-        NEW BEHAVIOR: Graph crash must be caught and return a fallback result.
-        The creature status must still be reset to 'idle'.
-        """
-        # [MODIFIED] Using an async side_effect to simulate a real AI timeout/failure
+        """Graph crash inside the background pipeline must still reset status to idle."""
         async def mock_fail(*args, **kwargs):
             raise RuntimeError("LLM exploded")
-        
         mock_graph.ainvoke = mock_fail
 
-        # [MODIFIED] No longer using pytest.raises because AgentService now catches the error
-        result = await svc.run_tick(
-            creature_id=FAKE_CREATURE_ID,
-            payload={},
-            background_tasks=MagicMock(),
-        )
+        bg = MagicMock()
+        await svc.run_tick(creature_id=FAKE_CREATURE_ID, payload={}, background_tasks=bg)
+        await _exec_bg_pipeline(bg)
 
-        # [NEW] Verify that we received the fallback 'wait' action instead of a crash
-        assert result["action_result"]["action"] == "wait"
-        assert result["action_result"]["metadata"]["reason"] == "AI_SERVICE_UNAVAILABLE"
-
-        # [MODIFIED] Ensure status was still reset to idle at the end of the 'finally' block
-        # We look at the very last call to redis.set
         last_status = mock_redis.set.call_args_list[-1].args[1]
         assert last_status == "idle"
 
@@ -196,11 +190,9 @@ class TestRunTick:
 
     async def test_passes_creature_id_in_graph_state(self, svc, mock_graph):
         """creature_id must be forwarded into the graph state so nodes can do DB recall."""
-        await svc.run_tick(
-            creature_id=FAKE_CREATURE_ID,
-            payload={},
-            background_tasks=MagicMock(),
-        )
+        bg = MagicMock()
+        await svc.run_tick(creature_id=FAKE_CREATURE_ID, payload={}, background_tasks=bg)
+        await _exec_bg_pipeline(bg)
         payload = mock_graph.ainvoke.call_args.args[0]
         assert payload["creature_id"] == FAKE_CREATURE_ID
 
@@ -217,16 +209,14 @@ class TestRunTick:
             agent=empty_agent,
             graph=mock_graph,
             supabase=mock_supabase,
-            aggregation_limit=1,  # force every tick to flush so hydrate is reached
+            aggregation_limit=1,
         )
         with patch(
             "app.services.agent_service.hydrate_agent", new_callable=AsyncMock
         ) as mock_hydrate:
-            await svc.run_tick(
-                creature_id=FAKE_CREATURE_ID,
-                payload={},
-                background_tasks=MagicMock(),
-            )
+            bg = MagicMock()
+            await svc.run_tick(creature_id=FAKE_CREATURE_ID, payload={}, background_tasks=bg)
+            await _exec_bg_pipeline(bg)
         mock_hydrate.assert_called_once_with(
             empty_agent, mock_supabase, mock_redis, creature_id=FAKE_CREATURE_ID
         )
@@ -375,16 +365,20 @@ class TestBufferAggregation:
 
     async def test_last_snapshot_id_recorded_after_flush(self, svc_agg):
         """_last_snapshot_ids must be set to the UUID returned by Supabase."""
+        bg = MagicMock()
         for i in range(3):
-            await svc_agg.run_full_tick_flow(self.CREATURE, _nested_payload(i), MagicMock())
+            await svc_agg.run_full_tick_flow(self.CREATURE, _nested_payload(i), bg)
+        await _exec_bg_pipeline(bg)
 
         assert svc_agg._last_snapshot_ids[self.CREATURE] == "snap-uuid-1"
 
     async def test_flush_inserts_correct_row_structure(self, svc_agg, per_table_supabase):
         """The flushed row must carry creature_id, summary_text, raw_payloads, and request_id."""
         payloads = [_nested_payload(i) for i in range(3)]
+        bg = MagicMock()
         for p in payloads:
-            await svc_agg.run_full_tick_flow(self.CREATURE, p, MagicMock())
+            await svc_agg.run_full_tick_flow(self.CREATURE, p, bg)
+        await _exec_bg_pipeline(bg)
 
         row = per_table_supabase._perception.insert.call_args.args[0]
 
@@ -397,24 +391,21 @@ class TestBufferAggregation:
         assert row["pos_y"] == 0.0
         assert row["pos_z"] == 0.0
 
-    async def test_fifo_scheduled_as_background_task_on_flush(self, svc_agg):
-        """_enforce_fifo_limit must be added as a BackgroundTask when the buffer flushes."""
+    async def test_fifo_called_on_flush(self, svc_agg):
+        """_enforce_fifo_limit must be called (inline) when the pipeline runs."""
         bg = MagicMock()
-        for i in range(3):
-            await svc_agg.run_full_tick_flow(self.CREATURE, _nested_payload(i), bg)
-
-        fifo_calls = [
-            c for c in bg.add_task.call_args_list
-            if c.args[0] is svc_agg._enforce_fifo_limit
-        ]
-        assert len(fifo_calls) == 1
-        # creature_id is the first positional arg after the function
-        assert fifo_calls[0].args[1] == self.CREATURE
+        with patch.object(svc_agg, "_enforce_fifo_limit") as mock_fifo:
+            for i in range(3):
+                await svc_agg.run_full_tick_flow(self.CREATURE, _nested_payload(i), bg)
+            await _exec_bg_pipeline(bg)
+        mock_fifo.assert_called_once_with(self.CREATURE)
 
     async def test_second_flush_after_next_window(self, svc_agg, per_table_supabase):
         """After a flush, the next 3 ticks should trigger a second flush."""
         for i in range(6):
-            await svc_agg.run_full_tick_flow(self.CREATURE, _nested_payload(i), MagicMock())
+            bg = MagicMock()
+            await svc_agg.run_full_tick_flow(self.CREATURE, _nested_payload(i), bg)
+            await _exec_bg_pipeline(bg)
 
         assert per_table_supabase._perception.insert.call_count == 2
         assert svc_agg.buffers.get(self.CREATURE, []) == []
@@ -430,8 +421,8 @@ class TestBufferAggregation:
         assert len(svc_agg.buffers[creature_a]) == 2
         assert len(svc_agg.buffers[creature_b]) == 1
 
-    async def test_no_flush_and_no_fifo_when_supabase_none(self, settings, mock_redis, mock_agent, mock_graph):
-        """Service without Supabase must buffer normally but never touch DB or schedule FIFO."""
+    async def test_no_db_writes_when_supabase_none(self, settings, mock_redis, mock_agent, mock_graph):
+        """Service without Supabase must buffer normally but never touch DB."""
         svc = AgentService(
             redis=mock_redis,
             settings=settings,
@@ -443,10 +434,10 @@ class TestBufferAggregation:
         bg = MagicMock()
         for i in range(3):
             await svc.run_full_tick_flow(self.CREATURE, _nested_payload(i), bg)
+        await _exec_bg_pipeline(bg)
 
         # Buffer flushed in memory but no DB write happened
         assert svc.buffers.get(self.CREATURE, []) == []
-        # No FIFO task because _supabase is None (early return in _enforce_fifo_limit)
-        # The bg.add_task calls that DID happen are for behavior_decisions and persist_tick
-        # — but supabase is None so those are also skipped
-        bg.add_task.assert_not_called()
+        # _run_flush_pipeline was scheduled exactly once (for the flush tick)
+        assert bg.add_task.call_count == 1
+        assert bg.add_task.call_args.args[0] is svc._run_flush_pipeline
