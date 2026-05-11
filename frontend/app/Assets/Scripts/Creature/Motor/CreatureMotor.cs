@@ -50,8 +50,10 @@ public class CreatureMotor : MonoBehaviour
 
     // ─── Mode setup ───
     [Header("Mode Setup")]
-    [Tooltip("ModeID asset for the 'Action' mode (drag from Project)")]
+    [Tooltip("ModeID asset for the 'Action' mode. Optional: Malbers Action mode is usually ID 4.")]
     public ModeID actionMode;
+    [Tooltip("Fallback Action mode ID used when no ModeID asset is assigned. Malbers default Action mode is 4.")]
+    public int actionModeId = 4;
 
     // ─── Action ability indices — match your MAnimal Action mode list (1-based) ───
     // Defaults match the Malbers preset. Override in the Inspector if your list differs.
@@ -108,6 +110,8 @@ public class CreatureMotor : MonoBehaviour
 
     // Set when we're holding an action-mode intent so OnModeEnd can clear it.
     bool _inActionIntent;
+
+    public int ActionModeId => actionMode != null ? actionMode.ID : actionModeId;
 
     // ═══════════════════════════════════════════════
     //  INIT / TEARDOWN
@@ -187,7 +191,7 @@ public class CreatureMotor : MonoBehaviour
     void OnModeEnded(int modeID, int abilityIndex)
     {
         if (!_inActionIntent) return;
-        if (actionMode == null || modeID != actionMode.ID) return;
+        if (modeID != ActionModeId) return;
 
         _inActionIntent = false;
 
@@ -281,11 +285,11 @@ public class CreatureMotor : MonoBehaviour
                 $"remaining={agent.remainingDistance:F2} " +
                 $"desiredVel={agent.desiredVelocity.magnitude:F2}";
 
-        // Debug.Log(
-        //     $"[Motor:Proof] intent='{_currentIntent}' " +
-        //     $"catPos={transform.position} " +
-        //     $"destination={aiControl.DestinationPosition} " +
-        //     $"{agentInfo}");
+        Debug.Log(
+            $"[Motor:Proof] intent='{_currentIntent}' " +
+            $"catPos={animal.transform.position} " +
+            $"destination={aiControl.DestinationPosition} " +
+            $"{agentInfo}");
     }
 
     // ═══════════════════════════════════════════════
@@ -337,15 +341,21 @@ public class CreatureMotor : MonoBehaviour
 
     bool TriggerAction(int abilityIndex)
     {
-        if (actionMode == null || abilityIndex <= 0)
+        int modeId = ActionModeId;
+        if (modeId <= 0 || abilityIndex <= 0)
         {
-            Debug.LogWarning($"[CreatureMotor] TriggerAction: actionMode not set or abilityIndex = {abilityIndex}");
+            Debug.LogWarning($"[CreatureMotor] TriggerAction: actionModeId={modeId} abilityIndex={abilityIndex}");
             return false;
         }
 
         StopAI();
 
-        bool activated = animal.Mode_TryActivate(actionMode.ID, abilityIndex);
+        // Malbers API: Action mode is commonly ID 4, and ability is selected
+        // by index inside MAnimal.modes -> Action -> Abilities.
+        bool activated = animal.Mode_TryActivate(modeId, abilityIndex);
+        if (!activated)
+            Debug.LogWarning($"[CreatureMotor] Malbers refused Action mode={modeId} ability={abilityIndex}. Check MAnimal.modes Action ability index/state/stance conditions.");
+
         _inActionIntent = activated;
 
         return activated;
