@@ -73,8 +73,8 @@ SCENARIOS: list[Scenario] = [
         label       = "Anxious Cat",
         description = (
             "A highly anxious cat is crouching in a corner of a living room. "
-            "A loud, unknown human is walking closer from the north, now at 4 m and closing. "
-            "The cat's fear rises steadily. By tick 10 the human is at 1.5 m and the cat "
+            "An unknown human is walking closer from the north, now at 4 m and closing. "
+            "By tick 10 the human is at 1.5 m and the cat "
             "considers fleeing south toward a hiding spot. "
             "By tick 20 the cat has retreated and the human has moved away."
         ),
@@ -133,9 +133,12 @@ def _header(text: str) -> None:
 
 def _log_tick(tick_num: int, is_flush: bool, elapsed_ms: float, resp: dict[str, Any]) -> None:
     if is_flush:
-        reasoning = (resp.get("reasoning") or "")[:120]
-        action    = resp.get("action") or {}
-        detail    = f"action={action}  reasoning='{reasoning}…'"
+        if resp.get("status") == "processing":
+            detail = "pipeline queued — poll /status for result"
+        else:
+            reasoning = (resp.get("reasoning") or "")[:120]
+            action    = resp.get("action") or {}
+            detail    = f"action={action}  reasoning='{reasoning}…'"
         colour, tag = GREEN, "FLUSH "
     else:
         detail    = f"buffered_count={resp.get('buffered_count', '?')}"
@@ -152,9 +155,10 @@ def _check_buffer(tick_num: int, resp: dict[str, Any]) -> bool:
 
 
 def _check_flush(tick_num: int, resp: dict[str, Any]) -> bool:
-    ok = resp.get("status") != "buffering" and resp.get("action") is not None
+    # Flush ticks now return 202 with status="processing"; action arrives later via /status poll.
+    ok = resp.get("status") in ("processing", "ok") or resp.get("action") is not None
     if not ok:
-        print(f"  {RED}[WARN] tick {tick_num}: expected flush payload, got {resp}{RESET}")
+        print(f"  {RED}[WARN] tick {tick_num}: expected flush (processing/action), got {resp}{RESET}")
     return ok
 
 
