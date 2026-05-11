@@ -118,7 +118,8 @@ class AgentService:
         # Python creates a new wrapper object on every descriptor access, making
         # `self.m is self.m` normally False.  Storing here as an instance
         # attribute pins the identity so BackgroundTask assertions can use `is`.
-        self._enforce_fifo_limit = self._enforce_fifo_limit  # type: ignore[method-assign]
+        self._enforce_fifo_limit  = self._enforce_fifo_limit   # type: ignore[method-assign]
+        self._run_flush_pipeline  = self._run_flush_pipeline   # type: ignore[method-assign]
 
     # ── UUID helper ─────────────────────────────────────────────────────────
 
