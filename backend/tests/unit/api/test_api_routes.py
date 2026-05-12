@@ -209,11 +209,11 @@ class TestAgentRoutes:
 
         client.app.dependency_overrides.pop(get_agent_service, None)
 
-        assert resp.status_code == 200
+        # Flush ticks now return 202 Accepted immediately; the LLM pipeline
+        # runs in the background.  Unity polls GET /status for the result.
+        assert resp.status_code == 202
         data = resp.json()
-        assert data["tick"] == 1
-        assert data["action"]["action"] == "move"
-        assert data["reasoning"] == "I saw a mouse."
+        assert data["status"] == "processing"
 
     def test_agent_tick_old_flat_url_returns_404(self, client):
         """The legacy endpoint /agent/tick (no creature_id) must no longer exist."""

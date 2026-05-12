@@ -118,7 +118,8 @@ class AgentService:
         # Python creates a new wrapper object on every descriptor access, making
         # `self.m is self.m` normally False.  Storing here as an instance
         # attribute pins the identity so BackgroundTask assertions can use `is`.
-        self._enforce_fifo_limit = self._enforce_fifo_limit  # type: ignore[method-assign]
+        self._enforce_fifo_limit  = self._enforce_fifo_limit   # type: ignore[method-assign]
+        self._run_flush_pipeline  = self._run_flush_pipeline   # type: ignore[method-assign]
 
     # ── UUID helper ─────────────────────────────────────────────────────────
 
@@ -183,66 +184,116 @@ class AgentService:
 
         # ── Flush tick: buffer has reached the aggregation limit ──────────────
 
-        # Step 3 — guarantee FK rows exist before any INSERT
-        # Pass both the stable UUID (db_id) and the original alias (creature_id)
-        # so the creatures.name column stores the human-readable identifier.
-        self._ensure_creature_registered(db_id, creature_id)
-
-        # Step 4 — copy & clear buffer; persist semantic summary + raw payloads
+        # Copy & clear buffer synchronously to prevent race conditions, then
+        # hand the entire flush pipeline off to a background task so the HTTP
+        # response is returned immediately (202 Accepted).
         snapshot_batch = buffer.copy()
         buffer.clear()
 
-        if self._supabase is not None:
-            snapshot_id = self._flush_buffer(db_id, snapshot_batch)
-            self._last_snapshot_ids[creature_id] = snapshot_id
-            background_tasks.add_task(self._enforce_fifo_limit, db_id)
-        else:
-            logger.warning(
-                "Buffer full for creature %s but Supabase unavailable — "
-                "clearing without persist",
-                creature_id,
-            )
-
-        # Step 5 — sync Unity-pushed state values to creature_states
-        self._update_creature_states(db_id, payload)
-
-        # Step 6 — run the AI reasoning graph (last payload as representative)
-        await self._set_status(creature_id, "thinking")
-        try:
-            await self._hydrate_if_empty(creature_id)
-            result = await self._graph.ainvoke(
-                self._build_graph_input(creature_id, payload)
-            )
-        except Exception as exc:
-            logger.error("AI reasoning failed: %s", exc)
-            result = {
-                "tick":          self._agent.memory.tick_count,
-                "action_result": {
-                    "action":   "wait",
-                    "metadata": {"reason": "AI_SERVICE_UNAVAILABLE"},
-                },
-                "reasoning": f"Fallback: {exc}",
-            }
-        finally:
-            await self._set_status(creature_id, "idle")
-
-        # Step 7 — non-blocking persistence (runs after HTTP response is sent)
-        if self._supabase is not None:
-            background_tasks.add_task(
-                self._save_behavior_decision,
-                creature_id=db_id,
-                snapshot_id=self._last_snapshot_ids.get(creature_id),
-                result=result,
-            )
-            background_tasks.add_task(
-                persist_tick, self._agent, self._supabase, self._redis, creature_id,
-            )
+        background_tasks.add_task(
+            self._run_flush_pipeline,
+            creature_id,
+            db_id,
+            snapshot_batch,
+            payload,
+        )
 
         logger.debug(
-            "Flush  creature=%s  db_id=%s  tick=%s  action=%s",
-            creature_id, db_id, result.get("tick"), result.get("action_result"),
+            "Flush queued  creature=%s  db_id=%s  snapshots=%d",
+            creature_id, db_id, len(snapshot_batch),
         )
-        return result
+        return {"status": "processing", "count": self._aggregation_limit}
+
+    async def _run_flush_pipeline(
+        self,
+        creature_id: str,
+        db_id: str,
+        snapshot_batch: list[dict[str, Any]],
+        payload: dict[str, Any],
+    ) -> None:
+        """
+        Full flush pipeline — runs as a BackgroundTask after the 202 response
+        has been sent to Unity.
+
+        Steps mirror the original synchronous flush in run_full_tick_flow:
+          1. Ensure creature is registered in DB (FK prerequisite)
+          2. Persist semantic summary → perception_snapshots
+          3. Enforce FIFO row limit
+          4. Sync creature_states from payload
+          5. Run LangGraph AI reasoning
+          6. Persist behavior_decision
+          7. Persist tick history
+        """
+        try:
+            # Step 1 — guarantee FK rows exist
+            self._ensure_creature_registered(db_id, creature_id)
+
+            # Step 2 — semantic summary + perception_snapshots INSERT
+            if self._supabase is not None:
+                snapshot_id = self._flush_buffer(db_id, snapshot_batch)
+                self._last_snapshot_ids[creature_id] = snapshot_id
+            else:
+                logger.warning(
+                    "Buffer full for creature %s but Supabase unavailable — "
+                    "clearing without persist",
+                    creature_id,
+                )
+
+            # Step 3 — FIFO enforcement (inline; already in background)
+            if self._supabase is not None:
+                self._enforce_fifo_limit(db_id)
+
+            # Step 4 — sync Unity-pushed state values to creature_states
+            self._update_creature_states(db_id, payload)
+
+            # Step 5 — run the AI reasoning graph
+            await self._set_status(creature_id, "thinking")
+            try:
+                await self._hydrate_if_empty(creature_id)
+                result = await self._graph.ainvoke(
+                    self._build_graph_input(creature_id, payload)
+                )
+            except Exception as exc:
+                logger.error("AI reasoning failed: %s", exc)
+                result = {
+                    "tick":          self._agent.memory.tick_count,
+                    "action_result": {
+                        "action":   "wait",
+                        "metadata": {"reason": "AI_SERVICE_UNAVAILABLE"},
+                    },
+                    "reasoning": f"Fallback: {exc}",
+                }
+            finally:
+                await self._set_status(creature_id, "idle")
+
+            # Step 6 — persist behavior decision (inline; already in background)
+            if self._supabase is not None:
+                self._save_behavior_decision(
+                    creature_id=db_id,
+                    snapshot_id=self._last_snapshot_ids.get(creature_id),
+                    result=result,
+                )
+                await persist_tick(
+                    self._agent, self._supabase, self._redis, creature_id
+                )
+
+            action    = result.get("action_result") or {}
+            reasoning = result.get("reasoning") or ""
+            logger.info(
+                "[FLUSH DONE] creature=%s  action=%s  metadata=%s\n"
+                "             reasoning: %s",
+                creature_id,
+                action.get("action", "?"),
+                action.get("metadata", {}),
+                reasoning,
+            )
+
+        except Exception:
+            logger.exception(
+                "Flush pipeline failed for creature=%s — status reset to idle",
+                creature_id,
+            )
+            await self._set_status(creature_id, "idle")
 
     async def run_tick(
         self,
@@ -484,12 +535,16 @@ class AgentService:
             return
         try:
             action = result.get("action_result") or {}
+            # Exclude LangChain BaseMessage objects (not JSON-serializable)
+            # and raw_payload (large, already stored in perception_snapshots).
+            _SKIP = {"messages", "raw_payload"}
+            raw_output = {k: v for k, v in result.items() if k not in _SKIP}
             row = {
                 "creature_id":      creature_id,
                 "snapshot_id":      snapshot_id,
                 "decision_type":    action.get("action", "idle"),
                 "reasoning":        result.get("reasoning"),
-                "raw_brain_output": result,
+                "raw_brain_output": raw_output,
                 "status":           "completed",
             }
             _t0 = time.perf_counter()

@@ -1,24 +1,10 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- ==========================================
--- Cleanup (reverse dependency order)
--- ==========================================
-DROP TABLE IF EXISTS action_logs          CASCADE;
-DROP TABLE IF EXISTS behavior_decisions   CASCADE;
-DROP TABLE IF EXISTS perception_snapshots CASCADE;
-DROP TABLE IF EXISTS memory_summaries     CASCADE;
-DROP TABLE IF EXISTS creature_states      CASCADE;
-DROP TABLE IF EXISTS zones                CASCADE;
-DROP TABLE IF EXISTS user_creature_relations CASCADE;
-DROP TABLE IF EXISTS micrologs            CASCADE;
-DROP TABLE IF EXISTS creatures            CASCADE;
-DROP TABLE IF EXISTS users                CASCADE;
-
--- ==========================================
 -- Core Identity Tables
 -- ==========================================
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id         uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   aura       text,
   movement   text,
@@ -26,7 +12,7 @@ CREATE TABLE users (
   created_at timestamptz DEFAULT now() NOT NULL
 );
 
-CREATE TABLE creatures (
+CREATE TABLE IF NOT EXISTS creatures (
   id             uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   species        text DEFAULT 'cat',
   name           text,
@@ -37,7 +23,7 @@ CREATE TABLE creatures (
   created_at     timestamptz DEFAULT now() NOT NULL
 );
 
-CREATE TABLE user_creature_relations (
+CREATE TABLE IF NOT EXISTS user_creature_relations (
   id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id           uuid REFERENCES users(id) ON DELETE CASCADE,
   creature_id       uuid REFERENCES creatures(id) ON DELETE CASCADE,
@@ -52,7 +38,7 @@ CREATE TABLE user_creature_relations (
 -- Internal State Layer
 -- ==========================================
 
-CREATE TABLE creature_states (
+CREATE TABLE IF NOT EXISTS creature_states (
   creature_id uuid REFERENCES creatures(id) ON DELETE CASCADE PRIMARY KEY,
   hunger      float DEFAULT 0.0,
   energy      float DEFAULT 1.0,
@@ -66,7 +52,7 @@ CREATE TABLE creature_states (
 -- Territory Layer
 -- ==========================================
 
-CREATE TABLE zones (
+CREATE TABLE IF NOT EXISTS zones (
   id        uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   name      text NOT NULL,
   zone_type text,
@@ -80,7 +66,7 @@ CREATE TABLE zones (
 -- creature_id is NOT NULL — every record is anchored to a specific creature
 -- for deterministic memory retrieval.
 
-CREATE TABLE perception_snapshots (
+CREATE TABLE IF NOT EXISTS perception_snapshots (
   id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   creature_id  uuid NOT NULL REFERENCES creatures(id) ON DELETE CASCADE,
   request_id   text,                    -- requestId from the final snapshot in the window
@@ -93,14 +79,14 @@ CREATE TABLE perception_snapshots (
 );
 
 -- Composite index optimises per-creature chronological memory retrieval
-CREATE INDEX idx_perception_creature_time
+CREATE INDEX IF NOT EXISTS idx_perception_creature_time
   ON perception_snapshots(creature_id, created_at DESC);
 
 -- ==========================================
 -- Decision & Action Audit Trail
 -- ==========================================
 
-CREATE TABLE behavior_decisions (
+CREATE TABLE IF NOT EXISTS behavior_decisions (
   id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   creature_id      uuid REFERENCES creatures(id) ON DELETE CASCADE,
   snapshot_id      uuid REFERENCES perception_snapshots(id) ON DELETE SET NULL,
@@ -113,7 +99,7 @@ CREATE TABLE behavior_decisions (
   created_at       timestamptz DEFAULT now()
 );
 
-CREATE TABLE action_logs (
+CREATE TABLE IF NOT EXISTS action_logs (
   id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   decision_id  uuid REFERENCES behavior_decisions(id) ON DELETE CASCADE,
   action_type  text NOT NULL,
@@ -128,7 +114,7 @@ CREATE TABLE action_logs (
 -- Long-term Reflection Layer
 -- ==========================================
 
-CREATE TABLE micrologs (
+CREATE TABLE IF NOT EXISTS micrologs (
   id                 uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id            uuid REFERENCES users(id) ON DELETE CASCADE,
   creature_id        uuid REFERENCES creatures(id) ON DELETE CASCADE,
@@ -145,7 +131,7 @@ CREATE TABLE micrologs (
   created_at         timestamptz DEFAULT now() NOT NULL
 );
 
-CREATE TABLE memory_summaries (
+CREATE TABLE IF NOT EXISTS memory_summaries (
   id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   creature_id       uuid REFERENCES creatures(id) ON DELETE CASCADE,
   zone_id           uuid REFERENCES zones(id),
@@ -162,13 +148,25 @@ CREATE TABLE memory_summaries (
 -- Performance Indexes
 -- ==========================================
 
-CREATE INDEX idx_micrologs_user_id        ON micrologs(user_id);
-CREATE INDEX idx_micrologs_creature_id    ON micrologs(creature_id);
-CREATE INDEX idx_micrologs_importance     ON micrologs(importance_score DESC);
-CREATE INDEX idx_micrologs_session        ON micrologs(session_id);
-CREATE INDEX idx_decisions_creature_time  ON behavior_decisions(creature_id, created_at DESC);
-CREATE INDEX idx_decisions_pending        ON behavior_decisions(status) WHERE status = 'pending';
-CREATE INDEX idx_perception_spatial       ON perception_snapshots(pos_x, pos_y, pos_z);
+CREATE INDEX IF NOT EXISTS idx_micrologs_user_id        ON micrologs(user_id);
+CREATE INDEX IF NOT EXISTS idx_micrologs_creature_id    ON micrologs(creature_id);
+CREATE INDEX IF NOT EXISTS idx_micrologs_importance     ON micrologs(importance_score DESC);
+CREATE INDEX IF NOT EXISTS idx_micrologs_session        ON micrologs(session_id);
+CREATE INDEX IF NOT EXISTS idx_decisions_creature_time  ON behavior_decisions(creature_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_decisions_pending        ON behavior_decisions(status) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_perception_spatial       ON perception_snapshots(pos_x, pos_y, pos_z);
+
+-- ==========================================
+-- RAG: Vector columns (safe to run on existing DB)
+-- ==========================================
+
+ALTER TABLE perception_snapshots
+  ADD COLUMN IF NOT EXISTS embedding vector(1536);
+
+CREATE INDEX IF NOT EXISTS idx_perception_embedding
+  ON perception_snapshots
+  USING ivfflat (embedding vector_cosine_ops)
+  WITH (lists = 100);
 
 -- ==========================================
 -- Utility: Python RPC tunnel

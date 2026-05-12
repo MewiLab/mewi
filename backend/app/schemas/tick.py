@@ -64,13 +64,17 @@ class TickResponse(BaseModel):
     Response returned to Unity after each tick.
 
     During the aggregation window (buffer not yet full):
-      {"status": "buffering", "buffered_count": N}
+      {"status": "buffering", "buffered_count": N, "latency_ms": 4.2}
 
     On a flush tick (buffer reached 10), the LLM result is populated:
-      {"tick": 42, "action": {...}, "reasoning": "..."}
+      {"tick": 42, "action": {...}, "reasoning": "...", "latency_ms": 3241.8}
+
+    latency_ms is the total server-side wall time for this tick in milliseconds.
+    Unity can use this to calibrate animation timing and polling intervals.
     """
     tick:           int | None            = None
     action:         dict[str, Any] | None = None
     reasoning:      str | None            = None
     status:         str | None            = None  # "buffering" during fill phase
     buffered_count: int | None            = None  # current buffer depth when buffering
+    latency_ms:     float | None          = None  # total server wall time (ms)
