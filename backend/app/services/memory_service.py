@@ -1,7 +1,7 @@
 """
 Memory service — composes MemoryRepository + MemoryCache.
 
-Two public functions wired into the app lifecycle:
+Public functions:
 
   persist_tick(agent, supabase, redis)
       Called as a FastAPI BackgroundTask after each /tick response.
@@ -11,12 +11,26 @@ Two public functions wired into the app lifecycle:
       Called once in lifespan.py at startup.
       Restores agent memory from Redis (hot path) or Supabase (cold path).
 
+  retrieve_contextual_memories(current_perception_text, creature_id, supabase, settings)
+      Helper — embeds current perception, vector-searches perception_snapshots
+      for top-3 relevant past observations, and returns a formatted context
+      string for LLM prompts.  Does NOT write to DB.
+
+  run_reflection_cycle(creature_id, supabase, settings, snapshot_limit)
+      Toggle-gated (ENABLE_REFLECTION_CYCLE).  Fetches recent snapshots, uses
+      gpt-4-turbo to extract dominant_mood / dominant_behavior / summary_text,
+      and inserts a row into memory_summaries.
+
 Architecture: Route → Service → Repo → Supabase
               Route → Service → Cache → Redis
 The agent package is never imported by repos or other services.
 """
 
+from __future__ import annotations
+
+import json
 import logging
+import uuid as _uuid_mod
 from typing import Any, Dict
 
 import redis.asyncio as aioredis
@@ -30,16 +44,28 @@ from app.agent.schemas.perception_schema import (
     PerceptionSummary,
     ThreatLevel,
 )
+from app.core.config import Settings
 from app.repositories.memory_cache import MemoryCache
 from app.repositories.memory_repo import MemoryRepository
+from app.services.embedding_service import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
-# Matches the creature seeded in your DB / Unity config.
 _DEFAULT_CREATURE_ID = "cat_01"
 
 
-# ── Serialization helpers ───────────────────────────────────────────────────
+# ── UUID helper (mirrors AgentService._to_db_id; no circular import) ────────
+
+
+def _to_db_id(creature_id: str) -> str:
+    try:
+        _uuid_mod.UUID(creature_id)
+        return creature_id
+    except ValueError:
+        return str(_uuid_mod.uuid5(_uuid_mod.NAMESPACE_DNS, creature_id))
+
+
+# ── Serialization helpers ────────────────────────────────────────────────────
 
 
 def _serialize(summary: PerceptionSummary) -> Dict[str, Any]:
@@ -62,7 +88,7 @@ def _deserialize(data: Dict[str, Any]) -> PerceptionSummary:
     )
 
 
-# ── Public API ──────────────────────────────────────────────────────────────
+# ── Public API ───────────────────────────────────────────────────────────────
 
 
 async def persist_tick(
@@ -82,10 +108,10 @@ async def persist_tick(
     if not recall.recent_perceptions:
         return
 
-    latest = recall.recent_perceptions[-1]
+    latest  = recall.recent_perceptions[-1]
     payload = _serialize(latest)
 
-    repo = MemoryRepository(supabase)
+    repo  = MemoryRepository(supabase)
     cache = MemoryCache(redis)
 
     try:
@@ -109,9 +135,6 @@ async def hydrate_agent(
     Hot path: Redis list → already serialized, fast.
     Cold path: Supabase table → on first boot or after cache eviction.
               Also back-fills Redis so the next restart is a cache hit.
-
-    Each deserialized PerceptionSummary is replayed into agent.memory.record()
-    which also restores the spatial log as a side-effect.
     """
     cache = MemoryCache(redis)
     ticks: list[Dict[str, Any]] = await cache.load_ticks(creature_id=creature_id, limit=limit)
@@ -125,7 +148,6 @@ async def hydrate_agent(
             logger.error("Failed to hydrate from Supabase", exc_info=True)
             return
 
-        # Back-fill Redis so next restart hits the cache
         for row in rows:
             await cache.push_tick(creature_id=creature_id, perception=row["perception"])
 
@@ -142,4 +164,243 @@ async def hydrate_agent(
                 "Skipping malformed tick during hydration: %s", tick_data, exc_info=True
             )
 
-    logger.info("Hydrated %d/%d ticks into agent memory for '%s'", restored, len(ticks), creature_id)
+    logger.info(
+        "Hydrated %d/%d ticks into agent memory for '%s'",
+        restored, len(ticks), creature_id,
+    )
+
+
+async def retrieve_contextual_memories(
+    current_perception_text: str,
+    creature_id: str,
+    supabase: Client,
+    settings: Settings,
+) -> str:
+    """
+    Embed `current_perception_text`, retrieve the top-3 most similar past
+    perception_snapshots via pgvector, and assemble a formatted context string:
+
+        ## Historical Traits
+        <latest memory_summaries row, if any>
+
+        ## Relevant Past Observations
+        1. <snapshot summary>
+        2. <snapshot summary>
+        3. <snapshot summary>
+
+        ## Current Perception
+        <current_perception_text>
+
+    Returns the formatted string.  Does NOT write to DB.
+    Requires a `match_perception_snapshots` RPC function in Supabase.
+    """
+    db_id     = _to_db_id(creature_id)
+    emb_svc   = EmbeddingService(settings)
+
+    # ── Embed current perception ─────────────────────────────────────────────
+    try:
+        query_embedding = emb_svc.embed_text(current_perception_text)
+    except Exception:
+        logger.warning(
+            "retrieve_contextual_memories: embedding failed — "
+            "returning current perception only",
+            exc_info=True,
+        )
+        return f"## Current Perception\n{current_perception_text}"
+
+    sections: list[str] = []
+
+    # ── Historical Traits (latest memory_summaries row) ──────────────────────
+    try:
+        traits_resp = (
+            supabase.table("memory_summaries")
+            .select("summary_text, dominant_mood, dominant_behavior")
+            .eq("creature_id", db_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if traits_resp.data:
+            t = traits_resp.data[0]
+            mood_str   = f"{t.get('dominant_mood', 0):.2f}"
+            behavior   = t.get("dominant_behavior", "unknown")
+            trait_text = t.get("summary_text", "")
+            sections.append(
+                f"## Historical Traits\n"
+                f"Dominant mood: {mood_str}  |  Dominant behavior: {behavior}\n"
+                f"{trait_text}"
+            )
+    except Exception:
+        logger.warning("retrieve_contextual_memories: traits fetch failed", exc_info=True)
+
+    # ── Top-3 relevant snapshots (pgvector RPC) ──────────────────────────────
+    try:
+        snap_resp = supabase.rpc(
+            "match_perception_snapshots",
+            {
+                "query_embedding":    query_embedding,
+                "creature_id_filter": db_id,
+                "match_count":        3,
+            },
+        ).execute()
+
+        if snap_resp.data:
+            lines = ["## Relevant Past Observations"]
+            for i, row in enumerate(snap_resp.data, 1):
+                lines.append(f"{i}. {row.get('summary_text', '(no summary)')}")
+            sections.append("\n".join(lines))
+    except Exception:
+        logger.warning(
+            "retrieve_contextual_memories: pgvector RPC failed — "
+            "ensure match_perception_snapshots function exists in Supabase",
+            exc_info=True,
+        )
+
+    # ── Current perception ───────────────────────────────────────────────────
+    sections.append(f"## Current Perception\n{current_perception_text}")
+
+    return "\n\n".join(sections)
+
+
+async def run_reflection_cycle(
+    creature_id: str,
+    supabase: Client,
+    settings: Settings,
+    snapshot_limit: int = 5,
+) -> None:
+    """
+    Toggle-gated long-term reflection: condenses recent perception snapshots
+    into a memory_summaries row using gpt-4-turbo.
+
+    Skips immediately when ENABLE_REFLECTION_CYCLE is False (default).
+
+    Workflow:
+      1. Fetch the `snapshot_limit` most recent rows from perception_snapshots.
+      2. Build a reflection prompt from their summary_text fields.
+      3. Call gpt-4-turbo (JSON mode) to extract:
+           dominant_mood     float  [-1.0, 1.0]
+           dominant_behavior str    (e.g. "exploration", "hiding")
+           summary_text      str    (brief narrative synthesis)
+      4. INSERT into memory_summaries with period_start / period_end from the
+         fetched snapshots' created_at values.
+    """
+    if not settings.ENABLE_REFLECTION_CYCLE:
+        logger.debug("run_reflection_cycle: ENABLE_REFLECTION_CYCLE=False — skipping")
+        return
+
+    db_id = _to_db_id(creature_id)
+
+    # ── Step 1: fetch recent snapshots ───────────────────────────────────────
+    try:
+        snap_resp = (
+            supabase.table("perception_snapshots")
+            .select("id, summary_text, created_at")
+            .eq("creature_id", db_id)
+            .order("created_at", desc=True)
+            .limit(snapshot_limit)
+            .execute()
+        )
+    except Exception:
+        logger.error(
+            "run_reflection_cycle: failed to fetch snapshots for creature=%s",
+            creature_id, exc_info=True,
+        )
+        return
+
+    snapshots = snap_resp.data or []
+    if not snapshots:
+        logger.info(
+            "run_reflection_cycle: no snapshots found for creature=%s — skipping",
+            creature_id,
+        )
+        return
+
+    # Rows come back newest-first; reverse so prompt reads chronologically.
+    snapshots = list(reversed(snapshots))
+    period_start = snapshots[0].get("created_at", "")
+    period_end   = snapshots[-1].get("created_at", "")
+
+    # ── Step 2: build reflection prompt ──────────────────────────────────────
+    summary_lines = "\n".join(
+        f"{i}. {row.get('summary_text', '(empty)')}"
+        for i, row in enumerate(snapshots, 1)
+    )
+    reflection_prompt = (
+        "You are analyzing a virtual cat's recent behavior logs.\n"
+        "Based on the following perception snapshots, extract:\n"
+        "  - dominant_mood: a float in [-1.0, 1.0] "
+        "(negative = distressed, positive = content)\n"
+        "  - dominant_behavior: a short string label of the main behavior "
+        "(e.g. 'exploration', 'hiding', 'socializing', 'resting')\n"
+        "  - summary_text: a 1-2 sentence narrative synthesis\n\n"
+        f"Snapshots:\n{summary_lines}\n\n"
+        "Respond with valid JSON only, no markdown."
+    )
+
+    # ── Step 3: call gpt-4-turbo (sync OpenAI client) ────────────────────────
+    try:
+        from openai import OpenAI  # local import to avoid hard dep at module level
+
+        client = OpenAI(
+            api_key=settings.openai_api_key or settings.llm.api_key or None
+        )
+        response = client.chat.completions.create(
+            model="gpt-4-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a behavioral analysis assistant. "
+                        "Respond only with valid JSON."
+                    ),
+                },
+                {"role": "user", "content": reflection_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        )
+        raw = response.choices[0].message.content or "{}"
+        data: dict[str, Any] = json.loads(raw)
+    except Exception:
+        logger.error(
+            "run_reflection_cycle: LLM call failed for creature=%s",
+            creature_id, exc_info=True,
+        )
+        return
+
+    # Validate / coerce extracted fields.
+    dominant_mood     = float(data.get("dominant_mood", 0.0))
+    dominant_mood     = max(-1.0, min(1.0, dominant_mood))
+    dominant_behavior = str(data.get("dominant_behavior", "unknown"))[:64]
+    summary_text      = str(data.get("summary_text", ""))
+
+    if not summary_text:
+        logger.warning(
+            "run_reflection_cycle: LLM returned empty summary_text for creature=%s",
+            creature_id,
+        )
+        return
+
+    # ── Step 4: insert into memory_summaries ─────────────────────────────────
+    try:
+        supabase.table("memory_summaries").insert(
+            {
+                "creature_id":       db_id,
+                "period_start":      period_start,
+                "period_end":        period_end,
+                "dominant_mood":     dominant_mood,
+                "dominant_behavior": dominant_behavior,
+                "summary_text":      summary_text,
+            }
+        ).execute()
+        logger.info(
+            "[REFLECTION] memory_summaries INSERT — creature=%s  "
+            "mood=%.2f  behavior=%s  period=%s → %s",
+            creature_id, dominant_mood, dominant_behavior,
+            period_start, period_end,
+        )
+    except Exception:
+        logger.error(
+            "run_reflection_cycle: memory_summaries INSERT failed for creature=%s",
+            creature_id, exc_info=True,
+        )

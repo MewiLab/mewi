@@ -3,20 +3,27 @@ SemanticService — X-to-1 compression for Unity perception snapshots.
 
 Condenses a buffer of raw Unity JSON payloads into a single human-readable
 narrative paragraph suitable for long-term storage and LLM retrieval.
-Stateless and side-effect free — safe to share as a module-level singleton.
+Optionally generates vector embeddings via EmbeddingService.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any
 
 from app.core.logger import get_logger
+
+if TYPE_CHECKING:
+    from app.services.embedding_service import EmbeddingService
 
 logger = get_logger(__name__)
 
 
 class SemanticService:
     """Convert a list of raw Unity snapshots into one narrative paragraph."""
+
+    def __init__(self, embedding_service: EmbeddingService | None = None) -> None:
+        self._embedding = embedding_service
 
     # ── Threshold helpers ────────────────────────────────────────────────────
 
@@ -41,20 +48,23 @@ class SemanticService:
 
     # ── Public API ───────────────────────────────────────────────────────────
 
-    def generate_summary(self, snapshots: list[dict[str, Any]]) -> str:
+    def generate_summary(
+        self,
+        snapshots: list[dict[str, Any]],
+        location: dict[str, float] | None = None,
+        timestamp: str | None = None,
+    ) -> str:
         """
         Aggregate N Unity snapshots into one narrative paragraph.
 
-        Output pattern:
-          "The cat was [action]. It felt [mood], [hunger]. [Trends]. It noticed [entities]."
+        Optionally prepends a spatio-temporal header when `location` is given:
+          "[<ISO-timestamp> @ (x, y, z)] The cat was ..."
 
         Args:
             snapshots: Ordered list of raw Unity payloads (oldest → newest).
-                       Each payload must follow the Unity sensor schema:
-                       { requestId, self: {location, current_action},
-                         mood: {fear, trust, curiosity, social, energy},
-                         health: {hunger},
-                         entities: [{id, tags, distance, direction}] }
+            location:  Optional dict with 'x', 'y', 'z' keys for position context.
+            timestamp: Optional ISO-8601 string; defaults to UTC now when location
+                       is supplied but timestamp is omitted.
         """
         if not snapshots:
             return "No perception data available."
@@ -128,4 +138,28 @@ class SemanticService:
             tag_list = ", ".join(f"a {t}" for t in sorted(seen_tags))
             parts.append(f"It noticed {tag_list}.")
 
-        return " ".join(parts)
+        body = " ".join(parts)
+
+        # ── Prepend spatio-temporal context when location is provided ────────
+        if location is not None:
+            x   = location.get("x", 0.0)
+            y   = location.get("y", 0.0)
+            z   = location.get("z", 0.0)
+            ts  = timestamp or datetime.now(timezone.utc).isoformat()
+            return f"[{ts} @ ({x:.1f},{y:.1f},{z:.1f})] {body}"
+
+        return body
+
+    def generate_embedding(self, text: str) -> list[float]:
+        """
+        Return a 1536-dim embedding vector for `text` via text-embedding-3-small.
+        Returns an empty list when no EmbeddingService was injected.
+        """
+        if self._embedding is None:
+            logger.debug("generate_embedding called but no EmbeddingService injected")
+            return []
+        try:
+            return self._embedding.embed_text(text)
+        except Exception:
+            logger.exception("EmbeddingService.embed_text failed")
+            return []

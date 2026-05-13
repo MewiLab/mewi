@@ -94,6 +94,10 @@ class Settings(BaseSettings):
     llm: LLMSettings = LLMSettings()
     embedding: EmbeddingSettings = EmbeddingSettings()
     
+    # Feature toggles
+    ENABLE_MEMORY_PIPELINE: bool = False    # Redis buffer → embedding → perception_snapshots
+    ENABLE_REFLECTION_CYCLE: bool = False   # LLM reflection → memory_summaries
+
     # Workers
     agent_worker_interval: float = 10.0       # seconds between agent ticks
     microlog_worker_interval: float = 30.0    # seconds between embedding batches
