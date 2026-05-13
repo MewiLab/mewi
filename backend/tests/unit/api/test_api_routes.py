@@ -54,15 +54,6 @@ def mock_redis_dep():
     return AsyncMock()
 
 
-@pytest.fixture(autouse=True)
-def reset_agent_service_singleton():
-    import app.api.deps as deps_module
-    deps_module._shared_state     = None
-    deps_module._semantic_service = None
-    yield
-    deps_module._shared_state     = None
-    deps_module._semantic_service = None
-
 
 @pytest.fixture
 def client(fake_settings, mock_db, mock_redis_dep):
@@ -168,17 +159,36 @@ class TestAgentRoutes:
 
     # ── Single-tick: new nested schema ────────────────────────────────────────
 
+    @patch("app.services.embedding_service.EmbeddingService.embed_text", return_value=[0.1] * 5)
     def test_agent_tick_returns_200_with_action(
-        self, client, mock_redis_dep, fake_settings, mock_db
+        self, mock_embed, client, mock_redis_dep, mock_db
     ):
         """
         POST /agent/tick/{creature_id} with the new nested Unity schema.
         creature_id is now a path parameter — not in the body.
 
         Uses aggregation_limit=1 so the very first tick is a flush tick and
-        the LLM result is returned immediately (no buffering response).
+        the pipeline runs as a BackgroundTask (returns 202 "processing").
+        ENABLE_MEMORY_PIPELINE=True is required to activate the count trigger.
         """
+        import json as _json
+        from app.core.config import Settings
         from app.services.agent_service import AgentService
+
+        pipeline_settings = Settings(
+            supabase_url="http://fake-supabase",
+            supabase_publishable_key="fake-anon-key",
+            supabase_secret_key="fake-secret-key",
+            openai_api_key="fake-openai-key",
+            ENABLE_MEMORY_PIPELINE=True,
+        )
+
+        # Configure redis mock for LIST buffer operations
+        payload_json = _json.dumps(_nested_unity_payload(0))
+        mock_redis_dep.rpush = AsyncMock(return_value=1)
+        mock_redis_dep.llen = AsyncMock(return_value=1)
+        mock_redis_dep.lrange = AsyncMock(return_value=[payload_json])
+        mock_redis_dep.delete = AsyncMock(return_value=1)
 
         mock_graph = AsyncMock()
         mock_graph.ainvoke.return_value = {
@@ -193,7 +203,7 @@ class TestAgentRoutes:
         def _single_tick_svc():
             return AgentService(
                 redis=mock_redis_dep,
-                settings=fake_settings,
+                settings=pipeline_settings,
                 agent=mock_agent,
                 graph=mock_graph,
                 supabase=mock_db,
@@ -209,8 +219,8 @@ class TestAgentRoutes:
 
         client.app.dependency_overrides.pop(get_agent_service, None)
 
-        # Flush ticks now return 202 Accepted immediately; the LLM pipeline
-        # runs in the background.  Unity polls GET /status for the result.
+        # Flush ticks return 202 Accepted immediately; the LLM pipeline
+        # runs as a BackgroundTask.  Unity polls GET /status for the result.
         assert resp.status_code == 202
         data = resp.json()
         assert data["status"] == "processing"

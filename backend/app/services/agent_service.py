@@ -7,37 +7,39 @@ Architecture: per-request instance + shared state
   Persistent cross-request data lives in AgentServiceState, which is a
   process-scoped singleton injected at construction time.
 
-Buffer strategy (X-to-1 compression):
-  Raw Unity snapshots accumulate in AgentServiceState.buffers, keyed by
-  creature_id.  When the buffer reaches `aggregation_limit`, SemanticService
-  condenses all snapshots into one narrative string that is persisted as a
-  single row in perception_snapshots.  FIFO enforcement keeps each creature
-  at ≤ 100 rows.
+Buffer strategy (Redis LIST + feature toggle):
+  Raw Unity payloads are pushed as JSON to a Redis LIST key
+  `cat:buffer:{creature_id}`.  A per-creature asyncio.Lock in
+  AgentServiceState serialises concurrent pushes.
 
-DB write order per tick:
+  When ENABLE_MEMORY_PIPELINE is False (default) — every tick returns
+  {"status": "buffering", "count": N} immediately.  Zero LLM / DB cost.
+
+  When ENABLE_MEMORY_PIPELINE is True — two flush triggers are active:
+    Count trigger  : LLEN >= aggregation_limit → BackgroundTask flush.
+    Timer trigger  : 1st item in an empty list → 120-second safety-net
+                     asyncio.Task that flushes whatever remains.
+
+DB write order per flush:
   1. _ensure_creature_registered  — upsert creatures + creature_states
-  2. Append to in-memory buffer   — zero DB cost on most ticks
-  3. [buffer full, supabase set]  — _flush_buffer → INSERT perception_snapshots
-  4. [buffer full, supabase set]  — _enforce_fifo (BackgroundTask)
-  5. _update_creature_states      — UPDATE creature_states from nested payload
-  6. graph.ainvoke                — LangGraph AI reasoning
-  7. _save_behavior_decision      — INSERT behavior_decisions (BackgroundTask)
-  8. persist_tick                 — serialise to agent_tick_history (BackgroundTask)
+  2. _flush_buffer                — semantic summary + embedding → INSERT perception_snapshots
+  3. _enforce_fifo_limit          — prune old rows (inline; already in background)
+  4. _update_creature_states      — UPDATE creature_states from nested payload
+  5. graph.ainvoke                — LangGraph AI reasoning
+  6. _save_behavior_decision      — INSERT behavior_decisions (inline)
+  7. persist_tick                 — serialise to agent_tick_history (inline)
 
 All Supabase writes are best-effort: exceptions are caught, logged, and never
 re-raised so Unity is never blocked by a DB or network hiccup.
-
-Thread safety:
-  AgentServiceState dicts are mutated concurrently under CPython's GIL, which
-  makes individual dict read/write operations atomic.  This is safe for
-  single-process deployments.  A multi-process deployment would need an
-  external store (e.g. Redis) for the shared buffers.
 """
 
 from __future__ import annotations
 
+import asyncio
+import json
 import time
 import uuid as _uuid_mod
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
 
@@ -48,35 +50,37 @@ from supabase import Client
 from app.core.config import Settings
 from app.core.logger import get_logger
 from app.agent.creature_agent import CreatureAgent
+from app.services.embedding_service import EmbeddingService
 from app.services.memory_service import persist_tick, hydrate_agent
 from app.services.semantic_service import SemanticService
 
 logger = get_logger(__name__)
 
-_STATUS_KEY = "agent_status:{creature_id}"
+_STATUS_KEY    = "agent_status:{creature_id}"
+_BUFFER_KEY    = "cat:buffer:{creature_id}"
+_TIMER_DELAY_S = 120
 
 
 class AgentServiceState:
     """
     Process-scoped state shared across all per-request AgentService instances.
 
-    Holds per-creature snapshot buffers and the UUID of the most recently
-    saved aggregated perception row.  Injected into AgentService so that
-    buffer contents survive the per-request dependency-injection lifecycle.
+    Holds per-creature asyncio.Locks (for Redis buffer serialisation) and the
+    UUID of the most recently saved aggregated perception row.  Injected into
+    AgentService so that state outlives the per-request DI lifecycle.
     """
 
     def __init__(self) -> None:
-        # Snapshot windows keyed by creature_id.
-        self.buffers: dict[str, list[dict[str, Any]]] = {}
+        # Per-creature locks — defaultdict creates a new Lock on first access.
+        self.locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
         # Most recent perception_snapshots.id for each creature.
-        # Used as snapshot_id FK in behavior_decisions rows.
         self.last_snapshot_ids: dict[str, str | None] = {}
 
 
 class AgentService:
     """
     Per-request orchestrator.  Receives all request-scoped dependencies via
-    constructor injection.  Cross-request state (buffers, last snapshot IDs)
+    constructor injection.  Cross-request state (locks, last snapshot IDs)
     lives in the injected AgentServiceState singleton.
     """
 
@@ -91,37 +95,27 @@ class AgentService:
         aggregation_limit: int = 10,
         state: AgentServiceState | None = None,
     ):
-        # ── Per-request deps (safe to overwrite — each request gets its own instance) ──
+        # ── Per-request deps ────────────────────────────────────────────────
         self._redis             = redis
+        self._settings          = settings
         self._ttl               = settings.agent_status_ttl
         self._agent             = agent
         self._graph             = graph
         self._supabase          = supabase
-        self._semantic          = semantic_service or SemanticService()
         self._aggregation_limit = aggregation_limit
 
-        # ── Shared state — outlives this request ──────────────────────────────
-        # Fall back to a fresh state when none is injected (unit-test path).
-        # In production, deps.py injects the process-level singleton so all
-        # concurrent instances share the same buffers.
+        # SemanticService for narrative summaries; EmbeddingService for vectors.
+        self._semantic   = semantic_service or SemanticService()
+        self._embedding  = EmbeddingService(settings)
+
+        # ── Shared state — outlives this request ────────────────────────────
         self._state = state or AgentServiceState()
 
-        # Expose shared collections as direct attributes so call sites and test
-        # assertions use the same `svc.buffers` / `svc._last_snapshot_ids` names
-        # as before.  These are *references* to the same dict objects held inside
-        # self._state, so any mutation is immediately visible to every other
-        # AgentService instance sharing the same state.
-        self.buffers            = self._state.buffers
-        self._last_snapshot_ids = self._state.last_snapshot_ids
+        # ── Stable bound-method references (required for BackgroundTask `is`) ─
+        self._enforce_fifo_limit = self._enforce_fifo_limit   # type: ignore[method-assign]
+        self._run_flush_pipeline = self._run_flush_pipeline   # type: ignore[method-assign]
 
-        # ── Stable bound-method reference ────────────────────────────────────
-        # Python creates a new wrapper object on every descriptor access, making
-        # `self.m is self.m` normally False.  Storing here as an instance
-        # attribute pins the identity so BackgroundTask assertions can use `is`.
-        self._enforce_fifo_limit  = self._enforce_fifo_limit   # type: ignore[method-assign]
-        self._run_flush_pipeline  = self._run_flush_pipeline   # type: ignore[method-assign]
-
-    # ── UUID helper ─────────────────────────────────────────────────────────
+    # ── UUID helper ──────────────────────────────────────────────────────────
 
     @staticmethod
     def _to_db_id(creature_id: str) -> str:
@@ -139,7 +133,7 @@ class AgentService:
         except ValueError:
             return str(_uuid_mod.uuid5(_uuid_mod.NAMESPACE_DNS, creature_id))
 
-    # ── Public API ──────────────────────────────────────────────────────────
+    # ── Public API ───────────────────────────────────────────────────────────
 
     async def run_full_tick_flow(
         self,
@@ -148,61 +142,109 @@ class AgentService:
         background_tasks: BackgroundTasks,
     ) -> dict[str, Any]:
         """
-        10-to-1 aggregation tick pipeline.
+        Redis-buffered tick pipeline with feature-toggle gating.
 
-        Ticks 1-9: append to in-memory buffer, return immediately with
-          {"status": "buffering", "count": N} — zero LLM / DB cost.
+        Every tick: push payload to Redis LIST under cat:buffer:{creature_id}.
 
-        Tick 10 (flush): semantic summary → perception_snapshots INSERT →
-          LangGraph reasoning → behavior_decisions INSERT (background).
+        ENABLE_MEMORY_PIPELINE=False (default):
+          Return {"status": "buffering", "count": N} immediately.
 
-        Raises RuntimeError when graph/agent are absent (misconfigured DI).
-        _to_db_id() ensures every FK value is a valid UUID regardless of
-        what string Unity sends as creature_id.
+        ENABLE_MEMORY_PIPELINE=True:
+          Count trigger (LLEN >= aggregation_limit): pop all items, hand off
+            to BackgroundTask _run_flush_pipeline, return {"status": "processing"}.
+          Timer trigger (1st item pushed): spawn 120-second asyncio.Task that
+            flushes any remaining items once the deadline passes.
         """
+        db_id      = self._to_db_id(creature_id)
+        redis_key  = _BUFFER_KEY.format(creature_id=creature_id)
+        lock       = self._state.locks[creature_id]
+
+        async with lock:
+            await self._redis.rpush(redis_key, json.dumps(payload))
+            current_len = await self._redis.llen(redis_key)
+
+            if not self._settings.ENABLE_MEMORY_PIPELINE:
+                logger.debug(
+                    "Pipeline disabled — buffering creature=%s  %d items in Redis",
+                    creature_id, current_len,
+                )
+                return {"status": "buffering", "count": current_len}
+
+            # Timer trigger: first item entering an empty list.
+            if current_len == 1:
+                asyncio.create_task(
+                    self._timer_flush(creature_id, db_id, redis_key),
+                    name=f"timer_flush:{creature_id}",
+                )
+                logger.debug("Timer flush scheduled for creature=%s", creature_id)
+
+            # Count trigger: aggregation window full.
+            if current_len >= self._aggregation_limit:
+                if self._graph is None or self._agent is None:
+                    logger.warning(
+                        "Count trigger fired but graph/agent unavailable for creature=%s"
+                        " — items remain in Redis buffer",
+                        creature_id,
+                    )
+                    return {"status": "buffering", "count": current_len}
+
+                raw_items     = await self._redis.lrange(redis_key, 0, -1)
+                await self._redis.delete(redis_key)
+                snapshot_batch = [json.loads(item) for item in raw_items]
+
+                background_tasks.add_task(
+                    self._run_flush_pipeline,
+                    creature_id,
+                    db_id,
+                    snapshot_batch,
+                    payload,
+                )
+                logger.debug(
+                    "Flush queued  creature=%s  db_id=%s  snapshots=%d",
+                    creature_id, db_id, len(snapshot_batch),
+                )
+                return {"status": "processing"}
+
+            return {"status": "buffering", "count": current_len}
+
+    async def _timer_flush(
+        self,
+        creature_id: str,
+        db_id: str,
+        redis_key: str,
+    ) -> None:
+        """
+        120-second safety-net flush.  Fires when the count trigger never
+        reached the threshold (e.g. low-frequency ticks).
+
+        Acquires the per-creature lock before touching Redis so it never
+        races with a concurrent push or count-triggered flush.
+        """
+        await asyncio.sleep(_TIMER_DELAY_S)
+
         if self._graph is None or self._agent is None:
-            raise RuntimeError(
-                "AgentService.run_full_tick_flow requires graph and agent — "
-                "use the full constructor via AgentServiceDep"
+            logger.warning(
+                "Timer flush: graph/agent unavailable for creature=%s — skipping",
+                creature_id,
             )
+            return
 
-        # Resolve a stable UUID for every Supabase FK column.
-        db_id = self._to_db_id(creature_id)
+        lock = self._state.locks[creature_id]
+        async with lock:
+            raw_items = await self._redis.lrange(redis_key, 0, -1)
+            if not raw_items:
+                logger.debug("Timer flush: nothing to flush for creature=%s", creature_id)
+                return
+            await self._redis.delete(redis_key)
 
-        # ── Step 1: append to in-memory buffer (zero DB / LLM cost) ──────────
-        buffer = self.buffers.setdefault(creature_id, [])
-        buffer.append(payload)
-        count = len(buffer)
-
-        # ── Step 2: early return while the aggregation window is filling ──────
-        if count < self._aggregation_limit:
-            logger.debug(
-                "Buffering  creature=%s  %d/%d",
-                creature_id, count, self._aggregation_limit,
-            )
-            return {"status": "buffering", "count": count}
-
-        # ── Flush tick: buffer has reached the aggregation limit ──────────────
-
-        # Copy & clear buffer synchronously to prevent race conditions, then
-        # hand the entire flush pipeline off to a background task so the HTTP
-        # response is returned immediately (202 Accepted).
-        snapshot_batch = buffer.copy()
-        buffer.clear()
-
-        background_tasks.add_task(
-            self._run_flush_pipeline,
-            creature_id,
-            db_id,
-            snapshot_batch,
-            payload,
-        )
-
+        snapshot_batch = [json.loads(item) for item in raw_items]
         logger.debug(
-            "Flush queued  creature=%s  db_id=%s  snapshots=%d",
-            creature_id, db_id, len(snapshot_batch),
+            "Timer flush executing  creature=%s  snapshots=%d",
+            creature_id, len(snapshot_batch),
         )
-        return {"status": "processing", "count": self._aggregation_limit}
+        await self._run_flush_pipeline(
+            creature_id, db_id, snapshot_batch, snapshot_batch[-1]
+        )
 
     async def _run_flush_pipeline(
         self,
@@ -212,12 +254,12 @@ class AgentService:
         payload: dict[str, Any],
     ) -> None:
         """
-        Full flush pipeline — runs as a BackgroundTask after the 202 response
-        has been sent to Unity.
+        Full flush pipeline — runs as a BackgroundTask (or direct await from
+        _timer_flush) after the HTTP response has been sent to Unity.
 
-        Steps mirror the original synchronous flush in run_full_tick_flow:
+        Steps:
           1. Ensure creature is registered in DB (FK prerequisite)
-          2. Persist semantic summary → perception_snapshots
+          2. Persist semantic summary + embedding → perception_snapshots
           3. Enforce FIFO row limit
           4. Sync creature_states from payload
           5. Run LangGraph AI reasoning
@@ -228,10 +270,10 @@ class AgentService:
             # Step 1 — guarantee FK rows exist
             self._ensure_creature_registered(db_id, creature_id)
 
-            # Step 2 — semantic summary + perception_snapshots INSERT
+            # Step 2 — semantic summary + embedding → perception_snapshots INSERT
             if self._supabase is not None:
                 snapshot_id = self._flush_buffer(db_id, snapshot_batch)
-                self._last_snapshot_ids[creature_id] = snapshot_id
+                self._state.last_snapshot_ids[creature_id] = snapshot_id
             else:
                 logger.warning(
                     "Buffer full for creature %s but Supabase unavailable — "
@@ -270,7 +312,7 @@ class AgentService:
             if self._supabase is not None:
                 self._save_behavior_decision(
                     creature_id=db_id,
-                    snapshot_id=self._last_snapshot_ids.get(creature_id),
+                    snapshot_id=self._state.last_snapshot_ids.get(creature_id),
                     result=result,
                 )
                 await persist_tick(
@@ -311,34 +353,52 @@ class AgentService:
             return "idle"
         return value.decode() if isinstance(value, bytes) else value
 
-    # ── Buffer Management ───────────────────────────────────────────────────
+    # ── Buffer Management ────────────────────────────────────────────────────
 
     def _flush_buffer(
         self, creature_id: str, snapshots: list[dict[str, Any]]
     ) -> str | None:
         """
-        Generate a semantic summary for `snapshots` and persist ONE row to
+        Generate a semantic summary (with spatio-temporal context) and a
+        vector embedding for `snapshots`, then persist ONE row to
         perception_snapshots.  Returns the new row's UUID, or None on failure.
 
         Failure modes logged explicitly:
           - SemanticService raises (summary generation error)
+          - EmbeddingService raises (embedding generation error — non-fatal,
+            row is still persisted with embedding=NULL)
           - Supabase insert raises (FK violation, column mismatch, network)
-          - Supabase insert succeeds but returns empty data (RLS silent rejection)
+          - Supabase insert succeeds but returns empty data (RLS rejection)
         """
         if self._supabase is None:
             return None
 
+        last = snapshots[-1]
+        loc  = last.get("self", {}).get("location", {})
+        ts   = datetime.now(timezone.utc).isoformat()
+
         try:
-            summary = self._semantic.generate_summary(snapshots)
+            summary = self._semantic.generate_summary(
+                snapshots, location=loc, timestamp=ts
+            )
         except Exception:
             logger.exception(
                 "SemanticService.generate_summary failed for creature=%s", creature_id
             )
             return None
 
-        last = snapshots[-1]
-        loc  = last.get("self", {}).get("location", {})
-        row  = {
+        # Generate embedding — non-fatal if it fails.
+        embedding: list[float] | None = None
+        try:
+            embedding = self._embedding.embed_text(summary) or None
+        except Exception:
+            logger.warning(
+                "Embedding generation failed for creature=%s — "
+                "storing perception_snapshot without embedding",
+                creature_id,
+            )
+
+        row: dict[str, Any] = {
             "creature_id":  creature_id,
             "request_id":   last.get("requestId", ""),
             "summary_text": summary,
@@ -346,18 +406,20 @@ class AgentService:
             "pos_x":        loc.get("x", 0.0),
             "pos_y":        loc.get("y", 0.0),
             "pos_z":        loc.get("z", 0.0),
+            "embedding":    embedding,
         }
 
         logger.debug(
             "Inserting perception_snapshot: creature=%s  summary_len=%d  "
-            "entities_in_last_tick=%d",
-            creature_id, len(summary), len(last.get("entities", [])),
+            "has_embedding=%s  entities_in_last_tick=%d",
+            creature_id, len(summary), embedding is not None,
+            len(last.get("entities", [])),
         )
 
         try:
-            _t0 = time.perf_counter()
+            _t0  = time.perf_counter()
             resp = self._supabase.table("perception_snapshots").insert(row).execute()
-            _ms = (time.perf_counter() - _t0) * 1000
+            _ms  = (time.perf_counter() - _t0) * 1000
         except Exception:
             logger.exception(
                 "perception_snapshots INSERT raised — creature=%s  "
@@ -381,15 +443,17 @@ class AgentService:
         new_id = resp.data[0].get("id")
         logger.info(
             "[DB WRITE] perception_snapshots INSERT %.1f ms — "
-            "id=%s  creature=%s  snapshots=%d  summary=%r",
-            _ms, new_id, creature_id, len(snapshots), summary[:80],
+            "id=%s  creature=%s  snapshots=%d  embedding=%s  summary=%r",
+            _ms, new_id, creature_id, len(snapshots),
+            "yes" if embedding else "no",
+            summary[:80],
         )
         return new_id
 
     def _enforce_fifo_limit(self, creature_id: str, limit: int = 100) -> None:
         """
         Delete the oldest rows so the creature never exceeds `limit` aggregated
-        snapshots.  Runs as a BackgroundTask — safe to fail silently.
+        snapshots.  Called inline inside _run_flush_pipeline (already in bg).
         """
         if self._supabase is None:
             return
@@ -415,7 +479,7 @@ class AgentService:
         except Exception:
             logger.exception("FIFO enforcement failed for creature %s", creature_id)
 
-    # ── Private: DB helpers ─────────────────────────────────────────────────
+    # ── Private: DB helpers ──────────────────────────────────────────────────
 
     def _ensure_creature_registered(self, db_id: str, alias: str) -> None:
         """
@@ -449,9 +513,9 @@ class AgentService:
 
             creature_resp = self._supabase.table("creatures").upsert(
                 {
-                    "id":         db_id,    # stable UUID derived from alias
+                    "id":         db_id,
                     "species":    "cat",
-                    "name":       alias,    # human-readable alias stored for reference
+                    "name":       alias,
                     "created_at": now_iso,
                 },
                 on_conflict="id",
@@ -491,7 +555,7 @@ class AgentService:
                 "subsequent FK writes will fail",
                 alias, db_id,
             )
-            raise  # re-raise so the caller (run_full_tick_flow) surfaces a 503
+            raise
 
     def _update_creature_states(
         self, creature_id: str, payload: dict[str, Any]
@@ -530,13 +594,11 @@ class AgentService:
         snapshot_id: str | None,
         result: dict[str, Any],
     ) -> None:
-        """INSERT a behavior_decisions row.  Called as a BackgroundTask."""
+        """INSERT a behavior_decisions row.  Called inline inside _run_flush_pipeline."""
         if self._supabase is None:
             return
         try:
             action = result.get("action_result") or {}
-            # Exclude LangChain BaseMessage objects (not JSON-serializable)
-            # and raw_payload (large, already stored in perception_snapshots).
             _SKIP = {"messages", "raw_payload"}
             raw_output = {k: v for k, v in result.items() if k not in _SKIP}
             row = {
@@ -601,7 +663,6 @@ class AgentService:
             "chosen_action":     None,
             "reasoning":         None,
             "action_result":     None,
-            # Flat fields for graph nodes that pre-date the nested schema
             "pos_x":     loc.get("x", 0.0),
             "pos_y":     loc.get("y", 0.0),
             "pos_z":     loc.get("z", 0.0),

@@ -1,4 +1,3 @@
-import logging
 import asyncio
 from contextlib import asynccontextmanager
 
@@ -11,9 +10,11 @@ from app.core.supabase import create_supabase
 from app.agent.creature_agent import create_creature_agent
 from app.agent.llm_provider import create_llm_provider
 from app.agent.graph import build_creature_graph
-from app.services.memory_service import hydrate_agent
-from app.workers.agent_worker import AgentWorker
+from app.services.agent_service import AgentServiceState
+from app.services.embedding_service import EmbeddingService
+from app.services.semantic_service import SemanticService
 from app.workers.microlog_worker import MicrologWorker
+
 logger = get_logger(__name__)
 
 
@@ -22,67 +23,65 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     setup_logging(settings=settings)
     logger.info("Starting up...")
-    # Startup
+
+    # ── External connections ─────────────────────────────────────────────────
     logger.info("Connecting to Supabase…")
     app.state.supabase = create_supabase(settings)
+
     logger.info("Connecting to Redis…")
     app.state.redis = create_redis(settings)
     try:
         await app.state.redis.ping()
         logger.info("Redis ping OK")
     except Exception as exc:
-        logger.error("Redis ping FAILED — worker will be degraded: %s", exc)
-    
+        logger.error("Redis ping FAILED — service will be degraded: %s", exc)
+
+    # ── Agent + graph (shared, process-scoped) ───────────────────────────────
     logger.info("Creating creature agent…")
-    app.state.agent = create_creature_agent(
-        unity_url=settings.unity_bridge_url,
-    )
+    app.state.agent = create_creature_agent(unity_url=settings.unity_bridge_url)
     await app.state.agent.connect()
+
     logger.info("Compiling agent graph…")
-    
     llm = create_llm_provider(settings.llm)
     app.state.graph = build_creature_graph(app.state.agent, llm).compile()
 
-    logger.info("Hydrating agent memory from last session…")
-    await hydrate_agent(
-        agent=app.state.agent,
-        supabase=app.state.supabase,
-        redis=app.state.redis,
+    # ── Process-scoped service singletons ────────────────────────────────────
+    # AgentServiceState carries per-creature locks and last-snapshot IDs across
+    # requests.  SemanticService is stateless but holds an EmbeddingService
+    # client, so we build it once here and share it via app.state.
+    app.state.agent_state = AgentServiceState()
+    app.state.semantic_service = SemanticService(
+        embedding_service=EmbeddingService(settings)
     )
-    
-    # Start background workers
-    agent_worker = AgentWorker(
-        creature_id="default",
-        agent=app.state.agent,
-        graph=app.state.graph,
-        redis=app.state.redis,
-        supabase=app.state.supabase,
-        settings=settings,
-        interval_seconds=settings.agent_worker_interval,   # add to Settings
-    )
+    logger.info("AgentServiceState and SemanticService initialized")
+
+    # ── Background workers ───────────────────────────────────────────────────
+    # AgentWorker is removed: ticks are now driven by API requests per-creature.
+    # Hydration is handled dynamically inside AgentService._hydrate_if_empty.
     microlog_worker = MicrologWorker(
         supabase=app.state.supabase,
         settings=settings,
     )
-
     worker_tasks = [
-        asyncio.create_task(agent_worker.start()),
         asyncio.create_task(microlog_worker.start()),
     ]
-    logger.info("Workers started")
+    logger.info("MicrologWorker started")
 
-    logger.info("All clients ready")
+    logger.info("All clients ready — serving requests")
 
     yield
 
-    # Shutdown
+    # ── Shutdown ─────────────────────────────────────────────────────────────
     logger.info("Stopping workers…")
     for task in worker_tasks:
         task.cancel()
     await asyncio.gather(*worker_tasks, return_exceptions=True)
+
     logger.info("Shutting down agent…")
     await app.state.agent.disconnect()
+
     logger.info("Closing Redis pool…")
     await close_redis(app.state.redis)
+
     logger.info("Shutdown complete.")
     shutdown_logging()
