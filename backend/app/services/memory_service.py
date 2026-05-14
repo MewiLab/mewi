@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid as _uuid_mod
 from typing import Any, Dict
 
@@ -289,6 +290,10 @@ async def run_reflection_cycle(
         return
 
     db_id = _to_db_id(creature_id)
+    logger.info(
+        "run_reflection_cycle: START creature=%s  limit=%d",
+        creature_id, snapshot_limit,
+    )
 
     # ── Step 1: fetch recent snapshots ───────────────────────────────────────
     try:
@@ -310,13 +315,18 @@ async def run_reflection_cycle(
     snapshots = snap_resp.data or []
     if not snapshots:
         logger.info(
-            "run_reflection_cycle: no snapshots found for creature=%s — skipping",
+            "run_reflection_cycle: no snapshots for creature=%s — skipping",
             creature_id,
         )
         return
 
-    # Rows come back newest-first; reverse so prompt reads chronologically.
-    snapshots = list(reversed(snapshots))
+    logger.info(
+        "run_reflection_cycle: %d snapshot(s) fetched for creature=%s",
+        len(snapshots), creature_id,
+    )
+
+    # Rows come back newest-first; reverse so the prompt reads chronologically.
+    snapshots    = list(reversed(snapshots))
     period_start = snapshots[0].get("created_at", "")
     period_end   = snapshots[-1].get("created_at", "")
 
@@ -325,63 +335,88 @@ async def run_reflection_cycle(
         f"{i}. {row.get('summary_text', '(empty)')}"
         for i, row in enumerate(snapshots, 1)
     )
-    reflection_prompt = (
-        "You are analyzing a virtual cat's recent behavior logs.\n"
-        "Based on the following perception snapshots, extract:\n"
-        "  - dominant_mood: a float in [-1.0, 1.0] "
-        "(negative = distressed, positive = content)\n"
-        "  - dominant_behavior: a short string label of the main behavior "
-        "(e.g. 'exploration', 'hiding', 'socializing', 'resting')\n"
-        "  - summary_text: a 1-2 sentence narrative synthesis\n\n"
-        f"Snapshots:\n{summary_lines}\n\n"
-        "Respond with valid JSON only, no markdown."
+    system_msg = (
+        "You are a behavioral analysis assistant for a virtual cat simulation. "
+        "Respond ONLY with a valid JSON object — no markdown, no explanation."
+    )
+    user_msg = (
+        "Analyze the following perception snapshots and return a JSON object with "
+        "exactly these three keys:\n"
+        '  "dominant_mood": a float in [-1.0, 1.0] '
+        "(−1 = deeply distressed, +1 = highly content)\n"
+        '  "dominant_behavior": a short string label '
+        "(e.g. \"exploration\", \"hiding\", \"playing\", \"resting\")\n"
+        '  "summary_text": a 1-2 sentence narrative synthesis of the arc\n\n'
+        f"Snapshots:\n{summary_lines}"
     )
 
-    # ── Step 3: call gpt-4-turbo (sync OpenAI client) ────────────────────────
-    try:
-        from openai import OpenAI  # local import to avoid hard dep at module level
+    # ── Step 3: call LLM (best-effort) ───────────────────────────────────────
+    # If the LLM call succeeds, use its structured output.
+    # If it fails or times out, fall back to an algorithmic summary built
+    # directly from the snapshot texts so the INSERT always happens.
+    dominant_mood     = 0.0
+    dominant_behavior = "unknown"
+    summary_text      = ""
 
-        client = OpenAI(
-            api_key=settings.openai_api_key or settings.llm.api_key or None
+    try:
+        from app.agent.llm_provider import create_llm_provider
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        llm      = create_llm_provider(settings.llm)
+        response = await llm.ainvoke([
+            SystemMessage(content=system_msg),
+            HumanMessage(content=user_msg),
+        ])
+        raw = response.content.strip()
+        logger.info(
+            "run_reflection_cycle: LLM raw response for creature=%s: %.300s",
+            creature_id, raw,
         )
-        response = client.chat.completions.create(
-            model="gpt-4-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a behavioral analysis assistant. "
-                        "Respond only with valid JSON."
-                    ),
-                },
-                {"role": "user", "content": reflection_prompt},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.2,
+
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        if not match:
+            raise ValueError(f"no JSON object in response: {raw!r:.100}")
+        data: dict[str, Any] = json.loads(match.group())
+
+        dominant_mood     = max(-1.0, min(1.0, float(data.get("dominant_mood", 0.0))))
+        dominant_behavior = str(data.get("dominant_behavior", "unknown"))[:64]
+        summary_text      = str(data.get("summary_text", ""))
+        logger.info(
+            "run_reflection_cycle: LLM extraction OK for creature=%s  "
+            "mood=%.2f  behavior=%s",
+            creature_id, dominant_mood, dominant_behavior,
         )
-        raw = response.choices[0].message.content or "{}"
-        data: dict[str, Any] = json.loads(raw)
+
     except Exception:
-        logger.error(
-            "run_reflection_cycle: LLM call failed for creature=%s",
+        logger.warning(
+            "run_reflection_cycle: LLM call failed for creature=%s — "
+            "using algorithmic fallback",
             creature_id, exc_info=True,
         )
-        return
 
-    # Validate / coerce extracted fields.
-    dominant_mood     = float(data.get("dominant_mood", 0.0))
-    dominant_mood     = max(-1.0, min(1.0, dominant_mood))
-    dominant_behavior = str(data.get("dominant_behavior", "unknown"))[:64]
-    summary_text      = str(data.get("summary_text", ""))
-
+    # ── Step 4: algorithmic fallback if LLM didn't produce a summary ──────────
     if not summary_text:
-        logger.warning(
-            "run_reflection_cycle: LLM returned empty summary_text for creature=%s",
-            creature_id,
+        texts = [
+            s.get("summary_text", "").strip()
+            for s in snapshots
+            if s.get("summary_text", "").strip()
+        ]
+        if texts:
+            summary_text = " → ".join(texts)
+        else:
+            summary_text = (
+                f"Aggregated {len(snapshots)} perception snapshot(s) "
+                f"for creature {creature_id}."
+            )
+        dominant_behavior = "unknown"
+        dominant_mood     = 0.0
+        logger.info(
+            "run_reflection_cycle: fallback summary built for creature=%s  "
+            "len=%d chars",
+            creature_id, len(summary_text),
         )
-        return
 
-    # ── Step 4: insert into memory_summaries ─────────────────────────────────
+    # ── Step 5: insert into memory_summaries ─────────────────────────────────
     try:
         supabase.table("memory_summaries").insert(
             {
@@ -394,10 +429,9 @@ async def run_reflection_cycle(
             }
         ).execute()
         logger.info(
-            "[REFLECTION] memory_summaries INSERT — creature=%s  "
-            "mood=%.2f  behavior=%s  period=%s → %s",
-            creature_id, dominant_mood, dominant_behavior,
-            period_start, period_end,
+            "[REFLECTION DONE] memory_summaries INSERT — creature=%s  "
+            "mood=%.2f  behavior=%s  snapshots=%d",
+            creature_id, dominant_mood, dominant_behavior, len(snapshots),
         )
     except Exception:
         logger.error(

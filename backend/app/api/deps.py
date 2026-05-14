@@ -80,7 +80,7 @@ def get_agent_service(
         supabase=supabase,
         semantic_service=request.app.state.semantic_service,
         state=request.app.state.agent_state,
-        aggregation_limit=10,
+        aggregation_limit=settings.BUFFER_FLUSH_THRESHOLD,
     )
 
 
