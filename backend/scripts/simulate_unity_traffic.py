@@ -323,22 +323,20 @@ def _wait_for_pipeline_flush(
     threshold_hint: int | None = None,
 ) -> bool:
     """
-    Poll GET /status for all creatures until the is_thinking flag transitions
-    True→False (LangGraph reasoning completed), or until timeout_s elapses.
+    Poll GET /status for all creatures and mark each one done as soon as
+    is_thinking is False.  Does NOT require observing a True→False transition,
+    so creatures whose pipelines complete before polling starts are detected on
+    the very first poll.
 
-    The 120-second fallback timer in the backend triggers a flush when fewer
-    than BUFFER_SIZE_DEFAULT ticks have accumulated.  Set BUFFER_FLUSH_THRESHOLD on
-    the server and reduce --flush-wait to skip that wait entirely.
-
-    Returns True if flush completion was detected for all creatures.
+    Returns True when all creatures are confirmed idle within timeout_s.
     """
     _header("Step 3 — Waiting for Background Pipeline Flush")
 
     print(f"  Timeout       : {timeout_s:.0f}s  |  Poll interval: 5s\n")
 
-    deadline     = time.monotonic() + timeout_s
-    flush_active = set()  # creatures seen with is_thinking=True
-    flush_done   = set()  # creatures that completed the True→False transition
+    deadline   = time.monotonic() + timeout_s
+    flush_done = set()   # creatures confirmed idle
+    first_poll = True
 
     while time.monotonic() < deadline:
         remaining = deadline - time.monotonic()
@@ -352,21 +350,22 @@ def _wait_for_pipeline_flush(
                 is_thinking = r.json().get("is_thinking", False)
 
                 if is_thinking:
-                    if cid not in flush_active:
-                        print(f"\n  [{CYAN}ACTIVE{RESET}] {cid}: pipeline processing…")
-                    flush_active.add(cid)
-                elif cid in flush_active:
+                    print(f"\n  [{CYAN}ACTIVE{RESET}] {cid}: pipeline processing…")
+                else:
+                    note = " (completed before polling started)" if first_poll else ""
+                    print(f"\n  [{GREEN}DONE  {RESET}] {cid}: flush complete{note}.")
                     flush_done.add(cid)
-                    print(f"\n  [{GREEN}DONE  {RESET}] {cid}: flush complete.")
             except Exception:
                 pass
+
+        first_poll = False
 
         if len(flush_done) == len(creature_ids):
             break
 
         print(
             f"  Polling… {remaining:>5.0f}s remaining  "
-            f"({len(flush_done)}/{len(creature_ids)} flushed)       ",
+            f"({len(flush_done)}/{len(creature_ids)} done)       ",
             end="\r",
             flush=True,
         )
@@ -376,9 +375,8 @@ def _wait_for_pipeline_flush(
 
     not_done = [c for c in creature_ids if c not in flush_done]
     if not_done:
-        print(f"  {YELLOW}[WARN] Flush completion not detected for: {not_done}{RESET}")
-        print(f"  {YELLOW}       The pipeline may still have run — check Supabase below.{RESET}")
-        print(f"  {YELLOW}       If repeatedly empty: verify ENABLE_MEMORY_PIPELINE=True on server.{RESET}")
+        print(f"  {YELLOW}[WARN] Flush not confirmed for: {not_done}{RESET}")
+        print(f"  {YELLOW}       If Supabase is empty: verify ENABLE_MEMORY_PIPELINE=True on server.{RESET}")
         return False
 
     print(f"  {GREEN}All creatures flushed.{RESET}")
@@ -603,13 +601,11 @@ def main() -> None:
     parser.add_argument(
         "--flush-wait",
         type=float,
-        default=130.0,
+        default=30.0,
         metavar="SECS",
         help=(
-            "Seconds to wait for the background pipeline flush after the last tick "
-            "(default: 130 — covers the 120 s fallback timer plus processing). "
-            "Set BUFFER_FLUSH_THRESHOLD=<snapshots> on the server and reduce this "
-            "to ~15 to avoid the wait entirely."
+            "Seconds to poll for pipeline completion after the last tick "
+            "(default: 30). Increase if LangGraph reasoning is slow."
         ),
     )
     parser.add_argument(
