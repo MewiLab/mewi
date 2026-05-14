@@ -97,6 +97,7 @@ class Settings(BaseSettings):
     # Feature toggles
     ENABLE_MEMORY_PIPELINE: bool = False    # Redis buffer → embedding → perception_snapshots
     ENABLE_REFLECTION_CYCLE: bool = False   # LLM reflection → memory_summaries
+    BUFFER_FLUSH_THRESHOLD: int = 10        # items in Redis LIST before a count-trigger flush
 
     # Workers
     agent_worker_interval: float = 10.0       # seconds between agent ticks

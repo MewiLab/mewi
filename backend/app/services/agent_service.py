@@ -51,7 +51,7 @@ from app.core.config import Settings
 from app.core.logger import get_logger
 from app.agent.creature_agent import CreatureAgent
 from app.services.embedding_service import EmbeddingService
-from app.services.memory_service import persist_tick, hydrate_agent
+from app.services.memory_service import persist_tick, hydrate_agent, run_reflection_cycle
 from app.services.semantic_service import SemanticService
 
 logger = get_logger(__name__)
@@ -75,6 +75,8 @@ class AgentServiceState:
         self.locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
         # Most recent perception_snapshots.id for each creature.
         self.last_snapshot_ids: dict[str, str | None] = {}
+        # How many times each creature's buffer has been flushed this session.
+        self.flush_counts: dict[str, int] = {}
 
 
 class AgentService:
@@ -281,6 +283,11 @@ class AgentService:
                     creature_id,
                 )
 
+            # Track how many times this creature has been flushed.
+            flush_count = self._state.flush_counts.get(creature_id, 0) + 1
+            self._state.flush_counts[creature_id] = flush_count
+            logger.debug("Flush #%d for creature=%s", flush_count, creature_id)
+
             # Step 3 — FIFO enforcement (inline; already in background)
             if self._supabase is not None:
                 self._enforce_fifo_limit(db_id)
@@ -305,8 +312,6 @@ class AgentService:
                     },
                     "reasoning": f"Fallback: {exc}",
                 }
-            finally:
-                await self._set_status(creature_id, "idle")
 
             # Step 6 — persist behavior decision (inline; already in background)
             if self._supabase is not None:
@@ -318,6 +323,34 @@ class AgentService:
                 await persist_tick(
                     self._agent, self._supabase, self._redis, creature_id
                 )
+
+            # Step 7 — reflection cycle: condense recent snapshots → memory_summaries.
+            #
+            # Only runs when flush_count is a multiple of snapshot_limit (default 5),
+            # i.e. once per full snapshot window rather than after every flush.
+            # This avoids 5 concurrent LLM calls per creature which would:
+            #   • block the async event loop via competing sync Supabase calls
+            #   • push total flush latency to 60 s+ (LangGraph + reflection × 5)
+            #   • hit the LLM timeout before the first meaningful summary is ready
+            _REFLECTION_EVERY = 5  # run reflection every N flushes
+            should_reflect = (
+                self._supabase is not None
+                and self._settings.ENABLE_REFLECTION_CYCLE
+                and flush_count % _REFLECTION_EVERY == 0
+            )
+            if should_reflect:
+                logger.info(
+                    "Flush #%d: triggering reflection cycle for creature=%s",
+                    flush_count, creature_id,
+                )
+                await run_reflection_cycle(
+                    creature_id=creature_id,
+                    supabase=self._supabase,
+                    settings=self._settings,
+                    snapshot_limit=_REFLECTION_EVERY,
+                )
+
+            await self._set_status(creature_id, "idle")
 
             action    = result.get("action_result") or {}
             reasoning = result.get("reasoning") or ""
