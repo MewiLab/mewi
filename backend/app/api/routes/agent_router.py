@@ -5,13 +5,13 @@ import time
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from app.api.deps import AgentDep, AgentServiceDep, RedisDep, SettingsDep
+from app.api.deps import AgentDep, AgentServiceDep, RedisDep, SettingsDep, verify_api_key
 from app.core.logger import get_logger
 from app.schemas import TickPayload, TickResponse
 
 logger = get_logger(__name__)
 
-router = APIRouter(prefix="/agent", tags=["agent"])
+router = APIRouter(prefix="/agent", tags=["agent"], dependencies=[Depends(verify_api_key)])
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────

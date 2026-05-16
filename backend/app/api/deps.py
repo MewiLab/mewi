@@ -19,7 +19,8 @@ from __future__ import annotations
 from typing import Annotated, TypeAlias
 
 import redis.asyncio as aioredis
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import APIKeyHeader
 from supabase import Client
 
 from app.core.config import Settings, get_settings
@@ -27,6 +28,21 @@ from app.agent.creature_agent import CreatureAgent
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 SettingsDep: TypeAlias = Annotated[Settings, Depends(get_settings)]
+
+
+# ── API Key auth ───────────────────────────────────────────────────────────────
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def verify_api_key(
+    api_key: Annotated[str | None, Depends(_api_key_header)],
+    settings: SettingsDep,
+) -> None:
+    if not api_key or api_key != settings.API_SECRET_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API key.",
+        )
 
 
 # ── Supabase ──────────────────────────────────────────────────────────────────
