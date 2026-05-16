@@ -1,5 +1,3 @@
-// SnapshotManager.cs
-//
 // Owns the channel registry and produces the per-tick JSON payload.
 //
 // Responsibilities:

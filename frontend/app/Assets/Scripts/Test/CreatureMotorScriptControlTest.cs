@@ -24,15 +24,15 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
     public bool runOnStart = true;
     public bool takeOverControllerDuringTest = true;
     public bool restoreControllerAfterTest = true;
-    public bool runNavigationProof = false;
-    public bool runActionProof = true;
+    public bool runNavigationProof = true;
+    public bool runActionProof = false;
     public bool continueAfterNavigationFailure = true;
 
     [Header("Navigation Proof")]
     public float fallbackDistance = 4f;
     public float destinationTolerance = 1.25f;
     public float waitForAgentSeconds = 2f;
-    public float movementSampleSeconds = 2.5f;
+    public float navigationArrivalTimeout = 20f;
     public float minimumMovedDistance = 0.25f;
 
     [Header("Stop Proof")]
@@ -51,6 +51,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
 
     [Header("Debug")]
     public bool logStatusSnapshot = true;
+    public bool logNavMeshPathProof = true;
 
     Coroutine _run;
     bool _manualTick;
@@ -143,10 +144,8 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
 
         BeginRuntimeControl();
 
-        // Temporarily disabled so we can verify scripted Malbers actions first.
-        // Re-enable this block later when the NavMeshAgent/MAnimal movement setup is fixed.
         if (runNavigationProof)
-            Debug.LogWarning("[CreatureMotorScriptControlTest] Navigation proof is temporarily disabled in code; running action proof only.");
+            yield return RunNavigationProof(agent, ControlledTransform);
 
         if (runActionProof)
             yield return RunActionProof();
@@ -180,24 +179,34 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         motor.Tick();
 
         if (logStatusSnapshot)
-            Debug.Log($"[CreatureMotorScriptControlTest] after go_to\n{BuildStatus(agent, controlled)}");
+            Debug.Log($"[CreatureMotorScriptControlTest] after go_to\n{BuildStatus(agent, controlled, destination)}");
 
         float deadline = Time.time + waitForAgentSeconds;
-        while (Time.time < deadline && !AgentAcceptedDestination(agent, destination))
+        while (Time.time < deadline && !NavigationAcceptedDestination(agent, destination))
             yield return null;
 
-        if (!AgentAcceptedDestination(agent, destination))
+        if (!NavigationAcceptedDestination(agent, destination))
         {
-            Fail("NAV go_to", $"NavMeshAgent did not accept scripted destination. agent.destination={SafeAgentDestination(agent)}, expected={destination}");
+            Fail("NAV go_to", $"CreatureMotor did not accept scripted destination. expected={destination}\n{BuildStatus(agent, controlled, destination)}");
             if (!continueAfterNavigationFailure)
                 yield break;
             yield break;
         }
 
-        Pass($"NAV go_to destination accepted by script. agent.destination={agent.destination}");
+        Pass($"NAV go_to destination accepted by script. destination={destination} manualFallback={motor.IsUsingManualNavigation}");
+
+        if (logNavMeshPathProof)
+            LogNavMeshPathProof(agent, destination);
 
         Vector3 startPosition = controlled.position;
-        yield return new WaitForSeconds(movementSampleSeconds);
+        float bestDistance = HorizontalDistance(controlled.position, destination);
+        deadline = Time.time + navigationArrivalTimeout;
+        while (Time.time < deadline &&
+               HorizontalDistance(controlled.position, destination) > destinationTolerance)
+        {
+            bestDistance = Mathf.Min(bestDistance, HorizontalDistance(controlled.position, destination));
+            yield return null;
+        }
 
         float moved = HorizontalDistance(startPosition, controlled.position);
         if (moved < minimumMovedDistance)
@@ -205,13 +214,28 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
             Fail(
                 "NAV go_to movement",
                 $"Animal transform did not move enough after scripted go_to. moved={moved:F3}m expected>={minimumMovedDistance:F3}m controlled={controlled.name}\n" +
-                BuildStatus(agent, controlled));
+                BuildStatus(agent, controlled, destination));
             if (!continueAfterNavigationFailure)
                 yield break;
             yield break;
         }
 
         Pass($"NAV go_to animal moved by script. controlled={controlled.name} moved={moved:F3}m");
+
+        float finalDistance = HorizontalDistance(controlled.position, destination);
+        if (finalDistance > destinationTolerance)
+        {
+            Fail(
+                "NAV go_to arrival",
+                $"Animal moved but did not reach the target before timeout. finalDistance={finalDistance:F3}m " +
+                $"bestDistance={bestDistance:F3}m expected<={destinationTolerance:F3}m destination={destination}\n" +
+                BuildStatus(agent, controlled, destination));
+            if (!continueAfterNavigationFailure)
+                yield break;
+            yield break;
+        }
+
+        Pass($"NAV go_to arrived at target. finalDistance={finalDistance:F3}m destination={destination}");
 
         string stopCommandId = $"{board.CreatureId}:script-test-stop:{Time.frameCount}";
         board.ClearReflexIntent();
@@ -479,7 +503,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
             return true;
         }
 
-        Vector3 origin = agent.transform.position;
+        Vector3 origin = ControlledTransform.position;
         Vector3 forward = ControlledTransform.forward;
         if (forward.sqrMagnitude < 0.01f)
             forward = transform.forward.sqrMagnitude > 0.01f ? transform.forward : Vector3.forward;
@@ -511,6 +535,45 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         }
 
         return false;
+    }
+
+    void LogNavMeshPathProof(NavMeshAgent agent, Vector3 destination)
+    {
+        if (agent == null)
+        {
+            Debug.LogWarning("[CreatureMotorScriptControlTest] NavMesh path proof: agent is null.");
+            return;
+        }
+
+        if (!agent.isActiveAndEnabled || !agent.isOnNavMesh)
+        {
+            Debug.LogWarning(
+                $"[CreatureMotorScriptControlTest] NavMesh path proof: agent cannot calculate path. " +
+                $"active={agent.isActiveAndEnabled} onNavMesh={agent.isOnNavMesh}");
+            return;
+        }
+
+        var path = new NavMeshPath();
+        bool calculated = agent.CalculatePath(destination, path);
+        string corners = BuildCornersSummary(path);
+
+        Debug.Log(
+            $"[CreatureMotorScriptControlTest] NavMesh path proof: calculated={calculated} " +
+            $"status={path.status} corners={path.corners.Length} " +
+            $"agentAreaMask={agent.areaMask} autoTraverse={agent.autoTraverseOffMeshLink} " +
+            $"from={agent.transform.position.ToString("F3")} to={destination.ToString("F3")}\n{corners}");
+    }
+
+    string BuildCornersSummary(NavMeshPath path)
+    {
+        if (path == null || path.corners == null || path.corners.Length == 0)
+            return "corners: none";
+
+        string result = "corners:";
+        for (int i = 0; i < path.corners.Length; i++)
+            result += $"\n  [{i}] {path.corners[i].ToString("F3")}";
+
+        return result;
     }
 
     void BeginRuntimeControl()
@@ -574,6 +637,15 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
             return false;
 
         return HorizontalDistance(agent.destination, destination) <= destinationTolerance;
+    }
+
+    bool NavigationAcceptedDestination(NavMeshAgent agent, Vector3 destination)
+    {
+        if (AgentAcceptedDestination(agent, destination))
+            return true;
+
+        return motor.HasActiveNavigationDestination &&
+               HorizontalDistance(motor.ActiveNavigationDestination, destination) <= destinationTolerance;
     }
 
     void ResetCounters()
@@ -754,7 +826,9 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         return summary;
     }
 
-    string BuildStatus(NavMeshAgent agent, Transform controlled)
+    string BuildStatus(NavMeshAgent agent, Transform controlled) => BuildStatus(agent, controlled, Vector3.zero);
+
+    string BuildStatus(NavMeshAgent agent, Transform controlled, Vector3 destination)
     {
         string animalState = motor.animal.ActiveStateID != null
             ? $"{motor.animal.ActiveStateID.name}({motor.animal.ActiveStateID.ID})"
@@ -789,6 +863,14 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
             $"aiDirection={motor.aiControl.AIDirection.ToString("F3")} " +
             $"aiDestination={motor.aiControl.DestinationPosition.ToString("F3")}";
 
+        string motorNavigationStatus =
+            $"motorNavActive={motor.HasActiveNavigationDestination} " +
+            $"motorNavDestination={motor.ActiveNavigationDestination.ToString("F3")} " +
+            $"manualNav={motor.IsUsingManualNavigation} " +
+            $"manualCorner={motor.ManualNavigationCorner.ToString("F3")} " +
+            $"manualDirection={motor.ManualNavigationDirection.ToString("F3")} " +
+            $"distanceToRequested={(destination == Vector3.zero ? -1f : HorizontalDistance(controlled.position, destination)):F3}";
+
         string animalStatus =
             $"animalEnabled={motor.animal.isActiveAndEnabled} state={animalState} grounded={motor.animal.Grounded} " +
             $"sprint={motor.animal.Sprint} movementAxis={motor.animal.MovementAxis.ToString("F3")} " +
@@ -796,7 +878,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
             $"movementSmooth={motor.animal.MovementAxisSmoothed.ToString("F3")} " +
             $"controlled={controlled.name} controlledPos={controlled.position.ToString("F3")}";
 
-        return $"{animalStatus}\n{aiStatus}\n{agentStatus}";
+        return $"{animalStatus}\n{aiStatus}\n{motorNavigationStatus}\n{agentStatus}";
     }
 
     Vector3 SafeAgentDestination(NavMeshAgent agent)

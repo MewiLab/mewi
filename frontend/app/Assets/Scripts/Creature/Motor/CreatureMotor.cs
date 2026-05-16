@@ -95,6 +95,18 @@ public class CreatureMotor : MonoBehaviour
     public float wanderRetargetTime = 5f;
     public float fleeDistance        = 15f;
 
+    // ─── Navigation setup ───
+    [Header("Navigation")]
+    [Tooltip("How far to search when snapping a requested go_to/wander/flee destination onto the NavMesh.")]
+    public float navMeshDestinationSampleRadius = 2f;
+    [Tooltip("How far to search around the animal when building a fallback NavMesh path.")]
+    public float navMeshStartSampleRadius = 2f;
+    [Tooltip("If Malbers' NavMeshAgent is inactive/off NavMesh, drive MAnimal along a NavMeshPath directly.")]
+    public bool useManualNavMeshFallback = true;
+    public float manualNavArrivalDistance = 0.65f;
+    public float manualNavCornerDistance = 0.35f;
+    public float manualNavRepathInterval = 0.5f;
+
     // ─── Debug / proof ───
     [Header("Debug")]
     [Tooltip("Log every destination my intent system issues, plus a 1-second heartbeat proving MAnimalAIControl is only following orders.")]
@@ -107,11 +119,25 @@ public class CreatureMotor : MonoBehaviour
     float  _wanderTimer;
     bool   _hasArrived;
     float  _proofTimer;
+    bool   _hasActiveNavigationDestination;
+    bool   _usingManualNavigation;
+    Vector3 _activeNavigationDestination;
+    Vector3 _manualNavigationDestination;
+    Vector3 _manualNavigationCorner;
+    Vector3 _manualNavigationDirection;
+    NavMeshPath _manualPath;
+    int _manualCornerIndex;
+    float _manualRepathTimer;
 
     // Set when we're holding an action-mode intent so OnModeEnd can clear it.
     bool _inActionIntent;
 
     public int ActionModeId => actionMode != null ? actionMode.ID : actionModeId;
+    public bool HasActiveNavigationDestination => _hasActiveNavigationDestination;
+    public Vector3 ActiveNavigationDestination => _activeNavigationDestination;
+    public bool IsUsingManualNavigation => _usingManualNavigation;
+    public Vector3 ManualNavigationDirection => _manualNavigationDirection;
+    public Vector3 ManualNavigationCorner => _manualNavigationCorner;
 
     // ═══════════════════════════════════════════════
     //  INIT / TEARDOWN
@@ -168,20 +194,43 @@ public class CreatureMotor : MonoBehaviour
             Destroy(malbersBrain);
         }
 
+        animal.PreInput -= ManualNavigationPreInput;
+        animal.PreInput += ManualNavigationPreInput;
+
         aiControl.OnArrived.AddListener(OnArrived);
+        aiControl.OnTargetPositionArrived.AddListener(OnPositionArrived);
         animal.OnModeEnd.AddListener(OnModeEnded);
     }
 
     void OnDisable()
     {
         if (aiControl != null)
+        {
             aiControl.OnArrived.RemoveListener(OnArrived);
+            aiControl.OnTargetPositionArrived.RemoveListener(OnPositionArrived);
+        }
 
         if (animal != null)
+        {
+            animal.PreInput -= ManualNavigationPreInput;
             animal.OnModeEnd.RemoveListener(OnModeEnded);
+        }
     }
 
     void OnArrived(Transform target) => _hasArrived = true;
+
+    void OnPositionArrived(Vector3 position)
+    {
+        // Malbers can emit position-arrival events while its internal agent is
+        // being stopped/reset. Only treat the event as our go_to completion
+        // when it matches the current script-owned destination.
+        if (!_hasActiveNavigationDestination)
+            return;
+
+        if (HorizontalDistance(position, _activeNavigationDestination) <= manualNavArrivalDistance)
+            _hasArrived = true;
+    }
+    void ManualNavigationPreInput(MAnimal currentAnimal) => UpdateManualNavigation();
 
     /// <summary>
     /// Called by Malbers when any Mode animation finishes.
@@ -289,6 +338,10 @@ public class CreatureMotor : MonoBehaviour
             $"[Motor:Proof] intent='{_currentIntent}' " +
             $"catPos={animal.transform.position} " +
             $"destination={aiControl.DestinationPosition} " +
+            $"activeNav={(_hasActiveNavigationDestination ? _activeNavigationDestination.ToString("F3") : "none")} " +
+            $"manualNav={_usingManualNavigation} " +
+            $"manualCorner={_manualNavigationCorner.ToString("F3")} " +
+            $"manualDir={_manualNavigationDirection.ToString("F3")} " +
             $"{agentInfo}");
     }
 
@@ -304,21 +357,60 @@ public class CreatureMotor : MonoBehaviour
     // ═══════════════════════════════════════════════
     //  NAVIGATION HELPERS
     //
-    //  Every destination/target handed to MAnimalAIControl comes through here.
-    //  MAnimalAIControl never invents a destination of its own — it only
-    //  pathfinds to whatever WE tell it. That is the proof that the cat is
-    //  driven by our intent system, not by Malbers.
+    //  Every destination/target comes through here. We first try Malbers'
+    //  MAnimalAIControl path, then fall back to a direct NavMeshPath follower
+    //  if the NavMeshAgent is inactive/off mesh.
     // ═══════════════════════════════════════════════
 
-    void NavigateTo(Vector3 destination)
+    bool NavigateTo(Vector3 requestedDestination)
     {
+        _hasArrived = false;
+        _hasActiveNavigationDestination = false;
+        StopManualNavigation(false);
+
+        if (!TryProjectDestination(requestedDestination, out Vector3 destination, out string reason))
+        {
+            Debug.LogWarning($"[CreatureMotor] Cannot navigate to {requestedDestination}: {reason}");
+            return false;
+        }
+
+        _activeNavigationDestination = destination;
+        _hasActiveNavigationDestination = true;
+
+        if (TryNavigateWithMalbersAgent(destination))
+            return true;
+
+        if (useManualNavMeshFallback && TryStartManualNavigation(destination))
+            return true;
+
+        Debug.LogWarning(
+            $"[CreatureMotor] Navigation failed. requested={requestedDestination} projected={destination}. " +
+            BuildNavigationDebug());
+        _hasActiveNavigationDestination = false;
+        return false;
+    }
+
+    bool TryNavigateWithMalbersAgent(Vector3 destination)
+    {
+        if (!TryEnsureMalbersAgentReady(out string reason))
+        {
+            if (logIntentProof)
+                Debug.LogWarning($"[Motor:Proof] Malbers NavMeshAgent unavailable for '{_currentIntent}': {reason}");
+            return false;
+        }
+
         aiControl.SetDestination(destination);
+
         if (logIntentProof)
             Debug.Log($"[Motor:Proof] intent='{_currentIntent}' → MY code called SetDestination({destination}). MAnimalAIControl will now pathfind.");
+
+        return true;
     }
 
     void NavigateToTarget(Transform t, bool alwaysFollow = false)
     {
+        StopManualNavigation(false);
+        _hasActiveNavigationDestination = false;
         aiControl.SetTarget(t, alwaysFollow);
         if (logIntentProof)
             Debug.Log($"[Motor:Proof] intent='{_currentIntent}' → MY code called SetTarget({t.name}). MAnimalAIControl will now pathfind.");
@@ -326,7 +418,259 @@ public class CreatureMotor : MonoBehaviour
 
     void StopAI()
     {
+        StopManualNavigation(true);
+        _hasActiveNavigationDestination = false;
         aiControl.Stop();
+    }
+
+    bool TryProjectDestination(Vector3 requestedDestination, out Vector3 destination, out string reason)
+    {
+        destination = requestedDestination;
+        reason = "";
+
+        if (requestedDestination == Vector3.zero)
+        {
+            reason = "destination is Vector3.zero";
+            return false;
+        }
+
+        int areaMask = AgentAreaMask();
+        if (NavMesh.SamplePosition(requestedDestination, out NavMeshHit hit, navMeshDestinationSampleRadius, areaMask))
+        {
+            destination = hit.position;
+            return true;
+        }
+
+        reason = $"no NavMesh within {navMeshDestinationSampleRadius:F1}m";
+        return false;
+    }
+
+    bool TryEnsureMalbersAgentReady(out string reason)
+    {
+        reason = "";
+
+        if (aiControl == null)
+        {
+            reason = "MAnimalAIControl is null";
+            return false;
+        }
+
+        var agent = aiControl.Agent;
+        if (agent == null)
+        {
+            reason = "NavMeshAgent is null";
+            return false;
+        }
+
+        if (!aiControl.gameObject.activeInHierarchy)
+        {
+            reason = "MAnimalAIControl GameObject is inactive";
+            return false;
+        }
+
+        if (!agent.gameObject.activeInHierarchy)
+        {
+            reason = "NavMeshAgent GameObject is inactive";
+            return false;
+        }
+
+        if (aiControl.StateIsBlockingAgent)
+        {
+            reason = $"current state blocks the AI agent: {(animal.ActiveStateID != null ? animal.ActiveStateID.name : "unknown")}";
+            return false;
+        }
+
+        if (!aiControl.enabled)
+            aiControl.SetActive(true);
+
+        if (!agent.enabled)
+            agent.enabled = true;
+
+        if (agent.isOnNavMesh)
+            return true;
+
+        Vector3 probe = AnimalPosition;
+        if (!NavMesh.SamplePosition(probe, out NavMeshHit hit, navMeshStartSampleRadius, agent.areaMask))
+        {
+            reason = $"agent is off NavMesh and no NavMesh was found near animal position {probe}";
+            return false;
+        }
+
+        if (agent.Warp(hit.position) && agent.isOnNavMesh)
+            return true;
+
+        reason = $"agent is off NavMesh and Warp({hit.position}) did not place it on NavMesh";
+        return false;
+    }
+
+    bool TryStartManualNavigation(Vector3 destination)
+    {
+        if (!TryBuildManualPath(destination, out string reason))
+        {
+            Debug.LogWarning($"[CreatureMotor] Manual NavMesh fallback failed: {reason}");
+            return false;
+        }
+
+        _usingManualNavigation = true;
+        _manualNavigationDestination = destination;
+        _manualRepathTimer = 0f;
+
+        // Malbers AIControl cannot be used right now, so keep its agent stopped
+        // and feed the MAnimal movement axis ourselves using the same direction
+        // pattern MAnimalAIControl.Move() uses.
+        if (aiControl != null)
+            aiControl.Stop();
+
+        if (logIntentProof)
+            Debug.Log($"[Motor:Proof] intent='{_currentIntent}' using CreatureMotor manual NavMesh fallback to {destination}.");
+
+        return true;
+    }
+
+    bool TryBuildManualPath(Vector3 destination, out string reason)
+    {
+        reason = "";
+
+        if (!NavMesh.SamplePosition(AnimalPosition, out NavMeshHit startHit, navMeshStartSampleRadius, AgentAreaMask()))
+        {
+            reason = $"no NavMesh near animal position {AnimalPosition}";
+            return false;
+        }
+
+        if (_manualPath == null)
+            _manualPath = new NavMeshPath();
+
+        bool calculated = NavMesh.CalculatePath(startHit.position, destination, AgentAreaMask(), _manualPath);
+        if (!calculated || _manualPath.status == NavMeshPathStatus.PathInvalid || _manualPath.corners == null || _manualPath.corners.Length == 0)
+        {
+            reason = $"CalculatePath failed start={startHit.position} destination={destination} status={_manualPath.status}";
+            return false;
+        }
+
+        _manualCornerIndex = _manualPath.corners.Length > 1 ? 1 : 0;
+        return true;
+    }
+
+    void UpdateManualNavigation()
+    {
+        if (!_usingManualNavigation)
+            return;
+
+        if (HorizontalDistance(AnimalPosition, _manualNavigationDestination) <= manualNavArrivalDistance)
+        {
+            _hasArrived = true;
+            StopManualNavigation(true);
+            return;
+        }
+
+        _manualRepathTimer += Time.deltaTime;
+        if (_manualRepathTimer >= manualNavRepathInterval)
+        {
+            _manualRepathTimer = 0f;
+            TryBuildManualPath(_manualNavigationDestination, out _);
+        }
+
+        if (_manualPath == null || _manualPath.corners == null || _manualPath.corners.Length == 0)
+        {
+            animal.StopMoving();
+            return;
+        }
+
+        _manualCornerIndex = Mathf.Clamp(_manualCornerIndex, 0, _manualPath.corners.Length - 1);
+        Vector3 corner = _manualPath.corners[_manualCornerIndex];
+        Vector3 toCorner = corner - AnimalPosition;
+        toCorner.y = 0f;
+
+        while (toCorner.sqrMagnitude <= manualNavCornerDistance * manualNavCornerDistance &&
+               _manualCornerIndex < _manualPath.corners.Length - 1)
+        {
+            _manualCornerIndex++;
+            corner = _manualPath.corners[_manualCornerIndex];
+            toCorner = corner - AnimalPosition;
+            toCorner.y = 0f;
+        }
+
+        _manualNavigationCorner = corner;
+
+        if (toCorner.sqrMagnitude <= 0.0001f)
+        {
+            _manualNavigationDirection = Vector3.zero;
+            animal.StopMoving();
+            return;
+        }
+
+        _manualNavigationDirection = toCorner.normalized;
+        animal.Move(_manualNavigationDirection);
+    }
+
+    void UpdateNavigation()
+    {
+        if (_usingManualNavigation)
+            return;
+
+        if (_hasArrived || !_hasActiveNavigationDestination)
+            return;
+
+        var agent = aiControl != null ? aiControl.Agent : null;
+        bool agentCanContinue = aiControl != null &&
+                                aiControl.isActiveAndEnabled &&
+                                agent != null &&
+                                agent.isActiveAndEnabled &&
+                                agent.isOnNavMesh;
+
+        if (agentCanContinue)
+            return;
+
+        if (useManualNavMeshFallback && !TryStartManualNavigation(_activeNavigationDestination))
+            _hasActiveNavigationDestination = false;
+    }
+
+    bool IsAtActiveNavigationDestination()
+    {
+        return _hasActiveNavigationDestination &&
+               HorizontalDistance(AnimalPosition, _activeNavigationDestination) <= manualNavArrivalDistance;
+    }
+
+    void StopManualNavigation(bool stopAnimal)
+    {
+        _usingManualNavigation = false;
+        _manualCornerIndex = 0;
+        _manualRepathTimer = 0f;
+        _manualNavigationDirection = Vector3.zero;
+        _manualNavigationCorner = Vector3.zero;
+
+        if (stopAnimal && animal != null)
+            animal.StopMoving();
+    }
+
+    int AgentAreaMask()
+    {
+        var agent = aiControl != null ? aiControl.Agent : null;
+        return agent != null ? agent.areaMask : NavMesh.AllAreas;
+    }
+
+    Vector3 AnimalPosition => animal != null ? animal.transform.position : transform.position;
+
+    static float HorizontalDistance(Vector3 a, Vector3 b)
+    {
+        a.y = 0f;
+        b.y = 0f;
+        return Vector3.Distance(a, b);
+    }
+
+    string BuildNavigationDebug()
+    {
+        var agent = aiControl != null ? aiControl.Agent : null;
+        if (agent == null)
+            return "agent=null";
+
+        bool canReadNavState = agent.isActiveAndEnabled && agent.isOnNavMesh;
+        return
+            $"agentActive={agent.isActiveAndEnabled} onNavMesh={agent.isOnNavMesh} " +
+            $"agentPos={agent.transform.position.ToString("F3")} animalPos={AnimalPosition.ToString("F3")} " +
+            $"destination={(canReadNavState ? agent.destination.ToString("F3") : "n/a")} " +
+            $"pathStatus={(canReadNavState ? agent.pathStatus.ToString() : "n/a")} " +
+            $"manualFallback={useManualNavMeshFallback}";
     }
 
     // ═══════════════════════════════════════════════
@@ -409,14 +753,12 @@ public class CreatureMotor : MonoBehaviour
             case "wander":
                 if (defaultStance != null) animal.Stance = defaultStance;
                 SetSpeed(trotSpeedIndex);
-                PickWanderTarget();
-                return true;
+                return PickWanderTarget();
 
             case "flee":
                 SetSpeed(runSpeedIndex);
                 animal.Sprint = true;
-                SetFleeDestination(intent.DirectionHint);
-                return true;
+                return SetFleeDestination(intent.DirectionHint);
 
             case "investigate":
                 if (sneakStance != null) animal.Stance = sneakStance;
@@ -430,8 +772,7 @@ public class CreatureMotor : MonoBehaviour
             case "go_to":
                 if (defaultStance != null) animal.Stance = defaultStance;
                 SetSpeed(trotSpeedIndex);
-                NavigateTo(intent.DirectionHint);
-                return true;
+                return NavigateTo(intent.DirectionHint);
 
             case "follow":
                 if (defaultStance != null) animal.Stance = defaultStance;
@@ -525,6 +866,7 @@ public class CreatureMotor : MonoBehaviour
         switch (intent.Intent)
         {
             case "wander":
+                UpdateNavigation();
                 _wanderTimer += Time.deltaTime;
                 if (_wanderTimer > WanderRetargetTime || _hasArrived)
                     PickWanderTarget();
@@ -533,6 +875,7 @@ public class CreatureMotor : MonoBehaviour
             case "flee":
                 if (intent.DirectionHint != Vector3.zero)
                     SetFleeDestination(intent.DirectionHint);
+                UpdateNavigation();
                 break;
 
             case "investigate":
@@ -543,14 +886,25 @@ public class CreatureMotor : MonoBehaviour
                 break;
 
             case "go_to":
+                UpdateNavigation();
+
                 // LLM-sourced one-shot: on arrival, clear Mind so the next tick
                 // can issue a fresh intent. Without ClearMindIntent, a stale
                 // "go_to" sits dormant behind Tactical.
-                if (_hasArrived)
+                if (_hasArrived && IsAtActiveNavigationDestination())
                 {
+                    StopManualNavigation(true);
+                    _hasActiveNavigationDestination = false;
                     Report(intent, "succeeded", "");
                     _board.ClearMindIntent();
                     _board.SetTacticalCurrent("idle");
+                }
+                else if (_hasArrived)
+                {
+                    // Ignore stale arrival events from Malbers internals. A go_to
+                    // command should keep running until the animal is actually
+                    // near the requested place.
+                    _hasArrived = false;
                 }
                 break;
 
@@ -585,30 +939,34 @@ public class CreatureMotor : MonoBehaviour
     //  MOVEMENT HELPERS
     // ═══════════════════════════════════════════════
 
-    void PickWanderTarget()
+    bool PickWanderTarget()
     {
         _wanderTimer = 0f;
         _hasArrived  = false;
 
-        Vector3 randomDir = Random.insideUnitSphere * WanderRadius + transform.position;
-        randomDir.y = transform.position.y;
+        Vector3 randomDir = Random.insideUnitSphere * WanderRadius + AnimalPosition;
+        randomDir.y = AnimalPosition.y;
 
         if (NavMesh.SamplePosition(randomDir, out NavMeshHit hit, WanderRadius, NavMesh.AllAreas))
-            NavigateTo(hit.position);
-        else
-            Debug.LogWarning($"[CreatureMotor] Wander → NavMesh.SamplePosition FAILED near {transform.position} radius={WanderRadius}. Is the NavMesh baked?");
+            return NavigateTo(hit.position);
+
+        Debug.LogWarning($"[CreatureMotor] Wander → NavMesh.SamplePosition FAILED near {AnimalPosition} radius={WanderRadius}. Is the NavMesh baked?");
+        return false;
     }
 
-    void SetFleeDestination(Vector3 threatPosition)
+    bool SetFleeDestination(Vector3 threatPosition)
     {
         Vector3 fleeDir = (threatPosition == Vector3.zero)
-            ? -transform.forward
-            : (transform.position - threatPosition).normalized;
+            ? -animal.transform.forward
+            : (AnimalPosition - threatPosition).normalized;
 
-        Vector3 fleeTarget = transform.position + fleeDir * FleeDistance;
+        Vector3 fleeTarget = AnimalPosition + fleeDir * FleeDistance;
 
         if (NavMesh.SamplePosition(fleeTarget, out NavMeshHit hit, FleeDistance, NavMesh.AllAreas))
-            NavigateTo(hit.position);
+            return NavigateTo(hit.position);
+
+        Debug.LogWarning($"[CreatureMotor] Flee → NavMesh.SamplePosition FAILED near {fleeTarget} radius={FleeDistance}. Is the NavMesh baked?");
+        return false;
     }
 
     void ReportCurrent(string status, string reason)
