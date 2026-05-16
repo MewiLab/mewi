@@ -73,7 +73,11 @@ async def real_client(real_settings, real_redis, real_supabase):
     app.dependency_overrides[get_redis] = lambda: real_redis
     app.dependency_overrides[get_supabase] = lambda: real_supabase
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"X-API-Key": real_settings.API_SECRET_TOKEN},
+    ) as client:
         yield client
 
     app.dependency_overrides.clear()

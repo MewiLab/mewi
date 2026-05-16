@@ -94,6 +94,9 @@ class Settings(BaseSettings):
     llm: LLMSettings = LLMSettings()
     embedding: EmbeddingSettings = EmbeddingSettings()
     
+    # Auth
+    API_SECRET_TOKEN: str = "dev-secret-change-me"
+
     # Feature toggles
     ENABLE_MEMORY_PIPELINE: bool = False    # Redis buffer → embedding → perception_snapshots
     ENABLE_REFLECTION_CYCLE: bool = False   # LLM reflection → memory_summaries

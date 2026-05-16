@@ -10,6 +10,7 @@ Application factory.
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.exceptions import AppError
@@ -28,6 +29,15 @@ def create_app() -> FastAPI:
         description="Backend for the AI cat companion — FastAPI + LangGraph",
         version="0.2.0",
         lifespan=lifespan,
+    )
+
+    # ── CORS ─────────────────────────────────────────────────
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # ── Global exception handler ──────────────────────────────

@@ -1,11 +1,11 @@
 from uuid import UUID
-from fastapi import APIRouter, Query
-from app.api.deps import SettingsDep, SupabaseDep
+from fastapi import APIRouter, Depends, Query
+from app.api.deps import SettingsDep, SupabaseDep, verify_api_key
 from app.models.microlog import MicrologCreate, MicrologRead
 from app.repositories.microlog_repo import MicrologRepository
 from app.services.microlog_service import MicrologService
 
-router = APIRouter(prefix="/micrologs", tags=["micrologs"])
+router = APIRouter(prefix="/micrologs", tags=["micrologs"], dependencies=[Depends(verify_api_key)])
 
 
 @router.get("/{user_id}", response_model=list[MicrologRead])
