@@ -50,7 +50,8 @@ def make_reason(llm: LLMProvider):
         response = await llm.ainvoke([HumanMessage(content=prompt)])
         decision = _parse_decision(str(response.content))
         action_result = _runtime(state).action_result(
-            decision["chosen_action"]["action"]
+            decision["chosen_action"]["action"],
+            decision["chosen_action"].get("kwargs"),
         )
         return {
             "chosen_action": decision["chosen_action"],

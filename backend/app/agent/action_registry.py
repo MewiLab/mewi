@@ -66,8 +66,27 @@ class ActionRegistry:
             for action in self._actions
         ]
 
-    def result_for(self, action: str | None) -> ActionResult:
+    def result_for(
+        self,
+        action: str | None,
+        kwargs: dict[str, Any] | None = None,
+    ) -> ActionResult:
         action = action or "idle"
         if action not in self._by_name:
             action = "idle"
-        return ActionResult(status="done", action=action)
+        kwargs = kwargs or {}
+        return ActionResult(
+            status="done",
+            action=action,
+            x=_as_float(kwargs.get("x")),
+            y=_as_float(kwargs.get("y")),
+            z=_as_float(kwargs.get("z")),
+            target=str(kwargs.get("target") or ""),
+        )
+
+
+def _as_float(value: Any) -> float:
+    try:
+        return float(value) if value is not None else 0.0
+    except (TypeError, ValueError):
+        return 0.0

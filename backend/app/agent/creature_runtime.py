@@ -29,8 +29,12 @@ class CreatureRuntime:
     def remember(self, last_n: int | None = None) -> MemoryRecall:
         return self.memory.recall(last_n=last_n)
 
-    def action_result(self, action: str | None) -> ActionResult:
-        return self.actions.result_for(action)
+    def action_result(
+        self,
+        action: str | None,
+        kwargs: dict[str, Any] | None = None,
+    ) -> ActionResult:
+        return self.actions.result_for(action, kwargs)
 
     @property
     def available_actions(self) -> list[str]:
