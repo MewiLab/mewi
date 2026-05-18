@@ -17,7 +17,7 @@ class LLMSettings(BaseSettings):
         extra="ignore"
     )
 
-    provider: Literal["openai", "anthropic", "ollama", "openrouter"] = "openai"
+    provider: Literal["openai", "anthropic", "ollama", "openrouter", "groq"] = "openai"
     model: str = "gpt-4-turbo"  # Updated to a valid default model
     api_key: str = ""
     base_url: str = ""          # Override via LLM_BASE_URL in .env
@@ -29,9 +29,11 @@ class LLMSettings(BaseSettings):
     def _set_defaults(self):
         """Fill in sensible base_url defaults so callers never have to."""
         if self.provider == "ollama" and not self.base_url:
-            self.base_url = "http://localhost:11434"
+            self.base_url = "http://localhost:11434/v1"
         if self.provider == "openrouter" and not self.base_url:
             self.base_url = "https://openrouter.ai/api/v1"
+        if self.provider == "groq" and not self.base_url:
+            self.base_url = "https://api.groq.com/openai/v1"
         return self
 
 
@@ -54,6 +56,8 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    env: str = "production"
+
     # Supabase
     supabase_url: str
     supabase_publishable_key: str
@@ -61,6 +65,9 @@ class Settings(BaseSettings):
     supabase_timeout: float = 10.0
     
     # Redis
+    redis_url: str | None = None
+
+    # origin Redis
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
@@ -69,28 +76,36 @@ class Settings(BaseSettings):
     debug: bool = False
     agent_status_ttl: int = 300  
     log_level: str = "INFO"
-    log_file_path: str | None = "app.log"  # Set to empty string in .env to disable file logging
+    log_file_path: str | None = None  # Opt in locally via LOG_FILE_PATH=app.log in .env
     log_max_bytes: int = 5_000_000         # 5 MB
     log_backup_count: int = 3
     
+    # Ollama
+    ollama_base_url: str = ""
+
+    # OpenAI API key fallback for services that need a real embedding key
+    openai_api_key: str = ""
+
     # unity
     unity_bridge_url: str = "http://localhost:8080"
-    unity_transport: Literal["http", "proxy"] = "http" 
+    unity_transport: Literal["http", "proxy"] = "http"
     
     # Nested LLM Config
     llm: LLMSettings = LLMSettings()
     embedding: EmbeddingSettings = EmbeddingSettings()
     
+    # Auth
+    API_SECRET_TOKEN: str = "dev-secret-change-me"
+
+    # Feature toggles
+    ENABLE_MEMORY_PIPELINE: bool = False    # Redis buffer → embedding → perception_snapshots
+    ENABLE_REFLECTION_CYCLE: bool = False   # LLM reflection → memory_summaries
+    BUFFER_FLUSH_THRESHOLD: int = 10        # items in Redis LIST before a count-trigger flush
+
     # Workers
     agent_worker_interval: float = 10.0       # seconds between agent ticks
     microlog_worker_interval: float = 30.0    # seconds between embedding batches
-    agent_job_ttl: int = 120
 
-    # Test mode — when True, the graph skips the LLM and cycles through
-    # ActionManager.TEST_ACTION_CYCLE (sit/eat/drink/...) so each tick fires
-    # a different obvious action. Use this to verify Unity CreatureMotor
-    # action-mode abilities without spending LLM tokens.
-    test_action_cycle: bool = False
 
 @lru_cache
 def get_settings() -> Settings:

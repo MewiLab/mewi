@@ -1,0 +1,147 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-2566569000372846705
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7bfcc53f890e3864b941cd0e3c01c970, type: 3}
+  m_Name: T_Play Dodge
+  m_EditorClassIdentifier: 
+  active: 1
+  Description: Plays a mode on the Animal(Self or the Target)
+  MessageID:
+    UseConstant: 1
+    ConstantValue: 0
+    Variable: {fileID: 0}
+  UpdateInterval:
+    UseConstant: 1
+    ConstantValue: 0.2
+    Variable: {fileID: 0}
+  WaitForPreviousTask: 0
+  affect: 0
+  Play: 0
+  modeID: {fileID: 11400000, guid: 7888596ce3530b145bc15622fac8a6c4, type: 2}
+  AbilityID:
+    UseConstant: 1
+    ConstantValue: -99
+    Variable: {fileID: 0}
+  ModePower:
+    UseConstant: 1
+    ConstantValue: 0
+    Variable: {fileID: 0}
+  near: 0
+  ActivateDistance:
+    UseConstant: 1
+    ConstantValue: 0
+    Variable: {fileID: 0}
+  CoolDown:
+    UseConstant: 1
+    ConstantValue: 0
+    Variable: {fileID: 0}
+  ModeAngle: 360
+  lookAtAlign: 0
+  IgnoreFirstCoolDown: 1
+  StopModeOnExit: 1
+  alignTime: 0.3
+  SetInputTrue: 0
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e33e187dc72d4a48aaede99913c6393, type: 3}
+  m_Name: ACW DodgeAttack
+  m_EditorClassIdentifier: 
+  ID:
+    UseConstant: 1
+    ConstantValue: 0
+    Variable: {fileID: 0}
+  tasks:
+  - {fileID: -2566569000372846705}
+  transitions:
+  - decision: {fileID: 4102636963328550336}
+    trueState: {fileID: 11400000, guid: 14a01af572054954d8b89f4529cc1fc9, type: 2}
+    falseState: {fileID: 0}
+  - decision: {fileID: 6279158467875924837}
+    trueState: {fileID: 11400000, guid: 2bb031809ac90e84c9a657e2a125e1bf, type: 2}
+    falseState: {fileID: 0}
+  GizmoStateColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  CreateTaskAsset: 1
+  CreateDecisionAsset: 1
+  TasksIndex: -1
+  DecisionIndex: 1
+--- !u!114 &4102636963328550336
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bcb15355fb5af304ebab1307cd8dab67, type: 3}
+  m_Name: D_WaitDecision
+  m_EditorClassIdentifier: 
+  active: 1
+  Description: Type Description Here
+  DecisionID:
+    UseConstant: 1
+    ConstantValue: 0
+    Variable: {fileID: 0}
+  send: 0
+  interval:
+    UseConstant: 1
+    ConstantValue: 0.2
+    Variable: {fileID: 0}
+  WaitForAllTasks: 0
+  waitForTask: -1
+  WaitMinTime:
+    UseConstant: 1
+    ConstantValue: 2
+    Variable: {fileID: 0}
+  WaitMaxTime:
+    UseConstant: 1
+    ConstantValue: 2
+    Variable: {fileID: 0}
+--- !u!114 &6279158467875924837
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bcb15355fb5af304ebab1307cd8dab67, type: 3}
+  m_Name: D_Wait if I did not Find anyone
+  m_EditorClassIdentifier: 
+  active: 1
+  Description: If the AI did not see the Player around then go to Patrol Again
+  DecisionID:
+    UseConstant: 1
+    ConstantValue: 0
+    Variable: {fileID: 0}
+  send: 0
+  interval:
+    UseConstant: 1
+    ConstantValue: 0.2
+    Variable: {fileID: 0}
+  WaitForAllTasks: 0
+  waitForTask: -1
+  WaitMinTime:
+    UseConstant: 1
+    ConstantValue: 5
+    Variable: {fileID: 0}
+  WaitMaxTime:
+    UseConstant: 1
+    ConstantValue: 5
+    Variable: {fileID: 0}

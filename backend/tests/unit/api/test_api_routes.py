@@ -8,11 +8,12 @@ No real Supabase, Redis, or OpenAI calls happen.
 from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import json
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.api.deps import get_supabase, get_redis, get_settings, get_agent, get_graph
+from app.api.deps import get_supabase, get_redis, get_settings, get_agent, get_graph, get_agent_service
 
 
 FAKE_USER_ID = str(uuid4())
@@ -50,40 +51,19 @@ def mock_db():
 
 @pytest.fixture
 def mock_redis_dep():
-    r = AsyncMock()
-    r.delete = AsyncMock()
-    return r
+    from unittest.mock import AsyncMock
+    return AsyncMock()
 
-
-@pytest.fixture
-def mock_agent_dep():
-    agent = MagicMock()
-    agent.memory.tick_count = 0
-    agent.body.available_actions = []
-    agent.body.is_connected = False
-    return agent
 
 
 @pytest.fixture
-def mock_graph_dep():
-    graph = AsyncMock()
-    graph.ainvoke.return_value = {
-        "action_result": {"action": "wander", "kwargs": {}},
-        "reasoning": "mock reasoning",
-    }
-    return graph
-
-
-@pytest.fixture
-def client(fake_settings, mock_db, mock_redis_dep, mock_agent_dep, mock_graph_dep):
-    """FastAPI TestClient with all external deps overridden — no real LLM/Redis/DB calls."""
+def client(fake_settings, mock_db, mock_redis_dep):
+    """FastAPI TestClient with all external deps overridden."""
     app = create_app()
     app.dependency_overrides[get_settings] = lambda: fake_settings
     app.dependency_overrides[get_supabase] = lambda: mock_db
     app.dependency_overrides[get_redis] = lambda: mock_redis_dep
-    app.dependency_overrides[get_agent] = lambda: mock_agent_dep
-    app.dependency_overrides[get_graph] = lambda: mock_graph_dep
-    with TestClient(app, raise_server_exceptions=False) as c:
+    with TestClient(app, raise_server_exceptions=False, headers={"X-API-Key": fake_settings.API_SECRET_TOKEN}) as c:
         yield c
     app.dependency_overrides.clear()
 
@@ -136,80 +116,274 @@ class TestMicrologRoutes:
 # ── /api/v1/agent ─────────────────────────────────────────────
 
 FAKE_CREATURE_ID = str(uuid4())
-FAKE_SNAPSHOT = {"location": "park", "mood": "curious", "nearby_humans": 2}
+
+
+def _nested_unity_payload(i: int = 0) -> dict:
+    """
+    Build a single valid Unity nested-schema payload for HTTP tests.
+    Matches TickPayload with alias="self" and alias="requestId".
+    """
+    return {
+        "requestId": f"req-{i:03d}",
+        "self": {
+            "location":       f"Harbor,Dock_{i}",
+            "current_action": "walking",
+        },
+        "mood":   {"fear": 0.1, "trust": 0.8, "curiosity": 0.6, "social": 0.3, "energy": 0.9},
+        "health": {"hunger": 0.2},
+        "entities": [
+            {"id": "lamp-01", "tags": ["lantern"], "distance": 3.0, "direction": "north"}
+        ],
+        "spatial_context": {
+            "zones": [
+                {"id": "Harbor", "type": "district", "confinement": "Open", "surface": "wood"}
+            ]
+        },
+    }
 
 
 class TestAgentRoutes:
     def test_get_status_returns_idle_by_default(self, client, mock_redis_dep):
         mock_redis_dep.get.return_value = None
-        resp = client.get(f"/api/v1/agent/status/{FAKE_USER_ID}")
+        resp = client.get(f"/api/v1/agent/status/{FAKE_CREATURE_ID}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "idle"
         assert data["is_thinking"] is False
 
     def test_get_status_returns_thinking(self, client, mock_redis_dep):
-        mock_redis_dep.get.return_value = "thinking"
-        resp = client.get(f"/api/v1/agent/status/{FAKE_USER_ID}")
+        mock_redis_dep.get.return_value = b"thinking"
+        resp = client.get(f"/api/v1/agent/status/{FAKE_CREATURE_ID}")
         data = resp.json()
         assert data["status"] == "thinking"
         assert data["is_thinking"] is True
 
-    def test_agent_tick_returns_202_with_job_id(self, client, mock_redis_dep):
-        payload = {"self": {"x": 0, "y": 0, "z": 0}, "mood": {"fear": 0.1}}
-        resp = client.post("/api/v1/agent/tick", json=payload)
+    def test_get_status_response_contains_creature_id(self, client, mock_redis_dep):
+        mock_redis_dep.get.return_value = None
+        resp = client.get(f"/api/v1/agent/status/{FAKE_CREATURE_ID}")
+        assert resp.json()["creature_id"] == FAKE_CREATURE_ID
 
+    # ── Single-tick: new nested schema ────────────────────────────────────────
+
+    @patch("app.services.embedding_service.EmbeddingService.embed_text", return_value=[0.1] * 5)
+    def test_agent_tick_returns_200_with_action(
+        self, mock_embed, client, mock_redis_dep, mock_db
+    ):
+        """
+        POST /agent/tick/{creature_id} with the new nested Unity schema.
+        creature_id is now a path parameter — not in the body.
+
+        Uses aggregation_limit=1 so the very first tick is a flush tick and
+        the pipeline runs as a BackgroundTask (returns 202 "processing").
+        ENABLE_MEMORY_PIPELINE=True is required to activate the count trigger.
+        """
+        import json as _json
+        from app.core.config import Settings
+        from app.services.agent_service import AgentService
+
+        pipeline_settings = Settings(
+            supabase_url="http://fake-supabase",
+            supabase_publishable_key="fake-anon-key",
+            supabase_secret_key="fake-secret-key",
+            openai_api_key="fake-openai-key",
+            ENABLE_MEMORY_PIPELINE=True,
+        )
+
+        # Configure redis mock for LIST buffer operations
+        payload_json = _json.dumps(_nested_unity_payload(0))
+        mock_redis_dep.rpush = AsyncMock(return_value=1)
+        mock_redis_dep.llen = AsyncMock(return_value=1)
+        mock_redis_dep.lrange = AsyncMock(return_value=[payload_json])
+        mock_redis_dep.delete = AsyncMock(return_value=1)
+
+        mock_graph = AsyncMock()
+        mock_graph.ainvoke.return_value = {
+            "tick": 1,
+            "action_result": {"success": True, "action": "move", "detail": "moving to target"},
+            "reasoning": "I saw a mouse.",
+        }
+        mock_agent = MagicMock()
+        mock_agent.memory.tick_count = 1
+        mock_agent.body.available_actions = ["wait", "move"]
+
+        def _single_tick_svc():
+            return AgentService(
+                redis=mock_redis_dep,
+                settings=pipeline_settings,
+                agent=mock_agent,
+                graph=mock_graph,
+                supabase=mock_db,
+                aggregation_limit=1,
+            )
+
+        client.app.dependency_overrides[get_agent_service] = _single_tick_svc
+
+        resp = client.post(
+            f"/api/v1/agent/tick/{FAKE_CREATURE_ID}",
+            json=_nested_unity_payload(0),
+        )
+
+        client.app.dependency_overrides.pop(get_agent_service, None)
+
+        # Flush ticks return 202 Accepted immediately; the LLM pipeline
+        # runs as a BackgroundTask.  Unity polls GET /status for the result.
         assert resp.status_code == 202
         data = resp.json()
-        assert "job_id" in data
-        assert len(data["job_id"]) == 8  # uuid4().hex[:8]
+        assert data["status"] == "processing"
 
-    def test_agent_tick_enqueues_pending_job_in_redis(self, client, mock_redis_dep):
-        payload = {"self": {"x": 0, "y": 0, "z": 0}}
-        client.post("/api/v1/agent/tick", json=payload)
+    def test_agent_tick_old_flat_url_returns_404(self, client):
+        """The legacy endpoint /agent/tick (no creature_id) must no longer exist."""
+        resp = client.post("/api/v1/agent/tick", json=_nested_unity_payload(0))
+        assert resp.status_code == 404
 
-        # First set call must be the pending enqueue; the background worker
-        # may add more set calls (complete_job / fail_job) — don't assert_called_once.
-        first_key, first_value = mock_redis_dep.set.call_args_list[0][0]
-        assert first_key.startswith("job:")
-        assert first_value == "pending"
-
-    def test_agent_tick_invalid_payload_returns_422(self, client):
+    def test_agent_tick_invalid_body_returns_422(self, client):
         resp = client.post(
-            "/api/v1/agent/tick",
+            f"/api/v1/agent/tick/{FAKE_CREATURE_ID}",
             headers={"Content-Type": "application/json"},
-            content='"not a dictionary"',
+            content='"not a dict"',
         )
         assert resp.status_code == 422
 
-    def test_poll_result_returns_pending_when_key_missing(self, client, mock_redis_dep):
-        mock_redis_dep.get.return_value = None
-        resp = client.get("/api/v1/agent/tick/result/abc12345")
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "pending"
-
-    def test_poll_result_returns_pending_while_running(self, client, mock_redis_dep):
-        mock_redis_dep.get.return_value = "pending"
-        resp = client.get("/api/v1/agent/tick/result/abc12345")
-        assert resp.json()["status"] == "pending"
-
-    def test_poll_result_returns_done_and_consumes_key(self, client, mock_redis_dep):
-        import json
-        mock_redis_dep.get.return_value = json.dumps(
-            {"status": "done", "action": "wander", "x": 0, "y": 0, "z": 0, "target": ""}
+    def test_agent_report_accepts_unity_callback(self, client):
+        resp = client.post(
+            "/api/v1/agent/report",
+            json={
+                "agent_id": FAKE_CREATURE_ID,
+                "commandId": "cmd-001",
+                "requestId": "req-001",
+                "action": "go_to",
+                "status": "started",
+                "reason": "",
+                "time": 12.5,
+            },
         )
-        resp = client.get("/api/v1/agent/tick/result/abc12345")
-        data = resp.json()
-        assert data["status"] == "done"
-        assert data["action"] == "wander"
-        mock_redis_dep.delete.assert_called_once_with("job:abc12345")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
 
-    def test_poll_result_returns_error_and_consumes_key(self, client, mock_redis_dep):
-        import json
-        mock_redis_dep.get.return_value = json.dumps({"status": "error"})
-        resp = client.get("/api/v1/agent/tick/result/abc12345")
-        assert resp.json()["status"] == "error"
-        mock_redis_dep.delete.assert_called_once_with("job:abc12345")
+    def test_agent_result_returns_pending_when_missing(self, client, mock_redis_dep):
+        mock_redis_dep.get.return_value = None
+
+        resp = client.get(f"/api/v1/agent/result/{FAKE_CREATURE_ID}")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["creature_id"] == FAKE_CREATURE_ID
+        assert data["status"] == "pending"
+
+    def test_agent_result_returns_done_and_consumes(self, client, mock_redis_dep):
+        stored = {
+            "creature_id": FAKE_CREATURE_ID,
+            "status": "done",
+            "request_id": "req-001",
+            "tick": 3,
+            "action": "go_to",
+            "reasoning": "target nearby",
+            "x": 1.0,
+            "y": 0.0,
+            "z": 2.0,
+            "target": "",
+        }
+        mock_redis_dep.get.return_value = json.dumps(stored).encode()
+
+        resp = client.get(f"/api/v1/agent/result/{FAKE_CREATURE_ID}?consume=true")
+
+        assert resp.status_code == 200
+        assert resp.json()["action"] == "go_to"
+        mock_redis_dep.delete.assert_awaited_once_with(f"agent_result:{FAKE_CREATURE_ID}")
+
+    def test_agent_tick_result_compat_alias(self, client, mock_redis_dep):
+        mock_redis_dep.get.return_value = json.dumps({
+            "creature_id": FAKE_CREATURE_ID,
+            "status": "done",
+            "action": "wait",
+        })
+
+        resp = client.get(f"/api/v1/agent/tick/result/{FAKE_CREATURE_ID}")
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "done"
+
+    def test_agent_reports_returns_recent_callbacks(self, client, mock_redis_dep):
+        mock_redis_dep.lrange.return_value = [
+            json.dumps({
+                "agent_id": FAKE_CREATURE_ID,
+                "commandId": "cmd-001",
+                "requestId": "req-001",
+                "action": "go_to",
+                "status": "started",
+                "reason": "",
+                "time": 1.0,
+            }).encode()
+        ]
+
+        resp = client.get(f"/api/v1/agent/reports/{FAKE_CREATURE_ID}?limit=5")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["creature_id"] == FAKE_CREATURE_ID
+        assert data["reports"][0]["commandId"] == "cmd-001"
+
+    def test_agent_runtime_clear_deletes_runtime_keys(self, client, mock_redis_dep):
+        mock_redis_dep.delete.return_value = 4
+
+        resp = client.delete(f"/api/v1/agent/runtime/{FAKE_CREATURE_ID}")
+
+        assert resp.status_code == 200
+        assert resp.json()["deleted"] == 4
+
+    # ── Batch: 10 nested payloads ─────────────────────────────────────────────
+
+    def test_agent_tick_batch_10_nested_payloads(self, client):
+        """
+        Send 10 consecutive Unity snapshots to the new endpoint.
+
+        Assertions:
+        - Every request returns HTTP 200.
+        - The service received the creature_id as the first positional arg.
+        - The service received the nested dict (with "self" and "requestId" keys).
+        - Each call carried a distinct requestId so the service can track order.
+        """
+        mock_service = MagicMock()
+        mock_service.run_full_tick_flow = AsyncMock(return_value={
+            "tick":          1,
+            "action_result": {"action": "wait"},
+            "reasoning":     "buffering",
+        })
+        client.app.dependency_overrides[get_agent_service] = lambda: mock_service
+
+        try:
+            for i in range(10):
+                resp = client.post(
+                    f"/api/v1/agent/tick/{FAKE_CREATURE_ID}",
+                    json=_nested_unity_payload(i),
+                )
+                assert resp.status_code == 200, (
+                    f"tick {i} failed with {resp.status_code}: {resp.text}"
+                )
+
+            # Service was called exactly 10 times
+            assert mock_service.run_full_tick_flow.call_count == 10
+
+            # Verify every call was shaped correctly
+            for idx, call in enumerate(mock_service.run_full_tick_flow.call_args_list):
+                args, _ = call
+                creature_id_arg, payload_arg, _bg = args
+
+                # creature_id came from the URL path, not the body
+                assert creature_id_arg == FAKE_CREATURE_ID
+
+                # Payload uses the by_alias=True serialisation: "self", "requestId"
+                assert "self"      in payload_arg, f"tick {idx}: 'self' key missing"
+                assert "requestId" in payload_arg, f"tick {idx}: 'requestId' key missing"
+                assert "mood"      in payload_arg, f"tick {idx}: 'mood' key missing"
+                assert "health"    in payload_arg, f"tick {idx}: 'health' key missing"
+                assert "entities"  in payload_arg, f"tick {idx}: 'entities' key missing"
+
+                # Each tick carries its own requestId for ordering
+                assert payload_arg["requestId"] == f"req-{idx:03d}"
+
+        finally:
+            client.app.dependency_overrides.pop(get_agent_service, None)
 
 
 # ── /api/v1/assets ────────────────────────────────────────────

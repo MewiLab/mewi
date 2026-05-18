@@ -4,12 +4,12 @@
 
 from enum import Enum
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 
-from app.api.deps import SupabaseDep
+from app.api.deps import SupabaseDep, verify_api_key
 from app.services.storage_service import StorageService
 
-router = APIRouter(prefix="/assets", tags=["assets"])
+router = APIRouter(prefix="/assets", tags=["assets"], dependencies=[Depends(verify_api_key)])
 
 class MediaType(str, Enum):
     image = "image"

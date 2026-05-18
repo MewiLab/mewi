@@ -35,6 +35,9 @@ public class PeriodicMind : MonoBehaviour
     [Header("Mind Mode")]
     public MindMode mode = MindMode.Simulated;
 
+    [Header("Debug")]
+    [SerializeField] bool logLLMTicks = true;
+
     bool _running;
     int  _tickCounter;
     int  _commandCounter;
@@ -52,6 +55,13 @@ public class PeriodicMind : MonoBehaviour
         if (_reporter != null && _bridge != null)
             _reporter.UseConfig(_bridge.config);
 
+        if (logLLMTicks)
+        {
+            string baseUrl = _bridge != null && _bridge.config != null ? _bridge.config.baseUrl : "(missing config)";
+            string tickInterval = _config != null ? _config.mindTickInterval.ToString("F1") : "(missing config)";
+            Debug.Log($"[PeriodicMind] init mode={mode} tickInterval={tickInterval}s backend={baseUrl}");
+        }
+
         if (mode == MindMode.LLM)
         {
             if (_bridge == null)
@@ -64,7 +74,15 @@ public class PeriodicMind : MonoBehaviour
     public void StartThinking()
     {
         if (_running) return;
+        if (_config == null)
+        {
+            Debug.LogError("[PeriodicMind] StartThinking failed: Init was not called or CreatureConfig is missing.");
+            return;
+        }
+
         _running = true;
+        if (logLLMTicks)
+            Debug.Log($"[PeriodicMind] StartThinking mode={mode}");
         StartCoroutine(ThinkLoop());
     }
 
@@ -156,12 +174,16 @@ public class PeriodicMind : MonoBehaviour
 
     /*
         // 1. Drain any response the bridge has waiting.
-        // 2. Build a fresh snapshot and hand it off — the bridge cancels its
-        //    in-flight request, so latest-wins is enforced at the transport layer.
+        // 2. Build a fresh snapshot and hand it off. If the bridge is still
+        //    waiting on the backend, it will drop this tick and keep polling.
     */
     void TickLLM()
     {
-        if (_bridge == null || _snapshotManager == null) return;
+        if (_bridge == null || _snapshotManager == null)
+        {
+            Debug.LogWarning("[PeriodicMind] LLM tick skipped: missing AgentMindBridge or SnapshotManager.");
+            return;
+        }
 
         if (_bridge.TryConsume(out var intent))
             ApplyLLMResponse(intent);
@@ -169,7 +191,9 @@ public class PeriodicMind : MonoBehaviour
         string requestId = $"t{_tickCounter++:X8}";
         _lastRequestId   = requestId;
         string json      = _snapshotManager.BuildJson(requestId);
-        _bridge.SendTick(json);
+        if (logLLMTicks)
+            Debug.Log($"[PeriodicMind] LLM tick requestId={requestId} bytes={json.Length}");
+        _bridge.SendTick(_board.CreatureId, json);
 
         LogBridgeFailures();
     }

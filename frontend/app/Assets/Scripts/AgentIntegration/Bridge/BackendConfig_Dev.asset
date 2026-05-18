@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: BackendConfig_Dev
   m_EditorClassIdentifier: Assembly-CSharp::BackendConfig
   baseUrl: http://localhost:8000
+  apiKeyHeader: X-API-Key
+  apiKey: MewiVeryveryvery67secretT0k3N
   pollIntervalSeconds: 1.5
   maxPollAttempts: 20
   requestTimeoutSeconds: 30

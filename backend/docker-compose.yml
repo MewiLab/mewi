@@ -5,34 +5,9 @@
 #   Local dev:  `make dev`  → starts Redis here, app runs natively
 #   Deploy test: `make docker-up` → builds image + runs everything
 # ──────────────────────────────────────────────────────────────
-
 name: mewi
 
 services:
-
-  # ── Application (deploy profile only) ───────────────────────
-  agent-runtime:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: mewi_runtime
-    profiles: [deploy]
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      REDIS_HOST: redis
-    depends_on:
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
 
   # ── Infrastructure (always needed) ──────────────────────────
   redis:
@@ -48,6 +23,21 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-
+  # ── Application Runtime ─────────────────────────────────────
+  mewi_agent_runtime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mewi_agent_runtime
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      # It's best practice to load environment variables this way
+      - .env 
+    depends_on:
+      redis:
+        # Ensures the backend doesn't try to connect before Redis is ready
+        condition: service_healthy
 volumes:
   redis_data:

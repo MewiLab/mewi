@@ -4,10 +4,14 @@
 // When routes version up (e.g. /api/v2/...), update once here.
 public static class ApiRoutes
 {
-    public const string AgentTick       = "/api/v1/agent/tick";
-    public const string AgentTickResult = "/api/v1/agent/tick/result/";  // append job_id
-    public const string AgentReport     = "/api/v1/agent/report";
+    public const string AgentTick   = "/api/v1/agent/tick/";    // append creature_id
+    public const string AgentStatus = "/api/v1/agent/status/";  // append creature_id
+    public const string AgentResult = "/api/v1/agent/result/";  // append creature_id
+    public const string AgentReport = "/api/v1/agent/report";
 
     public static string Resolve(BackendConfig cfg, string path) =>
         cfg.baseUrl.TrimEnd('/') + path;
+
+    public static string ResolveWithId(BackendConfig cfg, string path, string id) =>
+        Resolve(cfg, path) + System.Uri.EscapeDataString(id ?? "");
 }

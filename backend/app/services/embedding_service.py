@@ -22,7 +22,7 @@ class EmbeddingService:
         emb = settings.embedding            
         self._model = emb.model
         self._client = OpenAI(
-            api_key=emb.api_key or settings.llm.api_key,   # fall back to LLM key
+            api_key=emb.api_key or settings.llm.api_key or None,
             base_url=emb.base_url or None,
         )
 

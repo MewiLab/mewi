@@ -1,67 +1,66 @@
-"""
-Background worker: agent "thinking" pipeline.
-
-Runs as a FastAPI BackgroundTask. All dependencies are passed explicitly
-so the worker is testable in isolation.
-"""
-
 import logging
+from typing import Any
 
 import redis.asyncio as aioredis
+from supabase import Client
 
-from app.agent.creature_agent import CreatureAgent
 from app.core.config import Settings
+from app.workers.base import BaseWorker
+from app.agent.creature_agent import CreatureAgent
 from app.services.agent_service import AgentService
+from app.services.memory_service import persist_tick
 
 logger = logging.getLogger(__name__)
 
 
-async def run_agent_job(
-    *,
-    job_id: str,
-    payload: dict,
-    redis: aioredis.Redis,
-    settings: Settings,
-    graph,
-    agent: CreatureAgent,
-) -> None:
+class AgentWorker(BaseWorker):
     """
-    Run one LangGraph tick and store the result via AgentService for Unity to poll.
-
-    Job lifecycle (managed by AgentService):
-      "pending"            — set by the router before this task starts
-      {"status":"done",…}  — written here on success
-      {"status":"error"}   — written here on failure; Unity aborts polling immediately
+    Runs the full agent think loop every N seconds.
+    Manages thinking/idle status around the graph call.
     """
-    svc = AgentService(redis, settings)
+    name = "agent_worker"
 
-    try:
-        result = await graph.ainvoke({
-            "raw_payload": payload,
-            "messages": [],
-            "tick": agent.memory.tick_count,
-            "available_actions": agent.body.available_actions,
-            "perception": None,
-            "perception_error": None,
-            "memory_context": None,
-            "chosen_action": None,
-            "reasoning": None,
-            "action_result": None,
-        })
+    def __init__(
+        self,
+        *,
+        creature_id: str,
+        agent: CreatureAgent,
+        graph: Any,
+        redis: aioredis.Redis,
+        supabase: Client,
+        settings: Settings,
+        interval_seconds: float = 10.0,
+    ):
+        super().__init__(interval_seconds)
+        self._creature_id = creature_id
+        self._agent       = agent
+        self._graph       = graph
+        self._redis       = redis
+        self._supabase    = supabase
+        self._agent_svc   = AgentService(redis=redis, settings=settings)
 
-        action_result  = result.get("action_result") or {}
-        chosen_action  = result.get("chosen_action") or {}
-        kwargs         = chosen_action.get("kwargs") or {}
-
-        await svc.complete_job(job_id, {
-            "action":    action_result.get("action", "wait"),
-            "x":         float(kwargs.get("x", 0.0)),
-            "y":         float(kwargs.get("y", 0.0)),
-            "z":         float(kwargs.get("z", 0.0)),
-            "target":    str(kwargs.get("target", "")),
-            "reasoning": result.get("reasoning", ""),
-        })
-
-    except Exception:
-        logger.exception("Agent job %s failed", job_id)
-        await svc.fail_job(job_id)
+    async def _run_once(self) -> None:
+        await self._agent_svc._set_status(self._creature_id, "thinking")
+        try:
+            raw_payload = await self._agent.body.get_state()
+            result = await self._graph.ainvoke({
+                "creature_id":       self._creature_id,
+                "raw_payload":       raw_payload,
+                "messages":          [],
+                "tick":              self._agent.memory.tick_count,
+                "available_actions": self._agent.body.available_actions,
+                "perception":        None,
+                "perception_error":  None,
+                "memory_context":    None,
+                "chosen_action":     None,
+                "reasoning":         None,
+                "action_result":     None,
+            })
+            logger.info(
+                "Tick %s — action: %s",
+                result.get("tick"),
+                result.get("action_result", {}).get("action"),
+            )
+            await persist_tick(self._agent, self._supabase, self._redis)
+        finally:
+            await self._agent_svc._set_status(self._creature_id, "idle")

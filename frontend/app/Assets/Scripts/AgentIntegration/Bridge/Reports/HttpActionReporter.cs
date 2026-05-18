@@ -53,6 +53,7 @@ public class HttpActionReporter : MonoBehaviour
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
+            config.ApplyAuth(req);
             if (config.requestTimeoutSeconds > 0)
                 req.timeout = Mathf.CeilToInt(config.requestTimeoutSeconds);
 

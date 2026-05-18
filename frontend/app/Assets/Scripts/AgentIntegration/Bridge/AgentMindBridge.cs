@@ -1,10 +1,8 @@
-// AgentMindBridge.cs  (AgentIntegration/Bridge/)
-//
 // Pure transport adapter for the PeriodicMind ↔ LLM backend loop.
 //
 // Contract:
-//   SendTick(json)        — POST + poll, store latest LLMIntent. Fire and forget.
-//                           Cancels any in-flight request (latest-wins backpressure).
+//   SendTick(creature,json) — POST + poll backend status. Fire and forget.
+//                             Drops new ticks while one request is in flight.
 //   TryConsume(out intent)— PeriodicMind polls each Think(); returns and clears.
 //
 // NOT responsible for:
@@ -31,6 +29,7 @@ public class AgentMindBridge : MonoBehaviour
 
     bool _warnedMoveDeprecated;
     int  _failedTickCount;
+    bool _requestInFlight;
 
     public class LLMIntent
     {
@@ -39,12 +38,39 @@ public class AgentMindBridge : MonoBehaviour
         public string    targetKey;
     }
 
-    [Serializable] class TickAccepted { public string job_id; }
+    [Serializable] class ActionResponse
+    {
+        public bool   success;
+        public string action = "";
+        public string detail = "";
+        public float  x, y, z;
+        public string target = "";
+    }
 
-    [Serializable] class PollResponse
+    [Serializable] class TickResponse
     {
         public string status = "";
+        public ActionResponse action;
+        public string reasoning = "";
+        public int    buffered_count;
+        public float  latency_ms;
+    }
+
+    [Serializable] class StatusResponse
+    {
+        public string creature_id = "";
+        public string status = "";
+        public bool   is_thinking;
+    }
+
+    [Serializable] class AgentResultResponse
+    {
+        public string creature_id = "";
+        public string status = "";
+        public string request_id = "";
         public string action = "";
+        public string reasoning = "";
+        public string detail = "";
         public float  x, y, z;
         public string target = "";
     }
@@ -56,20 +82,33 @@ public class AgentMindBridge : MonoBehaviour
     CancellationTokenSource _cts;
 
     /// <summary>
-    /// Send a pre-built snapshot JSON. Cancels any in-flight request first
-    /// so only the latest tick survives.
+    /// Send a pre-built snapshot JSON. If a request is already in flight, this
+    /// tick is dropped; the next mind tick after completion will send fresh state.
     /// </summary>
-    public void SendTick(string json)
+    public void SendTick(string creatureId, string json)
     {
+        if (string.IsNullOrWhiteSpace(creatureId))
+        {
+            Debug.LogWarning("[AgentMindBridge] SendTick called with empty creatureId");
+            return;
+        }
+
         if (string.IsNullOrEmpty(json))
         {
             Debug.LogWarning("[AgentMindBridge] SendTick called with empty json");
             return;
         }
 
-        _cts?.Cancel();
+        if (_requestInFlight)
+        {
+            if (logTraffic) Debug.Log("[AgentMindBridge] tick skipped: request already in flight");
+            return;
+        }
+
         _cts = new CancellationTokenSource();
-        RunTickAsync(json, _cts.Token).Forget();
+        _requestInFlight = true;
+        if (logTraffic) Debug.Log($"[AgentMindBridge] sending tick creature={creatureId} bytes={json.Length}");
+        RunTickAsync(creatureId, json, _cts.Token).Forget();
     }
 
     public bool TryConsume(out LLMIntent intent)
@@ -84,42 +123,61 @@ public class AgentMindBridge : MonoBehaviour
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
+        _requestInFlight = false;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  ASYNC PIPELINE  (POST → poll → parse)
+    //  ASYNC PIPELINE  (POST → status poll → optional parse)
     // ─────────────────────────────────────────────────────────────────────────
 
-    async UniTaskVoid RunTickAsync(string json, CancellationToken ct)
+    async UniTaskVoid RunTickAsync(string creatureId, string json, CancellationToken ct)
     {
         try
         {
-            string jobId = await PostTickAsync(json, ct);
-            if (string.IsNullOrEmpty(jobId)) return;
-
-            var resp = await PollResultAsync(jobId, ct);
+            TickResponse resp = await PostTickAsync(creatureId, json, ct);
             if (resp == null) return;
 
-            // We may resume on a worker thread after I/O — marshal back before
-            // touching shared state.
-            await UniTask.SwitchToMainThread(ct);
-            ParseAndStore(resp);
+            if (resp.action != null && !string.IsNullOrWhiteSpace(resp.action.action))
+            {
+                // Some backend/test configurations return an immediate action.
+                // The buffered production path normally returns only status.
+                await UniTask.SwitchToMainThread(ct);
+                ParseAndStore(resp.action.action, new Vector3(resp.action.x, resp.action.y, resp.action.z), resp.action.target);
+                return;
+            }
+
+            if (resp.status == "processing")
+            {
+                var result = await PollStatusAsync(creatureId, ct);
+                if (result == null || result.status != "done") return;
+
+                await UniTask.SwitchToMainThread(ct);
+                ParseAndStore(result.action, new Vector3(result.x, result.y, result.z), result.target);
+            }
         }
-        catch (OperationCanceledException) { /* superseded by newer tick */ }
+        catch (OperationCanceledException)
+        {
+            if (logTraffic) Debug.Log("[AgentMindBridge] tick cancelled");
+        }
         catch (Exception e)
         {
             MarkFailedTick();
             Debug.LogWarning($"[AgentMindBridge] tick failed: {e.Message}");
         }
+        finally
+        {
+            _requestInFlight = false;
+        }
     }
 
-    async UniTask<string> PostTickAsync(string json, CancellationToken ct)
+    async UniTask<TickResponse> PostTickAsync(string creatureId, string json, CancellationToken ct)
     {
         using var req = new UnityWebRequest(
-            ApiRoutes.Resolve(config, ApiRoutes.AgentTick), "POST");
+            ApiRoutes.ResolveWithId(config, ApiRoutes.AgentTick, creatureId), "POST");
         req.uploadHandler   = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
+        config.ApplyAuth(req);
         if (config.requestTimeoutSeconds > 0)
             req.timeout = Mathf.CeilToInt(config.requestTimeoutSeconds);
 
@@ -128,14 +186,14 @@ public class AgentMindBridge : MonoBehaviour
         if (req.result != UnityWebRequest.Result.Success)
         {
             MarkFailedTick();
-            Debug.LogWarning($"[AgentMindBridge] POST failed: {req.error}");
+            Debug.LogWarning($"[AgentMindBridge] POST failed: HTTP {req.responseCode} {req.error} {req.downloadHandler.text}");
             return null;
         }
 
-        TickAccepted accepted;
+        TickResponse accepted;
         try
         {
-            accepted = JsonUtility.FromJson<TickAccepted>(req.downloadHandler.text);
+            accepted = JsonUtility.FromJson<TickResponse>(req.downloadHandler.text);
         }
         catch (Exception e)
         {
@@ -144,20 +202,19 @@ public class AgentMindBridge : MonoBehaviour
             return null;
         }
 
-        if (string.IsNullOrEmpty(accepted?.job_id))
+        if (logTraffic)
         {
-            MarkFailedTick();
-            Debug.LogWarning("[AgentMindBridge] 202 response missing job_id");
-            return null;
+            string status = accepted != null ? accepted.status : "";
+            int buffered = accepted != null ? accepted.buffered_count : 0;
+            float latency = accepted != null ? accepted.latency_ms : 0f;
+            Debug.Log($"[AgentMindBridge] tick accepted status={status} buffered={buffered} latency_ms={latency:F1}");
         }
-
-        if (logTraffic) Debug.Log($"[AgentMindBridge] job_id={accepted.job_id}");
-        return accepted.job_id;
+        return accepted;
     }
 
-    async UniTask<PollResponse> PollResultAsync(string jobId, CancellationToken ct)
+    async UniTask<AgentResultResponse> PollStatusAsync(string creatureId, CancellationToken ct)
     {
-        string url = ApiRoutes.Resolve(config, ApiRoutes.AgentTickResult) + jobId;
+        string url = ApiRoutes.ResolveWithId(config, ApiRoutes.AgentStatus, creatureId);
         int    intervalMs = Mathf.Max(50, Mathf.RoundToInt(config.pollIntervalSeconds * 1000f));
 
         for (int i = 0; i < config.maxPollAttempts; i++)
@@ -165,49 +222,80 @@ public class AgentMindBridge : MonoBehaviour
             await UniTask.Delay(intervalMs, DelayType.Realtime, cancellationToken: ct);
 
             using var get = UnityWebRequest.Get(url);
+            config.ApplyAuth(get);
+            if (config.requestTimeoutSeconds > 0)
+                get.timeout = Mathf.CeilToInt(config.requestTimeoutSeconds);
             await get.SendWebRequest().ToUniTask(cancellationToken: ct);
 
             if (get.result != UnityWebRequest.Result.Success) continue;
 
-            PollResponse resp;
+            StatusResponse resp;
             try
             {
-                resp = JsonUtility.FromJson<PollResponse>(get.downloadHandler.text);
+                resp = JsonUtility.FromJson<StatusResponse>(get.downloadHandler.text);
             }
             catch (Exception e)
             {
                 MarkFailedTick();
-                Debug.LogWarning($"[AgentMindBridge] failed to parse poll response: {e.Message}");
+                Debug.LogWarning($"[AgentMindBridge] failed to parse status response: {e.Message}");
                 return null;
             }
 
-            if (resp.status == "done")
+            if (!resp.is_thinking)
             {
-                if (logTraffic) Debug.Log($"[AgentMindBridge] job {jobId} done: {resp.action}");
-                return resp;
-            }
-            if (resp.status == "error")
-            {
-                MarkFailedTick();
-                Debug.LogWarning($"[AgentMindBridge] job {jobId} failed on backend");
-                return null;
+                if (logTraffic) Debug.Log($"[AgentMindBridge] creature {creatureId} status={resp.status}");
+                var result = await FetchResultAsync(creatureId, ct);
+                if (result != null && result.status != "pending")
+                    return result;
             }
         }
 
         MarkFailedTick();
-        Debug.LogWarning($"[AgentMindBridge] job {jobId} timed out after {config.maxPollAttempts} polls");
+        Debug.LogWarning($"[AgentMindBridge] creature {creatureId} still thinking after {config.maxPollAttempts} polls");
         return null;
+    }
+
+    async UniTask<AgentResultResponse> FetchResultAsync(string creatureId, CancellationToken ct)
+    {
+        string url = ApiRoutes.ResolveWithId(config, ApiRoutes.AgentResult, creatureId) + "?consume=true";
+        using var get = UnityWebRequest.Get(url);
+        config.ApplyAuth(get);
+        if (config.requestTimeoutSeconds > 0)
+            get.timeout = Mathf.CeilToInt(config.requestTimeoutSeconds);
+
+        await get.SendWebRequest().ToUniTask(cancellationToken: ct);
+
+        if (get.result != UnityWebRequest.Result.Success)
+        {
+            MarkFailedTick();
+            Debug.LogWarning($"[AgentMindBridge] result fetch failed: HTTP {get.responseCode} {get.error} {get.downloadHandler.text}");
+            return null;
+        }
+
+        try
+        {
+            var result = JsonUtility.FromJson<AgentResultResponse>(get.downloadHandler.text);
+            if (logTraffic) Debug.Log($"[AgentMindBridge] result status={result.status} action={result.action}");
+            return result;
+        }
+        catch (Exception e)
+        {
+            MarkFailedTick();
+            Debug.LogWarning($"[AgentMindBridge] failed to parse result response: {e.Message}");
+            return null;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     //  MAIN-THREAD HELPERS
     // ─────────────────────────────────────────────────────────────────────────
 
-    void ParseAndStore(PollResponse resp)
+    void ParseAndStore(string rawAction, Vector3 destination, string target)
     {
-        if (string.IsNullOrEmpty(resp.action) || resp.action == "wait") return;
+        if (string.IsNullOrWhiteSpace(rawAction)) return;
 
-        string action = resp.action.Trim().ToLowerInvariant();
+        string action = rawAction.Trim().ToLowerInvariant();
+        if (action == "wait") return;
         if (action == "stop") action = "stop_moving";
         if (action == "move")
         {
@@ -222,8 +310,8 @@ public class AgentMindBridge : MonoBehaviour
         _latestIntent = new LLMIntent
         {
             intent      = action,
-            destination = new Vector3(resp.x, resp.y, resp.z),
-            targetKey   = resp.target ?? "",
+            destination = destination,
+            targetKey   = target ?? "",
         };
     }
 
