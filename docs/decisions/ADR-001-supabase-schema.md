@@ -1,4 +1,4 @@
-# ADR 007: Supabase Schema Management and Unity Data Adapter
+# ADR-001: Supabase Schema Management and Unity Data Adapter
 
 ## Status
 Proposed (Implemented and Verified)

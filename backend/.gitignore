@@ -477,3 +477,5 @@ $RECYCLE.BIN/
 
 # logging files
 app.log
+
+.claude
