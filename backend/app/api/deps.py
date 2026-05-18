@@ -1,19 +1,3 @@
-"""
-FastAPI dependency functions.
-
-Concurrency model
-─────────────────
-AgentService is created fresh on every request so that per-request resources
-(redis, supabase, agent, graph) are injected cleanly.  Concurrent requests for
-different creatures never share mutable per-request state.
-
-Process-scoped singletons are initialised once in lifespan.py and read from
-app.state — no module-level globals, no lazy-init guards, no `global` keyword.
-
-  app.state.agent_state      — AgentServiceState  (per-creature locks + snapshot IDs)
-  app.state.semantic_service — SemanticService     (narrative + embedding generation)
-"""
-
 from __future__ import annotations
 
 from typing import Annotated, TypeAlias
@@ -24,13 +8,10 @@ from fastapi.security import APIKeyHeader
 from supabase import Client
 
 from app.core.config import Settings, get_settings
-from app.agent.creature_agent import CreatureAgent
 
-# ── Settings ──────────────────────────────────────────────────────────────────
+
 SettingsDep: TypeAlias = Annotated[Settings, Depends(get_settings)]
 
-
-# ── API Key auth ───────────────────────────────────────────────────────────────
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
@@ -45,7 +26,7 @@ def verify_api_key(
         )
 
 
-# ── Supabase ──────────────────────────────────────────────────────────────────
+# Supabase 
 def get_supabase(request: Request) -> Client:
     return request.app.state.supabase
 
@@ -53,7 +34,7 @@ def get_supabase(request: Request) -> Client:
 SupabaseDep: TypeAlias = Annotated[Client, Depends(get_supabase)]
 
 
-# ── Redis ─────────────────────────────────────────────────────────────────────
+# Redis
 def get_redis(request: Request) -> aioredis.Redis:
     return request.app.state.redis
 
@@ -61,48 +42,28 @@ def get_redis(request: Request) -> aioredis.Redis:
 RedisDep: TypeAlias = Annotated[aioredis.Redis, Depends(get_redis)]
 
 
-# ── Agent (eye + memory + body) ───────────────────────────────────────────────
-def get_agent(request: Request) -> CreatureAgent:
-    return request.app.state.agent
+# Behavior graph (compiled once at startup, reused per tick)
+def get_behavior_graph(request: Request):
+    return request.app.state.behavior_graph
 
 
-AgentDep: TypeAlias = Annotated[CreatureAgent, Depends(get_agent)]
+BehaviorGraphDep: TypeAlias = Annotated[object, Depends(get_behavior_graph)]
 
 
-# ── Graph (compiled once at startup, reused per tick) ────────────────────────
-def get_graph(request: Request):
-    return request.app.state.graph
-
-
-GraphDep: TypeAlias = Annotated[object, Depends(get_graph)]
-
-
-# ── AgentService (per-request instance, app-state singletons) ────────────────
-def get_agent_service(
+# AgentTickService (thin Redis queue facade) 
+def get_agent_tick_service(
     request: Request,
     redis: RedisDep,
     settings: SettingsDep,
-    supabase: SupabaseDep,
 ):
-    from app.services.agent_service import AgentService
-    from app.services.agent_service import AgentServiceState
-    from app.services.semantic_service import SemanticService
+    from app.services.agent_tick_service import AgentTickService
 
-    if not hasattr(request.app.state, "agent_state"):
-        request.app.state.agent_state = AgentServiceState()
-    if not hasattr(request.app.state, "semantic_service"):
-        request.app.state.semantic_service = SemanticService()
-
-    return AgentService(
-        redis=redis,
-        settings=settings,
-        agent=getattr(request.app.state, "agent", None),
-        graph=getattr(request.app.state, "graph", None),
-        supabase=supabase,
-        semantic_service=request.app.state.semantic_service,
-        state=request.app.state.agent_state,
-        aggregation_limit=settings.BUFFER_FLUSH_THRESHOLD,
-    )
+    if not hasattr(request.app.state, "agent_tick_service"):
+        request.app.state.agent_tick_service = AgentTickService(
+            redis=redis,
+            settings=settings,
+        )
+    return request.app.state.agent_tick_service
 
 
-AgentServiceDep: TypeAlias = Annotated[object, Depends(get_agent_service)]
+AgentTickServiceDep: TypeAlias = Annotated[object, Depends(get_agent_tick_service)]

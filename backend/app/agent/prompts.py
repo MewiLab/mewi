@@ -17,12 +17,12 @@ Nearby entities:
 {entities}
 
 # DECISION RULES
-- fear HIGH   → flee, hide, or freeze depending on distance to threat.
-- fear MODERATE, curiosity HIGH → cautious approach; sniff or observe.
+- fear HIGH   → flee, alert, or stop_moving depending on distance to threat.
+- fear MODERATE, curiosity HIGH → cautious approach; smell or look_around.
 - trust HIGH  → seek interaction, stay close.
 - energy LOW  → rest or move slowly; avoid costly actions.
 - Proximity < 2 m = "Interaction Zone" — act immediately.
-- Proximity > 5 m = "Observation Zone" — watch and wait.
+- Proximity > 5 m = "Observation Zone" — look_around or idle.
 - You MUST choose from Available Affordances only.
 
 # AVAILABLE AFFORDANCES
@@ -78,6 +78,10 @@ def format_strategic_prompt(
     else:
         entity_lines = "  (none visible)"
 
+    action_lines = "\n".join(f"  - {action}" for action in actions)
+    if not action_lines:
+        action_lines = "  - idle\n  - wander\n  - go_to"
+
     return STRATEGIC_COMMANDER_PROMPT.format(
         temperament    = temperament,
         trust          = trust,
@@ -86,5 +90,5 @@ def format_strategic_prompt(
         mood           = mood_lines,
         health         = health_lines,
         entities       = entity_lines,
-        actions        = ", ".join(actions) if actions else "move, stop, wait",
+        actions        = action_lines,
     )

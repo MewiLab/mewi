@@ -1,0 +1,92 @@
+"""Models for POST /agent/tick/{creature_id}."""
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class Location(BaseModel):
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+
+
+class SelfState(BaseModel):
+    location:       Location | str = ""
+    current_action: str            = "idle"
+    location_label: str            = ""
+
+
+class MoodState(BaseModel):
+    fear:      float = Field(0.0, ge=0.0, le=1.0)
+    trust:     float = Field(0.0, ge=0.0, le=1.0)
+    curiosity: float = Field(0.5, ge=0.0, le=1.0)
+    social:    float = Field(0.0, ge=0.0, le=1.0)
+    energy:    float = Field(1.0, ge=0.0, le=1.0)
+
+
+class HealthState(BaseModel):
+    hunger: float = Field(0.0, ge=0.0, le=1.0)
+
+
+class EntitySnapshot(BaseModel):
+    id:        str       = ""
+    tags:      list[str] = Field(default_factory=list)
+    distance:  float     = 0.0
+    direction: str       = ""
+
+
+class ZoneEntry(BaseModel):
+    id:          str = ""
+    type:        str = ""
+    confinement: str = ""
+    surface:     str = ""
+
+
+class SpatialContext(BaseModel):
+    zones: list[ZoneEntry] = Field(default_factory=list)
+
+
+class TickPayload(BaseModel):
+    """
+    One environment snapshot pushed from Unity each game tick.
+
+    creature_id is a URL path parameter — not part of the sensor payload.
+    The incoming JSON key "self" is mapped to `self_state` to avoid the
+    Python keyword; callers serialise back with by_alias=True.
+    """
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    request_id: str                  = Field("",  alias="requestId")
+    agent_id:   str                  = ""
+    command_id: str                  = Field("", alias="commandId")
+    time:       float | None         = None
+    self_state: SelfState            = Field(default_factory=SelfState, alias="self")
+    mood:       MoodState            = Field(default_factory=MoodState)
+    health:     HealthState          = Field(default_factory=HealthState)
+    entities:   list[EntitySnapshot] = Field(default_factory=list)
+    spatial_context: SpatialContext  = Field(default_factory=SpatialContext)
+
+
+class TickSubmitResponse(BaseModel):
+    """Response returned immediately after enqueueing a tick job."""
+
+    job_id: str
+    creature_id: str
+    request_id: str = ""
+    status: str = "queued"
+    queue_depth: int = 0
+
+
+class TickJobResponse(BaseModel):
+    """Current Redis state for one tick job."""
+
+    job_id: str
+    creature_id: str
+    request_id: str = ""
+    status: str
+    tick: int | None = None
+    action: dict[str, Any] | None = None
+    reasoning: str | None = None
+    error: str | None = None

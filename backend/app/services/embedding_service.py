@@ -1,13 +1,3 @@
-# app/services/embedding_service.py
-"""
-Embedding service — wraps any OpenAI-compatible embeddings endpoint.
-
-Follows the same provider pattern as LLMSettings:
-  EMBEDDING_PROVIDER=openai       (default)
-  EMBEDDING_PROVIDER=openrouter
-  EMBEDDING_MODEL=text-embedding-3-small
-"""
-
 import logging
 from openai import OpenAI
 
@@ -18,6 +8,11 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
+    """
+    EMBEDDING_PROVIDER=openai       (default)
+    EMBEDDING_PROVIDER=openrouter
+    EMBEDDING_MODEL=text-embedding-3-small
+    """
     def __init__(self, settings: Settings):
         emb = settings.embedding            
         self._model = emb.model

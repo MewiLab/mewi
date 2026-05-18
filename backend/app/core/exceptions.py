@@ -1,8 +1,3 @@
-"""
-Custom exceptions — caught by handlers in main.py so routes stay clean.
-"""
-
-
 class AppError(Exception):
     """Base for all domain errors."""
 

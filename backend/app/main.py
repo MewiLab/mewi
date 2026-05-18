@@ -1,12 +1,3 @@
-"""
-Application factory.
-
-`create_app()` wires everything together:
-  - lifespan (startup / shutdown)
-  - exception handlers
-  - route registration
-"""
-
 import logging
 
 from fastapi import FastAPI, Request
@@ -15,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.exceptions import AppError
 from app.core.lifespan import lifespan
-from app.api.routes import agent_router, micrologs_router
+from app.api.routes import agent_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,7 +22,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ── CORS ─────────────────────────────────────────────────
+    # CORS 
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -40,7 +31,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ── Global exception handler ──────────────────────────────
+    # Global exception handler 
     @app.exception_handler(AppError)
     async def app_error_handler(_request: Request, exc: AppError):
         return JSONResponse(
@@ -48,19 +39,14 @@ def create_app() -> FastAPI:
             content={"detail": exc.message},
         )
 
-    # ── Register routers ──────────────────────────────────────
-    from app.api.routes import assets_router
-
-    app.include_router(micrologs_router.router, prefix="/api/v1")
-    app.include_router(assets_router.router, prefix="/api/v1")
+    # Register routers
     app.include_router(agent_router.router, prefix="/api/v1")
 
-    # ── Health check ──────────────────────────────────────────
+
     @app.get("/health", tags=["infra"])
     async def health():
         return {"status": "ok"}
 
     return app
-
 
 app = create_app()

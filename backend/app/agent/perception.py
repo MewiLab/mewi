@@ -78,6 +78,26 @@ class SnapshotManager:
         self, raw_json: dict[str, Any]
     ) -> tuple[EnvironmentSnapshot, CreatureSnapshot] | PerceptionError:
         try:
+            if "self" in raw_json:
+                self_state = raw_json.get("self") or {}
+                location = self_state.get("location") or {}
+                position = location if isinstance(location, dict) else {}
+                env_data = EnvironmentSnapshot(
+                    entities=[
+                        EntityObservation(
+                            name=entity.get("id", ""),
+                            tag=(entity.get("tags") or [""])[0],
+                            distance=entity.get("distance", 0.0),
+                        )
+                        for entity in raw_json.get("entities", [])
+                    ]
+                )
+                creature_data = CreatureSnapshot(
+                    position=position,
+                    active_state=self_state.get("current_action", "idle"),
+                )
+                return env_data, creature_data
+
             env_data = EnvironmentSnapshot(
                 **raw_json.get("environment_snapshot", {})
             )
@@ -117,7 +137,8 @@ class SnapshotManager:
         return [
             e
             for e in entities
-            if self._distance(creature_pos, e.position) <= self.relevance_radius
+            if (e.distance or self._distance(creature_pos, e.position))
+            <= self.relevance_radius
         ]
  
     def _assess_threat(
@@ -140,7 +161,7 @@ class SnapshotManager:
                 continue
 
             if creature_pos is not None:
-                dist = self._distance(creature_pos, entity.position)
+                dist = entity.distance or self._distance(creature_pos, entity.position)
                 if dist <= self.threat_radius:
                     return ThreatLevel.DANGER  # can't get worse, exit early
                 highest = ThreatLevel.CAUTION

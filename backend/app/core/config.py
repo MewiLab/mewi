@@ -39,14 +39,31 @@ class LLMSettings(BaseSettings):
 
 class EmbeddingSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="EMBEDDING_", 
-        env_file=".env", 
+        env_prefix="EMBEDDING_",
+        env_file=".env",
         extra="ignore"
     )
 
     model:    str = "text-embedding-3-small"
     api_key:  str = ""        # falls back to LLM_API_KEY if empty
     base_url: str = ""        # leave empty for OpenAI default
+
+
+class LangSmithSettings(BaseSettings):
+    """
+    LangSmith tracing config. When `tracing` is true, the lifespan exports
+    LANGSMITH_* env vars so LangChain/LangGraph auto-instrumentation picks them up.
+    """
+    model_config = SettingsConfigDict(
+        env_prefix="LANGSMITH_",
+        env_file=".env",
+        extra="ignore",
+    )
+
+    tracing:  bool = False
+    api_key:  str = ""
+    project:  str = "cat-brain"
+    endpoint: str = "https://api.smith.langchain.com"
 
 
 class Settings(BaseSettings):
@@ -86,13 +103,10 @@ class Settings(BaseSettings):
     # OpenAI API key fallback for services that need a real embedding key
     openai_api_key: str = ""
 
-    # unity
-    unity_bridge_url: str = "http://localhost:8080"
-    unity_transport: Literal["http", "proxy"] = "http"
-    
     # Nested LLM Config
     llm: LLMSettings = LLMSettings()
     embedding: EmbeddingSettings = EmbeddingSettings()
+    langsmith: LangSmithSettings = LangSmithSettings()
     
     # Auth
     API_SECRET_TOKEN: str = "dev-secret-change-me"

@@ -1,19 +1,16 @@
-"""
-LLM provider abstraction.
-
-The graph depends on LLMProvider (a Protocol).
-Concrete implementations are created once in lifespan.py and injected.
-"""
 from __future__ import annotations
 
 import logging
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol
 from langchain_core.messages import BaseMessage
 
 logger = logging.getLogger(__name__)
 
 
 class LLMProvider(Protocol):
+    """
+    LLM provider abstraction. Support multiple llm api
+    """
     def invoke(self, messages: list[BaseMessage], **kwargs: Any) -> BaseMessage: ...
     async def ainvoke(self, messages: list[BaseMessage], **kwargs: Any) -> BaseMessage: ...
     
@@ -97,7 +94,7 @@ def _make_openrouter_provider(settings) -> LLMProvider:
         timeout=settings.timeout,
         default_headers={
             "HTTP-Referer": "https://your-app.example.com",   # shows in OR dashboard
-            "X-Title": "CreatureAgent",
+            "X-Title": "CreatureRuntime",
         },
     )
 
