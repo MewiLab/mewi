@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Manual keyboard driver for all CreatureMotor intents.
+/// Manual keyboard driver for all CreatureWorker intents through MindIntent.
 /// Attach to the same GameObject as CreatureBlackboard (AI Core).
 ///
 /// ── Key Map ──────────────────────────────────────────────
@@ -11,7 +11,7 @@ using UnityEngine;
 ///    F  →  flee        (threat simulated 5 m in front)
 ///    N  →  investigate (uses closestPlayer if assigned)
 ///
-///  Reflex (timed — auto-expires after 1 s)
+///  Mind action
 ///    Space  →  flinch
 ///
 ///  Scripted actions (one-shot, motor clears on Mode end)
@@ -65,7 +65,7 @@ public class AnimalControllerTest : MonoBehaviour
             // Simulate a threat directly in front of the creature
             Vector3 fakeThreat = transform.position + transform.forward * fakeTheatDistance;
             Debug.Log($"[MotorTest] flee ← fake threat at {fakeThreat}");
-            _board.SetTacticalCurrent("flee", fakeThreat);
+            _board.SetMindIntent("flee", fakeThreat);
         }
 
         if (Input.GetKeyDown(KeyCode.N))
@@ -75,11 +75,11 @@ public class AnimalControllerTest : MonoBehaviour
             Send("investigate");
         }
 
-        // ── Reflex (auto-expires 1 s) ────────────────────────────────
+        // ── Mind action ──────────────────────────────────────────────
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            Debug.Log("[MotorTest] REFLEX → flinch (1 s)");
-            _board.SetReflexIntent("flinch", 1f);
+            Debug.Log("[MotorTest] mind → flinch");
+            _board.SetMindIntent("flinch");
         }
 
         // ── Scripted actions ─────────────────────────────────────────
@@ -97,13 +97,13 @@ public class AnimalControllerTest : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Backspace))
         {
             Debug.Log("[MotorTest] TERMINAL → die");
-            _board.SetTacticalCurrent("die");
+            _board.SetMindIntent("die");
         }
     }
 
     void Send(string intent)
     {
-        Debug.Log($"[MotorTest] tactical → {intent}");
-        _board.SetTacticalCurrent(intent);
+        Debug.Log($"[MotorTest] mind → {intent}");
+        _board.SetMindIntent(intent);
     }
 }

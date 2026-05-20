@@ -46,6 +46,8 @@ def make_reason(llm: LLMProvider):
             entities=raw.get("entities", []),
             actions=state.get("actions_for_prompt")
             or _runtime(state).action_prompt_descriptions,
+            persona=state.get("persona") or _runtime(state).persona,
+            previous_action_result=_format_previous_action_result(raw.get("action_result")),
         )
         response = await llm.ainvoke([HumanMessage(content=prompt)])
         decision = _parse_decision(str(response.content))
@@ -55,6 +57,7 @@ def make_reason(llm: LLMProvider):
         )
         return {
             "chosen_action": decision["chosen_action"],
+            "plan_steps": decision["plan_steps"],
             "action_result": action_result.model_dump(),
             "reasoning": decision["reasoning"],
             "messages": [HumanMessage(content=prompt), response],
@@ -84,14 +87,81 @@ def _parse_decision(content: str) -> dict[str, Any]:
     except (json.JSONDecodeError, IndexError):
         data = {"final_action": "idle", "reasoning": "Failed to parse LLM output"}
 
-    action = data.get("action") or data.get("final_action") or "idle"
+    plan_steps = _normalize_plan_steps(data.get("plan_steps"))
+    action = (
+        (plan_steps[0]["action"] if plan_steps else "")
+        or _normalize_action(data.get("final_action"))
+        or _normalize_action(data.get("action"))
+        or "idle"
+    )
     kwargs = data.get("kwargs") or {}
-    if data.get("target_id") and "target" not in kwargs:
-        kwargs["target"] = data["target_id"]
+    if not isinstance(kwargs, dict):
+        kwargs = {}
+    if "target" in kwargs:
+        normalized_target = _normalize_target(kwargs.get("target"))
+        if normalized_target is None:
+            kwargs.pop("target", None)
+        else:
+            kwargs["target"] = normalized_target
+    target = plan_steps[0].get("target") if plan_steps else None
+    if target is None:
+        target = _normalize_target(data.get("target_id"))
+    if target is not None and "target" not in kwargs:
+        kwargs["target"] = target
     return {
         "chosen_action": {"action": action, "kwargs": kwargs},
+        "plan_steps": plan_steps,
         "reasoning": data.get("reasoning") or data.get("thought") or "",
     }
+
+
+def _normalize_plan_steps(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    steps: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        action = _normalize_action(item.get("action"))
+        if not action:
+            continue
+        steps.append({
+            "action": action,
+            "target": _normalize_target(item.get("target", item.get("target_id"))),
+            "reason": _clean_text(item.get("reason")),
+        })
+    return steps
+
+
+def _normalize_action(value: Any) -> str:
+    text = _clean_text(value)
+    if not text or text.lower() in {
+        "action_name",
+        "action_id",
+        "immediate action_id to execute",
+    }:
+        return ""
+    return text
+
+
+def _normalize_target(value: Any) -> str | None:
+    text = _clean_text(value)
+    if not text or text.lower() in {
+        "null",
+        "none",
+        "entity_id",
+        "entity_id_or_null",
+        "specific entity id, or null",
+    }:
+        return None
+    return text
+
+
+def _clean_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
 
 
 def _format_position(location: Any, spatial_context: dict[str, Any]) -> str:
@@ -104,6 +174,34 @@ def _format_position(location: Any, spatial_context: dict[str, Any]) -> str:
     if zone_text:
         return f"{location_text}; nearby zones: {zone_text}"
     return location_text
+
+
+def _format_previous_action_result(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+
+    status = _clean_text(value.get("status")) or "unknown"
+    plan_id = _clean_text(value.get("planId") or value.get("plan_id"))
+    header = f"  plan_status={status}"
+    if plan_id:
+        header += f" plan_id={plan_id}"
+
+    steps = value.get("steps")
+    if not isinstance(steps, list) or not steps:
+        return header
+
+    lines = [header]
+    for step in steps[:6]:
+        if not isinstance(step, dict):
+            continue
+        action = _clean_text(step.get("action")) or "unknown"
+        step_status = _clean_text(step.get("status")) or "unknown"
+        target = _clean_text(step.get("target"))
+        reason = _clean_text(step.get("reason"))
+        target_text = f" target={target}" if target else ""
+        reason_text = f" reason={reason}" if reason else ""
+        lines.append(f"  - {action}: {step_status}{target_text}{reason_text}")
+    return "\n".join(lines)
 
 
 def _format_location(location: Any) -> str:

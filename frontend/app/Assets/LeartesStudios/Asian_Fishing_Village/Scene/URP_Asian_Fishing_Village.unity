@@ -122498,6 +122498,9 @@ PrefabInstance:
       addedObject: {fileID: 1870734386}
     - targetCorrespondingSourceObject: {fileID: 4181316820409248116, guid: b96e635735c78654192eeb49782c33d4, type: 3}
       insertIndex: -1
+      addedObject: {fileID: 1870734413}
+    - targetCorrespondingSourceObject: {fileID: 4181316820409248116, guid: b96e635735c78654192eeb49782c33d4, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 1870734398}
     - targetCorrespondingSourceObject: {fileID: 4181316820409248116, guid: b96e635735c78654192eeb49782c33d4, type: 3}
       insertIndex: -1
@@ -122705,7 +122708,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 64b3e013daf4d403baeb80a882a8da9e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AgentMindBridge
+  m_EditorClassIdentifier: Assembly-CSharp::AgentNetworkManager
   config: {fileID: 11400000, guid: 703c0e6361d5c4171a89fa3471f43a4f, type: 2}
   logTraffic: 1
 --- !u!114 &1870734386
@@ -122719,7 +122722,20 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4a22ec0d8f27346d397e3bb45c5b2b98, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CreatureMotor
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureWorker
+  _targetRegistry: {fileID: 0}
+--- !u!114 &1870734413
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1870734363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 015dfea863f184073937bd014997c747, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MalbersAnimalAdapter
   animal: {fileID: 1870734373}
   aiControl: {fileID: 126935439}
   actionMode: {fileID: 11400000, guid: 4dc5ca673dc60d346a62529c8a9bd8ff, type: 2}
@@ -122744,7 +122760,6 @@ MonoBehaviour:
   runSpeedIndex: 3
   deathState: {fileID: 11400000, guid: adfa24f62d6db4d40a1d837f4ec1a6e9, type: 2}
   wanderRadius: 10
-  wanderRetargetTime: 5
   fleeDistance: 15
   navMeshDestinationSampleRadius: 2
   navMeshStartSampleRadius: 2
@@ -122811,10 +122826,11 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ff474d815ed64e92a8aacadabb5699c4, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CreatureMotorScriptControlTest
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureWorkerScriptControlTest
   controller: {fileID: 1870734369}
   board: {fileID: 1870734370}
   motor: {fileID: 1870734386}
+  body: {fileID: 1870734413}
   config: {fileID: 11400000, guid: bbd5cffc138de4215bdfbe5fa0964a3c, type: 2}
   goToTarget: {fileID: 1030974965}
   runOnStart: 1

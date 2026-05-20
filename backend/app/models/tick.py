@@ -1,4 +1,4 @@
-"""Models for POST /agent/tick/{creature_id}."""
+"""Models for the Unity agent websocket tick envelope."""
 from __future__ import annotations
 
 from typing import Any
@@ -50,9 +50,9 @@ class SpatialContext(BaseModel):
 
 class TickPayload(BaseModel):
     """
-    One environment snapshot pushed from Unity each game tick.
+    One full environment snapshot pushed from Unity over the agent websocket.
 
-    creature_id is a URL path parameter — not part of the sensor payload.
+    creature_id is a websocket path parameter, not part of the sensor payload.
     The incoming JSON key "self" is mapped to `self_state` to avoid the
     Python keyword; callers serialise back with by_alias=True.
     """
@@ -67,26 +67,4 @@ class TickPayload(BaseModel):
     health:     HealthState          = Field(default_factory=HealthState)
     entities:   list[EntitySnapshot] = Field(default_factory=list)
     spatial_context: SpatialContext  = Field(default_factory=SpatialContext)
-
-
-class TickSubmitResponse(BaseModel):
-    """Response returned immediately after enqueueing a tick job."""
-
-    job_id: str
-    creature_id: str
-    request_id: str = ""
-    status: str = "queued"
-    queue_depth: int = 0
-
-
-class TickJobResponse(BaseModel):
-    """Current Redis state for one tick job."""
-
-    job_id: str
-    creature_id: str
-    request_id: str = ""
-    status: str
-    tick: int | None = None
-    action: dict[str, Any] | None = None
-    reasoning: str | None = None
-    error: str | None = None
+    action_result: dict[str, Any] | None = None

@@ -15,10 +15,12 @@ class CreatureRuntime:
         eye: SnapshotManager | None = None,
         memory: MemoryManager | None = None,
         actions: ActionRegistry | None = None,
+        persona: str = "",
     ):
         self.eye = eye or SnapshotManager()
         self.memory = memory or MemoryManager()
         self.actions = actions or ActionRegistry()
+        self.persona = persona
 
     def perceive(self, raw_json: dict[str, Any]) -> PerceptionSummary | PerceptionError:
         result = self.eye.process(raw_json)
@@ -55,10 +57,12 @@ class CreatureRuntime:
             "perception_error": None,
             "memory_context": None,
             "chosen_action": None,
+            "plan_steps": [],
             "reasoning": None,
             "action_result": None,
             "messages": [],
             "runtime": self,
+            "persona": self.persona,
             "tick": int(payload.get("tick", 0) or 0),
             "actions_for_prompt": self.action_prompt_descriptions,
             "creature_id": creature_id,
@@ -73,9 +77,11 @@ class CreatureRuntimeState(TypedDict):
     perception_error: str | None
     memory_context: dict[str, Any] | None
     chosen_action: dict[str, Any] | None
+    plan_steps: list[dict[str, Any]]
     reasoning: str | None
     action_result: dict[str, Any] | None
     messages: Annotated[list, operator.add]
     runtime: CreatureRuntime
+    persona: str
     tick: int
     actions_for_prompt: list[str]

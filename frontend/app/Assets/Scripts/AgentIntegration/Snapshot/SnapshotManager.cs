@@ -6,7 +6,7 @@
 //     a fresh SnapshotPayload, then JsonUtility-serialise the whole thing.
 //
 // Adding a new perception channel = create a class implementing
-// ISnapshotChannel + register it here. AgentMindBridge does NOT change.
+// ISnapshotChannel + register it here. AgentNetworkManager does NOT change.
 // PeriodicMind does NOT change.
 //
 // Channels can read the blackboard but must not mutate it.
@@ -58,14 +58,14 @@ public class SnapshotManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Serialise the current blackboard state to wire-format JSON.
+    /// Build the current blackboard state as a wire-format payload object.
     /// </summary>
-    public string BuildJson(string requestId)
+    public SnapshotPayload BuildPayload(string requestId)
     {
         if (_board == null)
         {
             Debug.LogError("[SnapshotManager] Init not called — blackboard is null.");
-            return "{}";
+            return new SnapshotPayload { requestId = requestId };
         }
 
         var payload = new SnapshotPayload
@@ -79,6 +79,15 @@ public class SnapshotManager : MonoBehaviour
         for (int i = 0; i < _channels.Count; i++)
             _channels[i].Write(payload, _board, transform);
 
+        return payload;
+    }
+
+    /// <summary>
+    /// Serialise the current blackboard state to the legacy raw snapshot JSON.
+    /// </summary>
+    public string BuildJson(string requestId)
+    {
+        SnapshotPayload payload = BuildPayload(requestId);
         string json = JsonUtility.ToJson(payload);
         if (logPayload) Debug.Log($"[SnapshotManager] {json}");
         return json;

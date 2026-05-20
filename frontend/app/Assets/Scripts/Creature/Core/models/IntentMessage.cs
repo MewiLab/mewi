@@ -2,9 +2,7 @@ using UnityEngine;
 
 public enum LayerSource
 {
-    Mind     = 0,
-    Tactical = 1,
-    Reflex   = 2,
+    Mind = 0,
 }
 
 public struct IntentMessage
@@ -83,6 +81,7 @@ public struct IntentMessage
     public override string ToString()
     {
         string dur = Duration < 0f ? "∞" : $"{TimeRemaining:F1}s";
-        return $"[{Source}] {Intent} ({dur})";
+        string target = string.IsNullOrEmpty(TargetKey) ? "" : $" -> {TargetKey}";
+        return $"[{Source}] {Intent}{target} ({dur})";
     }
 }

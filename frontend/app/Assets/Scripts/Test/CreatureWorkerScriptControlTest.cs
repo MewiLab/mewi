@@ -3,20 +3,21 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// Runtime proof that CreatureMotor is controlling the animal through script.
+/// Runtime proof that CreatureWorker is controlling the animal through script.
 ///
 /// Attach this to the same GameObject as CreatureController/CreatureBlackboard.
-/// It sends blackboard intents and verifies that CreatureMotor drives Malbers:
+/// It sends blackboard intents and verifies that CreatureWorker drives Malbers:
 /// navigation intents through MAnimalAIControl, and scripted action intents through
 /// MAnimal action-mode events.
 /// </summary>
 [DisallowMultipleComponent]
-public class CreatureMotorScriptControlTest : MonoBehaviour
+public class CreatureWorkerScriptControlTest : MonoBehaviour
 {
     [Header("References")]
     public CreatureController controller;
     public CreatureBlackboard board;
-    public CreatureMotor motor;
+    public CreatureWorker motor;
+    public MalbersAnimalAdapter body;
     public CreatureConfig config;
     public Transform goToTarget;
 
@@ -112,12 +113,12 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         RestoreRuntimeControl();
     }
 
-    [ContextMenu("Run CreatureMotor Script Control Test")]
+    [ContextMenu("Run CreatureWorker Script Control Test")]
     public void RunNow()
     {
         if (!Application.isPlaying)
         {
-            Debug.LogWarning("[CreatureMotorScriptControlTest] Enter Play Mode before running this test.");
+            Debug.LogWarning("[CreatureWorkerScriptControlTest] Enter Play Mode before running this test.");
             return;
         }
 
@@ -151,7 +152,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
             yield return RunActionProof();
 
         string result = _failCount == 0 ? "PASS" : "FAIL";
-        Debug.Log($"[CreatureMotorScriptControlTest] RESULT {result} - passed={_passCount} failed={_failCount} skipped={_skipCount}");
+        Debug.Log($"[CreatureWorkerScriptControlTest] RESULT {result} - passed={_passCount} failed={_failCount} skipped={_skipCount}");
 
         FinishRun();
     }
@@ -170,16 +171,14 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         string requestId = $"script-control-test-nav:{Time.frameCount}";
         string goCommandId = $"{board.CreatureId}:script-test-go:{Time.frameCount}";
 
-        board.ClearReflexIntent();
-        board.ClearTacticalIntent();
         board.ClearMindIntent();
         board.SetMindIntent("go_to", destination, goCommandId, requestId);
 
-        Debug.Log($"[CreatureMotorScriptControlTest] STEP go_to destination={destination} commandId={goCommandId}");
+        Debug.Log($"[CreatureWorkerScriptControlTest] STEP go_to destination={destination} commandId={goCommandId}");
         motor.Tick();
 
         if (logStatusSnapshot)
-            Debug.Log($"[CreatureMotorScriptControlTest] after go_to\n{BuildStatus(agent, controlled, destination)}");
+            Debug.Log($"[CreatureWorkerScriptControlTest] after go_to\n{BuildStatus(agent, controlled, destination)}");
 
         float deadline = Time.time + waitForAgentSeconds;
         while (Time.time < deadline && !NavigationAcceptedDestination(agent, destination))
@@ -187,13 +186,13 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
 
         if (!NavigationAcceptedDestination(agent, destination))
         {
-            Fail("NAV go_to", $"CreatureMotor did not accept scripted destination. expected={destination}\n{BuildStatus(agent, controlled, destination)}");
+            Fail("NAV go_to", $"CreatureWorker did not accept scripted destination. expected={destination}\n{BuildStatus(agent, controlled, destination)}");
             if (!continueAfterNavigationFailure)
                 yield break;
             yield break;
         }
 
-        Pass($"NAV go_to destination accepted by script. destination={destination} manualFallback={motor.IsUsingManualNavigation}");
+        Pass($"NAV go_to destination accepted by script. destination={destination} manualFallback={body.IsUsingManualNavigation}");
 
         if (logNavMeshPathProof)
             LogNavMeshPathProof(agent, destination);
@@ -238,11 +237,9 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         Pass($"NAV go_to arrived at target. finalDistance={finalDistance:F3}m destination={destination}");
 
         string stopCommandId = $"{board.CreatureId}:script-test-stop:{Time.frameCount}";
-        board.ClearReflexIntent();
-        board.ClearTacticalIntent();
         board.SetMindIntent("stop_moving", Vector3.zero, stopCommandId, requestId);
 
-        Debug.Log($"[CreatureMotorScriptControlTest] STEP stop_moving commandId={stopCommandId}");
+        Debug.Log($"[CreatureWorkerScriptControlTest] STEP stop_moving commandId={stopCommandId}");
         motor.Tick();
 
         Vector3 stopStart = controlled.position;
@@ -262,15 +259,15 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
 
     IEnumerator RunActionProof()
     {
-        if (motor.ActionModeId <= 0)
+        if (body.ActionModeId <= 0)
         {
-            Fail("ACTIONS setup", "CreatureMotor ActionModeId is not valid. Malbers default Action mode ID is 4.");
+            Fail("ACTIONS setup", "MalbersAnimalAdapter ActionModeId is not valid. Malbers default Action mode ID is 4.");
             yield break;
         }
 
-        if (motor.animal.Mode_Get(motor.ActionModeId) == null)
+        if (body.animal.Mode_Get(body.ActionModeId) == null)
         {
-            Fail("ACTIONS setup", $"MAnimal does not have an Action mode with ID {motor.ActionModeId}.\n{BuildModesSummary()}");
+            Fail("ACTIONS setup", $"MAnimal does not have an Action mode with ID {body.ActionModeId}.\n{BuildModesSummary()}");
             yield break;
         }
 
@@ -287,7 +284,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
     {
         if (action.AbilityIndex <= 0)
         {
-            Skip($"ACTION {action.Intent}", "ability index is 0/unassigned on CreatureMotor");
+            Skip($"ACTION {action.Intent}", "ability index is 0/unassigned on MalbersAnimalAdapter");
             yield break;
         }
 
@@ -299,12 +296,10 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         string requestId = $"script-control-test-action:{Time.frameCount}";
         string commandId = $"{board.CreatureId}:script-test-{action.Intent}:{Time.frameCount}";
 
-        board.ClearReflexIntent();
-        board.ClearTacticalIntent();
         board.ClearMindIntent();
         board.SetMindIntent(action.Intent, Vector3.zero, commandId, requestId, action.Intent);
 
-        Debug.Log($"[CreatureMotorScriptControlTest] STEP action intent={action.Intent} ability={action.AbilityIndex} commandId={commandId}");
+        Debug.Log($"[CreatureWorkerScriptControlTest] STEP action intent={action.Intent} ability={action.AbilityIndex} commandId={commandId}");
         motor.Tick();
         CapturePreparedMode(action);
 
@@ -321,7 +316,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
             {
                 Pass($"ACTION {action.Intent} accepted by script/Malbers. prepared ModeAbility={_preparedModeAbility}, but Animator did not enter OnModeStart.");
                 Debug.LogWarning(
-                    $"[CreatureMotorScriptControlTest] ACTION {action.Intent} was accepted by Malbers but no OnModeStart fired. " +
+                    $"[CreatureWorkerScriptControlTest] ACTION {action.Intent} was accepted by Malbers but no OnModeStart fired. " +
                     "This usually means the Action ability has no valid Animator transition/ModeBehaviour path for this animal.");
                 yield return ForceActionCleanup();
                 yield break;
@@ -329,7 +324,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
 
             Fail(
                 $"ACTION {action.Intent}",
-                $"expected mode start actionMode={motor.ActionModeId} ability={action.AbilityIndex}, " +
+                $"expected mode start actionMode={body.ActionModeId} ability={action.AbilityIndex}, " +
                 $"saw mode={_startedModeId} ability={_startedAbilityIndex}\n" +
                 BuildActionStatus(action));
             yield return ForceActionCleanup();
@@ -358,7 +353,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[CreatureMotorScriptControlTest] ACTION {action.Intent} started but did not end within {actionEndTimeout:F1}s; forcing cleanup so the next action can run.");
+            Debug.LogWarning($"[CreatureWorkerScriptControlTest] ACTION {action.Intent} started but did not end within {actionEndTimeout:F1}s; forcing cleanup so the next action can run.");
         }
 
         yield return ForceActionCleanup();
@@ -368,19 +363,19 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
     {
         return new[]
         {
-            new ActionCase("flinch", ResolveAbilityIndex("flinch", "stun", "startle", motor.startleAbilityIndex)),
-            new ActionCase("scratch", ResolveAbilityIndex("scratch", "", "", motor.scratchAbilityIndex)),
-            new ActionCase("look_around", ResolveAbilityIndex("look", "look around", "", motor.lookAroundAbilityIndex)),
-            new ActionCase("nod_head", ResolveAbilityIndex("nod", "nod head", "", motor.nodHeadAbilityIndex)),
-            new ActionCase("eat", ResolveAbilityIndex("eat", "", "", motor.eatAbilityIndex)),
-            new ActionCase("drink", ResolveAbilityIndex("drink", "", "", motor.drinkAbilityIndex)),
-            new ActionCase("sit", ResolveAbilityIndex("sit", "seat", "", motor.sitAbilityIndex)),
-            new ActionCase("lie", ResolveAbilityIndex("lie", "lay", "down", motor.lieAbilityIndex)),
-            new ActionCase("sleep", ResolveAbilityIndex("sleep", "", "", motor.sleepAbilityIndex)),
-            new ActionCase("groom", ResolveAbilityIndex("groom", "", "", motor.groomAbilityIndex)),
-            new ActionCase("smell", ResolveAbilityIndex("smell", "sniff", "", motor.smellAbilityIndex)),
-            new ActionCase("alert", ResolveAbilityIndex("alert", "", "", motor.alertAbilityIndex)),
-            new ActionCase("vocalize", ResolveAbilityIndex("vocal", "meow", "howl", motor.vocalizeAbilityIndex)),
+            new ActionCase("flinch", ResolveAbilityIndex("flinch", "stun", "startle", body.startleAbilityIndex)),
+            new ActionCase("scratch", ResolveAbilityIndex("scratch", "", "", body.scratchAbilityIndex)),
+            new ActionCase("look_around", ResolveAbilityIndex("look", "look around", "", body.lookAroundAbilityIndex)),
+            new ActionCase("nod_head", ResolveAbilityIndex("nod", "nod head", "", body.nodHeadAbilityIndex)),
+            new ActionCase("eat", ResolveAbilityIndex("eat", "", "", body.eatAbilityIndex)),
+            new ActionCase("drink", ResolveAbilityIndex("drink", "", "", body.drinkAbilityIndex)),
+            new ActionCase("sit", ResolveAbilityIndex("sit", "seat", "", body.sitAbilityIndex)),
+            new ActionCase("lie", ResolveAbilityIndex("lie", "lay", "down", body.lieAbilityIndex)),
+            new ActionCase("sleep", ResolveAbilityIndex("sleep", "", "", body.sleepAbilityIndex)),
+            new ActionCase("groom", ResolveAbilityIndex("groom", "", "", body.groomAbilityIndex)),
+            new ActionCase("smell", ResolveAbilityIndex("smell", "sniff", "", body.smellAbilityIndex)),
+            new ActionCase("alert", ResolveAbilityIndex("alert", "", "", body.alertAbilityIndex)),
+            new ActionCase("vocalize", ResolveAbilityIndex("vocal", "meow", "howl", body.vocalizeAbilityIndex)),
         };
     }
 
@@ -389,7 +384,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         if (!autoResolveAbilityIndexesByName)
             return configuredIndex;
 
-        var mode = motor.animal.Mode_Get(motor.ActionModeId);
+        var mode = body.animal.Mode_Get(body.ActionModeId);
         if (mode == null || mode.Abilities == null)
             return configuredIndex;
 
@@ -405,7 +400,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
                 MatchesAbilityName(name, tertiaryName))
             {
                 if (configuredIndex != ability.Index.Value)
-                    Debug.Log($"[CreatureMotorScriptControlTest] Auto-resolved '{primaryName}' ability index {configuredIndex} -> {ability.Index.Value} from Action ability '{ability.Name}'.");
+                    Debug.Log($"[CreatureWorkerScriptControlTest] Auto-resolved '{primaryName}' ability index {configuredIndex} -> {ability.Index.Value} from Action ability '{ability.Name}'.");
 
                 return ability.Index.Value;
             }
@@ -424,19 +419,19 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
     {
         switch (action.Intent)
         {
-            case "flinch":      motor.startleAbilityIndex = action.AbilityIndex;      break;
-            case "scratch":     motor.scratchAbilityIndex = action.AbilityIndex;      break;
-            case "look_around": motor.lookAroundAbilityIndex = action.AbilityIndex;   break;
-            case "nod_head":    motor.nodHeadAbilityIndex = action.AbilityIndex;      break;
-            case "eat":         motor.eatAbilityIndex = action.AbilityIndex;          break;
-            case "drink":       motor.drinkAbilityIndex = action.AbilityIndex;        break;
-            case "sit":         motor.sitAbilityIndex = action.AbilityIndex;          break;
-            case "lie":         motor.lieAbilityIndex = action.AbilityIndex;          break;
-            case "sleep":       motor.sleepAbilityIndex = action.AbilityIndex;        break;
-            case "groom":       motor.groomAbilityIndex = action.AbilityIndex;        break;
-            case "smell":       motor.smellAbilityIndex = action.AbilityIndex;        break;
-            case "alert":       motor.alertAbilityIndex = action.AbilityIndex;        break;
-            case "vocalize":    motor.vocalizeAbilityIndex = action.AbilityIndex;     break;
+            case "flinch":      body.startleAbilityIndex = action.AbilityIndex;      break;
+            case "scratch":     body.scratchAbilityIndex = action.AbilityIndex;      break;
+            case "look_around": body.lookAroundAbilityIndex = action.AbilityIndex;   break;
+            case "nod_head":    body.nodHeadAbilityIndex = action.AbilityIndex;      break;
+            case "eat":         body.eatAbilityIndex = action.AbilityIndex;          break;
+            case "drink":       body.drinkAbilityIndex = action.AbilityIndex;        break;
+            case "sit":         body.sitAbilityIndex = action.AbilityIndex;          break;
+            case "lie":         body.lieAbilityIndex = action.AbilityIndex;          break;
+            case "sleep":       body.sleepAbilityIndex = action.AbilityIndex;        break;
+            case "groom":       body.groomAbilityIndex = action.AbilityIndex;        break;
+            case "smell":       body.smellAbilityIndex = action.AbilityIndex;        break;
+            case "alert":       body.alertAbilityIndex = action.AbilityIndex;        break;
+            case "vocalize":    body.vocalizeAbilityIndex = action.AbilityIndex;     break;
         }
     }
 
@@ -444,19 +439,20 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
     {
         if (controller == null) controller = GetComponent<CreatureController>();
         if (board == null)      board      = GetComponent<CreatureBlackboard>();
-        if (motor == null)      motor      = GetComponent<CreatureMotor>();
+        if (motor == null)      motor      = GetComponent<CreatureWorker>();
+        if (body == null)       body       = GetComponent<MalbersAnimalAdapter>();
         if (config == null && controller != null) config = controller.config;
     }
 
     void EnsureMotorInitializedIfNeeded()
     {
-        if (motor == null || board == null)
+        if (motor == null || board == null || body == null)
             return;
 
-        if (motor.animal != null && motor.aiControl != null)
+        if (body.animal != null && body.aiControl != null)
             return;
 
-        motor.Init(board, config);
+        motor.Init(board);
     }
 
     bool TryValidate(out NavMeshAgent agent)
@@ -467,26 +463,26 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
             return Fail("Missing CreatureBlackboard. Attach this to the AI Core GameObject or assign board.");
 
         if (motor == null)
-            return Fail("Missing CreatureMotor. Attach this to the AI Core GameObject or assign motor.");
+            return Fail("Missing CreatureWorker. Attach this to the AI Core GameObject or assign motor.");
 
-        if (motor.animal == null)
-            return Fail("CreatureMotor has no MAnimal. Let CreatureController initialize it or assign motor.animal.");
+        if (body == null)
+            return Fail("Missing MalbersAnimalAdapter. Attach this to the AI Core GameObject or assign body.");
 
-        if (motor.aiControl == null)
-            return Fail("CreatureMotor has no MAnimalAIControl. Assign motor.aiControl or use the Malbers AI prefab variant.");
+        if (body.animal == null)
+            return Fail("MalbersAnimalAdapter has no MAnimal. Let CreatureController initialize it or assign body.animal.");
 
-        if (!motor.animal.isActiveAndEnabled)
+        if (body.aiControl == null)
+            return Fail("MalbersAnimalAdapter has no MAnimalAIControl. Assign body.aiControl or use the Malbers AI prefab variant.");
+
+        if (!body.animal.isActiveAndEnabled)
             return Fail("MAnimal is not active/enabled. Enable the Cat MAnimal component before running the test.");
 
-        if (!motor.aiControl.isActiveAndEnabled)
+        if (!body.aiControl.isActiveAndEnabled)
             return Fail("MAnimalAIControl is not active/enabled. Enable the Malbers AI Control component before running the test.");
 
-        agent = motor.aiControl.Agent;
+        agent = body.aiControl.Agent;
         if (agent == null)
             return Fail("MAnimalAIControl.Agent is null. Assign the NavMeshAgent child to the AI control component.");
-
-        // Navigation validation is intentionally disabled while this harness is
-        // being used to prove action-mode control first.
 
         return true;
     }
@@ -541,14 +537,14 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
     {
         if (agent == null)
         {
-            Debug.LogWarning("[CreatureMotorScriptControlTest] NavMesh path proof: agent is null.");
+            Debug.LogWarning("[CreatureWorkerScriptControlTest] NavMesh path proof: agent is null.");
             return;
         }
 
         if (!agent.isActiveAndEnabled || !agent.isOnNavMesh)
         {
             Debug.LogWarning(
-                $"[CreatureMotorScriptControlTest] NavMesh path proof: agent cannot calculate path. " +
+                $"[CreatureWorkerScriptControlTest] NavMesh path proof: agent cannot calculate path. " +
                 $"active={agent.isActiveAndEnabled} onNavMesh={agent.isOnNavMesh}");
             return;
         }
@@ -558,7 +554,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         string corners = BuildCornersSummary(path);
 
         Debug.Log(
-            $"[CreatureMotorScriptControlTest] NavMesh path proof: calculated={calculated} " +
+            $"[CreatureWorkerScriptControlTest] NavMesh path proof: calculated={calculated} " +
             $"status={path.status} corners={path.corners.Length} " +
             $"agentAreaMask={agent.areaMask} autoTraverse={agent.autoTraverseOffMeshLink} " +
             $"from={agent.transform.position.ToString("F3")} to={destination.ToString("F3")}\n{corners}");
@@ -578,8 +574,8 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
 
     void BeginRuntimeControl()
     {
-        _previousLogIntentProof = motor.logIntentProof;
-        motor.logIntentProof = true;
+        _previousLogIntentProof = body != null && body.logIntentProof;
+        if (body != null) body.logIntentProof = true;
         _runtimeControlActive = true;
 
         _controllerWasEnabled = controller != null && controller.enabled;
@@ -592,7 +588,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         {
             controller.enabled = false;
             _manualTick = true;
-            Debug.Log("[CreatureMotorScriptControlTest] Temporarily disabled CreatureController and ticking CreatureMotor directly for an isolated proof.");
+            Debug.Log("[CreatureWorkerScriptControlTest] Temporarily disabled CreatureController and ticking CreatureWorker directly for an isolated proof.");
         }
         else
         {
@@ -607,8 +603,8 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
 
         DetachActionListeners();
 
-        if (motor != null)
-            motor.logIntentProof = _previousLogIntentProof;
+        if (body != null)
+            body.logIntentProof = _previousLogIntentProof;
 
         _manualTick = false;
         _runtimeControlActive = false;
@@ -644,8 +640,8 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         if (AgentAcceptedDestination(agent, destination))
             return true;
 
-        return motor.HasActiveNavigationDestination &&
-               HorizontalDistance(motor.ActiveNavigationDestination, destination) <= destinationTolerance;
+        return body.HasActiveNavigationDestination &&
+               HorizontalDistance(body.ActiveNavigationDestination, destination) <= destinationTolerance;
     }
 
     void ResetCounters()
@@ -672,7 +668,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         _modeStarted = true;
         _startedModeId = modeId;
         _startedAbilityIndex = abilityIndex;
-        Debug.Log($"[CreatureMotorScriptControlTest] EVENT OnModeStart mode={modeId} ability={abilityIndex}");
+        Debug.Log($"[CreatureWorkerScriptControlTest] EVENT OnModeStart mode={modeId} ability={abilityIndex}");
     }
 
     void OnTestModeEnded(int modeId, int abilityIndex)
@@ -680,49 +676,48 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         _modeEnded = true;
         _endedModeId = modeId;
         _endedAbilityIndex = abilityIndex;
-        Debug.Log($"[CreatureMotorScriptControlTest] EVENT OnModeEnd mode={modeId} ability={abilityIndex}");
+        Debug.Log($"[CreatureWorkerScriptControlTest] EVENT OnModeEnd mode={modeId} ability={abilityIndex}");
     }
 
     bool SawExpectedModeStart(ActionCase action)
     {
         return _modeStarted &&
-               _startedModeId == motor.ActionModeId &&
+               _startedModeId == body.ActionModeId &&
                _startedAbilityIndex == action.AbilityIndex;
     }
 
     bool SawExpectedModeEnd(ActionCase action)
     {
         return _modeEnded &&
-               _endedModeId == motor.ActionModeId &&
+               _endedModeId == body.ActionModeId &&
                _endedAbilityIndex == action.AbilityIndex;
     }
 
     void CapturePreparedMode(ActionCase action)
     {
         int expected = ExpectedModeAbility(action);
-        if (motor.animal.ModeAbility != expected)
+        if (body.animal.ModeAbility != expected)
             return;
 
         _modePrepared = true;
-        _preparedModeAbility = motor.animal.ModeAbility;
+        _preparedModeAbility = body.animal.ModeAbility;
     }
 
     int ExpectedModeAbility(ActionCase action)
     {
-        return Mathf.Abs(motor.ActionModeId * 1000) + Mathf.Abs(action.AbilityIndex);
+        return Mathf.Abs(body.ActionModeId * 1000) + Mathf.Abs(action.AbilityIndex);
     }
 
     IEnumerator ForceActionCleanup()
     {
-        board.ClearReflexIntent();
         board.ClearMindIntent();
-        board.SetTacticalCurrent("idle");
+        board.SetMindIntent("idle");
 
-        if (motor.animal.IsPlayingMode)
-            motor.animal.Mode_Stop(true);
+        if (body.animal.IsPlayingMode)
+            body.animal.Mode_Stop(true);
 
-        if (motor.animal.IsPreparingMode)
-            motor.animal.Mode_Interrupt_Forced();
+        if (body.animal.IsPreparingMode)
+            body.animal.Mode_Interrupt_Forced();
 
         motor.Tick();
         yield return new WaitForSeconds(delayBetweenActions);
@@ -733,29 +728,29 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
     {
         float deadline = Time.time + actionReadyTimeout;
         while (Time.time < deadline &&
-               (motor.animal.IsPreparingMode || motor.animal.IsPlayingMode))
+               (body.animal.IsPreparingMode || body.animal.IsPlayingMode))
         {
             yield return null;
         }
 
-        if (motor.animal.IsPreparingMode || motor.animal.IsPlayingMode)
+        if (body.animal.IsPreparingMode || body.animal.IsPlayingMode)
         {
             Debug.LogWarning(
-                $"[CreatureMotorScriptControlTest] Action system still busy {label}: " +
-                $"isPreparing={motor.animal.IsPreparingMode} isPlayingMode={motor.animal.IsPlayingMode}. Forcing interrupt.");
-            motor.animal.Mode_Stop(true);
-            motor.animal.Mode_Interrupt_Forced();
+                $"[CreatureWorkerScriptControlTest] Action system still busy {label}: " +
+                $"isPreparing={body.animal.IsPreparingMode} isPlayingMode={body.animal.IsPlayingMode}. Forcing interrupt.");
+            body.animal.Mode_Stop(true);
+            body.animal.Mode_Interrupt_Forced();
             yield return new WaitForSeconds(delayBetweenActions);
         }
     }
 
     void DetachActionListeners()
     {
-        if (!_actionListenersAttached || motor == null || motor.animal == null)
+        if (!_actionListenersAttached || body == null || body.animal == null)
             return;
 
-        motor.animal.OnModeStart.RemoveListener(OnTestModeStarted);
-        motor.animal.OnModeEnd.RemoveListener(OnTestModeEnded);
+        body.animal.OnModeStart.RemoveListener(OnTestModeStarted);
+        body.animal.OnModeEnd.RemoveListener(OnTestModeEnded);
         _actionListenersAttached = false;
     }
 
@@ -764,28 +759,28 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         if (_actionListenersAttached)
             return;
 
-        motor.animal.OnModeStart.RemoveListener(OnTestModeStarted);
-        motor.animal.OnModeEnd.RemoveListener(OnTestModeEnded);
-        motor.animal.OnModeStart.AddListener(OnTestModeStarted);
-        motor.animal.OnModeEnd.AddListener(OnTestModeEnded);
+        body.animal.OnModeStart.RemoveListener(OnTestModeStarted);
+        body.animal.OnModeEnd.RemoveListener(OnTestModeEnded);
+        body.animal.OnModeStart.AddListener(OnTestModeStarted);
+        body.animal.OnModeEnd.AddListener(OnTestModeEnded);
         _actionListenersAttached = true;
     }
 
     string BuildActionStatus(ActionCase action)
     {
-        var mode = motor.animal.Mode_Get(motor.ActionModeId);
+        var mode = body.animal.Mode_Get(body.ActionModeId);
         if (mode == null)
-            return $"actionModeId={motor.ActionModeId} is not present on MAnimal.modes\n{BuildModesSummary()}";
+            return $"actionModeId={body.ActionModeId} is not present on MAnimal.modes\n{BuildModesSummary()}";
 
         var ability = mode.GetAbility(action.AbilityIndex);
         string abilityInfo = ability == null
             ? $"ability {action.AbilityIndex} is not in Action mode list"
             : $"ability={ability.Name}({ability.Index.Value}) active={ability.Active} status={ability.Status} " +
-              $"blockedByState={mode.StateCanInterrupt(motor.animal.ActiveStateID, ability)} " +
-              $"blockedByStance={mode.StanceCanInterrupt(motor.animal.Stance, ability)}";
+              $"blockedByState={mode.StateCanInterrupt(body.animal.ActiveStateID, ability)} " +
+              $"blockedByStance={mode.StanceCanInterrupt(body.animal.Stance, ability)}";
 
-        string activeMode = motor.animal.ActiveMode != null
-            ? $"{motor.animal.ActiveMode.Name}({motor.animal.ActiveMode.ID.ID})"
+        string activeMode = body.animal.ActiveMode != null
+            ? $"{body.animal.ActiveMode.Name}({body.animal.ActiveMode.ID.ID})"
             : "none";
 
         string abilityIndexes = "";
@@ -802,10 +797,10 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
 
         return
             $"actionMode={mode.Name}({mode.ID.ID}) modeActive={mode.Active} temporal={mode.TemporalActivation} " +
-            $"expectedModeAbility={ExpectedModeAbility(action)} currentModeAbility={motor.animal.ModeAbility} " +
-            $"animalState={motor.animal.ActiveStateID.name}({motor.animal.ActiveStateID.ID}) noModes={motor.animal.ActiveState.NoModes} " +
-            $"stance={(motor.animal.Stance != null ? motor.animal.Stance.name : "null")} " +
-            $"isPreparing={motor.animal.IsPreparingMode} isPlayingMode={motor.animal.IsPlayingMode} activeMode={activeMode}\n" +
+            $"expectedModeAbility={ExpectedModeAbility(action)} currentModeAbility={body.animal.ModeAbility} " +
+            $"animalState={body.animal.ActiveStateID.name}({body.animal.ActiveStateID.ID}) noModes={body.animal.ActiveState.NoModes} " +
+            $"stance={(body.animal.Stance != null ? body.animal.Stance.name : "null")} " +
+            $"isPreparing={body.animal.IsPreparingMode} isPlayingMode={body.animal.IsPlayingMode} activeMode={activeMode}\n" +
             $"{abilityInfo}\n" +
             $"available Action abilities: {abilityIndexes}";
     }
@@ -813,12 +808,12 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
     string BuildModesSummary()
     {
         string summary = "MAnimal modes: ";
-        if (motor.animal.modes == null || motor.animal.modes.Count == 0)
+        if (body.animal.modes == null || body.animal.modes.Count == 0)
             return summary + "<none>";
 
-        for (int i = 0; i < motor.animal.modes.Count; i++)
+        for (int i = 0; i < body.animal.modes.Count; i++)
         {
-            var mode = motor.animal.modes[i];
+            var mode = body.animal.modes[i];
             if (mode == null || mode.ID == null) continue;
             if (i > 0) summary += ", ";
             summary += $"{mode.Name}({mode.ID.ID})";
@@ -830,8 +825,8 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
 
     string BuildStatus(NavMeshAgent agent, Transform controlled, Vector3 destination)
     {
-        string animalState = motor.animal.ActiveStateID != null
-            ? $"{motor.animal.ActiveStateID.name}({motor.animal.ActiveStateID.ID})"
+        string animalState = body.animal.ActiveStateID != null
+            ? $"{body.animal.ActiveStateID.name}({body.animal.ActiveStateID.ID})"
             : "null";
 
         string agentStatus;
@@ -857,25 +852,25 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
         }
 
         string aiStatus =
-            $"aiEnabled={motor.aiControl.isActiveAndEnabled} activeAgent={motor.aiControl.ActiveAgent} " +
-            $"aiReady={motor.aiControl.AIReady} waiting={motor.aiControl.IsWaiting} " +
-            $"blockingState={motor.aiControl.StateIsBlockingAgent} aiMoving={motor.aiControl.IsMoving} " +
-            $"aiDirection={motor.aiControl.AIDirection.ToString("F3")} " +
-            $"aiDestination={motor.aiControl.DestinationPosition.ToString("F3")}";
+            $"aiEnabled={body.aiControl.isActiveAndEnabled} activeAgent={body.aiControl.ActiveAgent} " +
+            $"aiReady={body.aiControl.AIReady} waiting={body.aiControl.IsWaiting} " +
+            $"blockingState={body.aiControl.StateIsBlockingAgent} aiMoving={body.aiControl.IsMoving} " +
+            $"aiDirection={body.aiControl.AIDirection.ToString("F3")} " +
+            $"aiDestination={body.aiControl.DestinationPosition.ToString("F3")}";
 
         string motorNavigationStatus =
-            $"motorNavActive={motor.HasActiveNavigationDestination} " +
-            $"motorNavDestination={motor.ActiveNavigationDestination.ToString("F3")} " +
-            $"manualNav={motor.IsUsingManualNavigation} " +
-            $"manualCorner={motor.ManualNavigationCorner.ToString("F3")} " +
-            $"manualDirection={motor.ManualNavigationDirection.ToString("F3")} " +
+            $"motorNavActive={body.HasActiveNavigationDestination} " +
+            $"motorNavDestination={body.ActiveNavigationDestination.ToString("F3")} " +
+            $"manualNav={body.IsUsingManualNavigation} " +
+            $"manualCorner={body.ManualNavigationCorner.ToString("F3")} " +
+            $"manualDirection={body.ManualNavigationDirection.ToString("F3")} " +
             $"distanceToRequested={(destination == Vector3.zero ? -1f : HorizontalDistance(controlled.position, destination)):F3}";
 
         string animalStatus =
-            $"animalEnabled={motor.animal.isActiveAndEnabled} state={animalState} grounded={motor.animal.Grounded} " +
-            $"sprint={motor.animal.Sprint} movementAxis={motor.animal.MovementAxis.ToString("F3")} " +
-            $"movementRaw={motor.animal.MovementAxisRaw.ToString("F3")} " +
-            $"movementSmooth={motor.animal.MovementAxisSmoothed.ToString("F3")} " +
+            $"animalEnabled={body.animal.isActiveAndEnabled} state={animalState} grounded={body.animal.Grounded} " +
+            $"sprint={body.animal.Sprint} movementAxis={body.animal.MovementAxis.ToString("F3")} " +
+            $"movementRaw={body.animal.MovementAxisRaw.ToString("F3")} " +
+            $"movementSmooth={body.animal.MovementAxisSmoothed.ToString("F3")} " +
             $"controlled={controlled.name} controlledPos={controlled.position.ToString("F3")}";
 
         return $"{animalStatus}\n{aiStatus}\n{motorNavigationStatus}\n{agentStatus}";
@@ -890,7 +885,7 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
     }
 
     Transform ControlledTransform =>
-        motor != null && motor.animal != null ? motor.animal.transform : transform;
+        body != null && body.animal != null ? body.animal.transform : transform;
 
     static float HorizontalDistance(Vector3 a, Vector3 b)
     {
@@ -908,18 +903,18 @@ public class CreatureMotorScriptControlTest : MonoBehaviour
     void Fail(string label, string message)
     {
         _failCount++;
-        Debug.LogError($"[CreatureMotorScriptControlTest] FAIL {label} - {message}");
+        Debug.LogError($"[CreatureWorkerScriptControlTest] FAIL {label} - {message}");
     }
 
     void Pass(string message)
     {
         _passCount++;
-        Debug.Log($"[CreatureMotorScriptControlTest] PASS {message}");
+        Debug.Log($"[CreatureWorkerScriptControlTest] PASS {message}");
     }
 
     void Skip(string label, string message)
     {
         _skipCount++;
-        Debug.LogWarning($"[CreatureMotorScriptControlTest] SKIP {label} - {message}");
+        Debug.LogWarning($"[CreatureWorkerScriptControlTest] SKIP {label} - {message}");
     }
 }

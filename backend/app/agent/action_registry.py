@@ -12,18 +12,12 @@ class ActionDefinition:
 class ActionResult:
     status: str
     action: str
-    x: float = 0.0
-    y: float = 0.0
-    z: float = 0.0
     target: str = ""
 
     def model_dump(self) -> dict[str, Any]:
         return {
             "status": self.status,
             "action": self.action,
-            "x": self.x,
-            "y": self.y,
-            "z": self.z,
             "target": self.target,
         }
 
@@ -78,15 +72,5 @@ class ActionRegistry:
         return ActionResult(
             status="done",
             action=action,
-            x=_as_float(kwargs.get("x")),
-            y=_as_float(kwargs.get("y")),
-            z=_as_float(kwargs.get("z")),
             target=str(kwargs.get("target") or ""),
         )
-
-
-def _as_float(value: Any) -> float:
-    try:
-        return float(value) if value is not None else 0.0
-    except (TypeError, ValueError):
-        return 0.0

@@ -14,10 +14,10 @@ class EmbeddingService:
     EMBEDDING_MODEL=text-embedding-3-small
     """
     def __init__(self, settings: Settings):
-        emb = settings.embedding            
+        emb = settings.embedding
         self._model = emb.model
         self._client = OpenAI(
-            api_key=emb.api_key or settings.llm.api_key or None,
+            api_key=emb.api_key or settings.openai_api_key or settings.llm.api_key or None,
             base_url=emb.base_url or None,
         )
 

@@ -1,5 +1,5 @@
 // AgentBridge.cs — TEST-ONLY legacy harness.
-// Do not attach to production NPC prefabs. Production LLM NPCs use AgentMindBridge.
+// Do not attach to production NPC prefabs. Production LLM NPCs use AgentNetworkManager.
 // Receives HTTP commands from the Python backend and routes them to either:
 //   • MAnimalAIControl + NavMesh  (go_to, follow, wander, stop)
 //   • MInputLink / MAnimal        (button presses, legacy axis)
@@ -109,7 +109,7 @@ public class AgentBridge : MonoBehaviour
     {
         if (HasProductionBridgeInHierarchy())
         {
-            Debug.LogError("[AgentBridge] Test-only AgentBridge is on the same hierarchy as AgentMindBridge. Disabling AgentBridge to avoid dual-control.");
+            Debug.LogError("[AgentBridge] Test-only AgentBridge is on the same hierarchy as AgentNetworkManager. Disabling AgentBridge to avoid dual-control.");
             enabled = false;
             return;
         }
@@ -155,7 +155,7 @@ public class AgentBridge : MonoBehaviour
     bool HasProductionBridgeInHierarchy()
     {
         var root = transform.root;
-        return root.GetComponentInChildren<AgentMindBridge>(true) != null;
+        return root.GetComponentInChildren<AgentNetworkManager>(true) != null;
     }
 
     void Update()

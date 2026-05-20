@@ -139,10 +139,9 @@ public class CreaturePerception : MonoBehaviour
 
         // Update the blackboard with the most relevant (closest) creature found
         // Note: You might want to rename closestPlayer to closestCreature in the Blackboard script
-        _board.closestPlayer         = closestCreature; 
-        _board.closestPlayerDist     = closestCreature != null ? closestDist : Mathf.Infinity;
-        _board.playerInSight         = closestInSight;
-        _board.playerApproachingFast = closestCreature != null && _speedEstimates.GetValueOrDefault(closestCreature) > _config.fastApproachSpeed;
+        _board.closestPlayer     = closestCreature;
+        _board.closestPlayerDist = closestCreature != null ? closestDist : Mathf.Infinity;
+        _board.playerInSight     = closestInSight;
 
         CleanupOldPositions(seenThisFrame);
 
@@ -224,9 +223,6 @@ public class CreaturePerception : MonoBehaviour
     {
         float dist = Vector3.Distance(_self.position, soundPos);
         if (dist > _config.hearingRange) return;
-
-        _board.lastHeardSoundDir  = (soundPos - _self.position).normalized;
-        _board.lastHeardSoundTime = Time.time;
 
         EmitEvent(SensoryEvent.SenseType.SoundHeard, null, Mathf.Clamp01(loudness * (1f - dist / _config.hearingRange)), "Sound");
     }

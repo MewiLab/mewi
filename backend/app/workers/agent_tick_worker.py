@@ -4,6 +4,7 @@ from contextlib import suppress
 from typing import Any
 
 from app.agent.creature_runtime import CreatureRuntime
+from app.agent.prompt_loader import DEFAULT_PERSONA_KEY, normalize_creature_id
 from app.services.agent_tick_service import AgentTickService
 
 logger = logging.getLogger(__name__)
@@ -12,9 +13,16 @@ logger = logging.getLogger(__name__)
 class AgentTickWorker:
     """Consumes queued tick jobs and runs them through the shared behavior graph."""
 
-    def __init__(self, service: AgentTickService, graph: Any):
+    def __init__(
+        self,
+        service: AgentTickService,
+        graph: Any,
+        personas: dict[str, str] | None = None,
+    ):
         self._service = service
         self._graph = graph
+        self._personas = personas or {}
+        self._default_persona = self._personas.get(DEFAULT_PERSONA_KEY, "")
         self._runtimes: dict[str, CreatureRuntime] = {}
         self._running = False
 
@@ -47,14 +55,19 @@ class AgentTickWorker:
         try:
             runtime = self._runtimes.get(creature_id)
             if runtime is None:
-                runtime = CreatureRuntime()
+                runtime = CreatureRuntime(persona=self._persona_for(creature_id))
                 self._runtimes[creature_id] = runtime
-                logger.info("Created CreatureRuntime for creature_id=%s", creature_id)
+                logger.info(
+                    "Created CreatureRuntime for creature_id=%s persona=%s",
+                    creature_id,
+                    self._persona_key_for(creature_id),
+                )
             result = await self._graph.ainvoke(runtime.state_for_tick(creature_id, payload))
             await self._service.publish_result(creature_id, job_id, {
                 "request_id": job.get("request_id", ""),
                 "tick": result.get("tick"),
                 "action_result": result.get("action_result"),
+                "plan_steps": result.get("plan_steps", []),
                 "reasoning": result.get("reasoning", ""),
             })
             return True
@@ -69,3 +82,10 @@ class AgentTickWorker:
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
+
+    def _persona_for(self, creature_id: str) -> str:
+        return self._personas.get(self._persona_key_for(creature_id), self._default_persona)
+
+    @staticmethod
+    def _persona_key_for(creature_id: str) -> str:
+        return normalize_creature_id(creature_id)

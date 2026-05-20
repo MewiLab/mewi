@@ -4,7 +4,7 @@
 // blackboard, summarises them down to the most informative slice, and writes
 // the wire-format entity list to the snapshot.
 //
-// Filtering policy (was previously inside AgentMindBridge):
+// Filtering policy (was previously inside AgentNetworkManager):
 //   - Sort by descending intensity (closest/loudest first).
 //   - Cap per category so one noisy group can't crowd out the rest.
 //   - Take the top N after capping.

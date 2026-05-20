@@ -6,8 +6,6 @@ from app.models.tick import (
     SelfState,
     SpatialContext,
     TickPayload,
-    TickJobResponse,
-    TickSubmitResponse,
     ZoneEntry,
 )
 
@@ -19,7 +17,5 @@ __all__ = [
     "SelfState",
     "SpatialContext",
     "TickPayload",
-    "TickJobResponse",
-    "TickSubmitResponse",
     "ZoneEntry",
 ]

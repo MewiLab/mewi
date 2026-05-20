@@ -13,6 +13,52 @@ class LLMProvider(Protocol):
     """
     def invoke(self, messages: list[BaseMessage], **kwargs: Any) -> BaseMessage: ...
     async def ainvoke(self, messages: list[BaseMessage], **kwargs: Any) -> BaseMessage: ...
+
+
+def describe_llm_provider(settings=None) -> dict[str, Any]:
+    """
+    Return a safe, loggable description of the active LLM provider.
+
+    This intentionally never returns the raw API key.
+    """
+    if settings is None:
+        from app.core.config import get_settings
+        settings = get_settings().llm
+
+    api_key_status = "set" if settings.api_key else "missing"
+    if settings.provider == "ollama" and settings.api_key == "ollama":
+        api_key_status = "placeholder"
+
+    return {
+        "provider": settings.provider,
+        "model": settings.model,
+        "base_url": settings.base_url or "<provider default>",
+        "temperature": settings.temperature,
+        "max_tokens": settings.max_tokens,
+        "timeout": settings.timeout,
+        "api_key": api_key_status,
+    }
+
+
+def log_llm_provider_selection(settings=None, target_logger: logging.Logger | None = None) -> dict[str, Any]:
+    """
+    Log the active LLM provider and return the same safe summary for callers
+    that want to expose it via app.state or diagnostics.
+    """
+    summary = describe_llm_provider(settings)
+    log = target_logger or logger
+    log.info(
+        "LLM provider selected: provider=%s model=%s base_url=%s api_key=%s temperature=%s max_tokens=%s timeout=%s",
+        summary["provider"],
+        summary["model"],
+        summary["base_url"],
+        summary["api_key"],
+        summary["temperature"],
+        summary["max_tokens"],
+        summary["timeout"],
+    )
+    return summary
+
     
 def create_llm_provider(settings=None) -> LLMProvider:
     if settings is None:
@@ -20,7 +66,12 @@ def create_llm_provider(settings=None) -> LLMProvider:
         settings = get_settings().llm
     
     provider = settings.provider
-    logger.info("Creating LLM provider: %s / %s", provider, settings.model)
+    logger.info(
+        "Creating LLM provider: provider=%s model=%s base_url=%s",
+        provider,
+        settings.model,
+        settings.base_url or "<provider default>",
+    )
     
     if provider in ("openai", "anthropic"):
         return _make_langchain_provider(settings)
@@ -54,27 +105,26 @@ def _make_langchain_provider(settings) -> LLMProvider:
     
     if settings.provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
-        return ChatAnthropic(
+        kwargs: dict[str, Any] = dict(
             api_key=settings.api_key or None,
             model=settings.model,
             temperature=settings.temperature,
             max_tokens=settings.max_tokens,
         )
+        if settings.base_url:
+            kwargs["base_url"] = settings.base_url
+        return ChatAnthropic(**kwargs)
         
     raise ValueError(settings.provider)
 
     
 def _make_ollama_provider(settings) -> LLMProvider:
     from langchain_openai import ChatOpenAI
-    # Ensure the base_url ends with /v1 (Ollama's OpenAI-compatible path).
-    # LLM_BASE_URL (e.g. an ngrok tunnel) is used as-is when set; the config
-    # validator already appended /v1 to the localhost default.
+    # Config already normalizes the base_url to Ollama's OpenAI-compatible /v1 path.
     base = settings.base_url.rstrip("/")
-    if not base.endswith("/v1"):
-        base = f"{base}/v1"
     logger.info("Ollama base_url resolved to: %s", base)
     return ChatOpenAI(
-        api_key="ollama",           # Ollama ignores the key but the field is required
+        api_key=settings.api_key or "ollama",
         base_url=base,
         model=settings.model,
         temperature=settings.temperature,

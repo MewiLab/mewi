@@ -4,33 +4,32 @@
     Modes:
       Simulated — rule-based mood + intent, fully local.
       LLM       — every tick:
-                    1. consume any pending response from the bridge
+                    1. consume any pending response plan from the bridge
                     2. build a fresh snapshot via SnapshotManager
-                    3. hand it to AgentMindBridge.SendTick (latest-wins backpressure)
+                    3. hand it to AgentNetworkManager.SendTick when no plan is running
                   mood decay still runs each tick so it never freezes between replies.
 
     Responsibility split (Option A — orchestrator-knows-all):
       PeriodicMind    — WHEN  (timer, owns the loop)
       SnapshotManager — WHAT  (channel registry → JSON)
-      AgentMindBridge — HOW   (POST + poll + parse, async)
+      AgentNetworkManager — HOW   (websocket + parse, async)
 
-    PeriodicMind is the sole writer to CreatureBlackboard.SetMindIntent().
+    PeriodicMind is the sole writer to CreatureBlackboard's mind plan queue.
 */
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum MindMode { Simulated, LLM }
 
-[RequireComponent(typeof(AgentMindBridge))]
-[RequireComponent(typeof(HttpActionReporter))]
+[RequireComponent(typeof(AgentNetworkManager))]
 public class PeriodicMind : MonoBehaviour
 {
     CreatureBlackboard _board;
     CreatureConfig     _config;
-    [SerializeField] AgentMindBridge _bridge;
+    [SerializeField] AgentNetworkManager _bridge;
     [SerializeField] SnapshotManager _snapshotManager;
-    [SerializeField] NamedTargetRegistry _targetRegistry;
-    [SerializeField] HttpActionReporter _reporter;
+    [SerializeField] CreatureWorker _worker;
 
     [Header("Mind Mode")]
     public MindMode mode = MindMode.Simulated;
@@ -43,17 +42,15 @@ public class PeriodicMind : MonoBehaviour
     int  _commandCounter;
     int  _lastObservedBridgeFailureCount;
     string _lastRequestId = "";
+    PlanExecutionReport _pendingPlanReport;
 
     public void Init(CreatureBlackboard board, CreatureConfig config)
     {
         _board  = board;
         _config = config;
-        if (_bridge == null)          _bridge          = GetComponent<AgentMindBridge>();
+        if (_bridge == null)          _bridge          = GetComponent<AgentNetworkManager>();
         if (_snapshotManager == null) _snapshotManager = GetComponent<SnapshotManager>();
-        if (_targetRegistry == null)  _targetRegistry  = FindFirstObjectByType<NamedTargetRegistry>();
-        if (_reporter == null)        _reporter        = GetComponent<HttpActionReporter>();
-        if (_reporter != null && _bridge != null)
-            _reporter.UseConfig(_bridge.config);
+        if (_worker == null)          _worker          = GetComponent<CreatureWorker>();
 
         if (logLLMTicks)
         {
@@ -65,7 +62,7 @@ public class PeriodicMind : MonoBehaviour
         if (mode == MindMode.LLM)
         {
             if (_bridge == null)
-                Debug.LogError("[PeriodicMind] LLM mode needs AgentMindBridge on the same GameObject.");
+                Debug.LogError("[PeriodicMind] LLM mode needs AgentNetworkManager on the same GameObject.");
             if (_snapshotManager == null)
                 Debug.LogError("[PeriodicMind] LLM mode needs SnapshotManager on the same GameObject.");
         }
@@ -173,106 +170,141 @@ public class PeriodicMind : MonoBehaviour
     }
 
     /*
-        // 1. Drain any response the bridge has waiting.
-        // 2. Build a fresh snapshot and hand it off. If the bridge is still
+        // 1. Drain any completed backend plan.
+        // 2. Let the motor finish the queued plan before asking the backend
+        //    for another one.
+        // 3. Build a fresh snapshot and hand it off. If the bridge is still
         //    waiting on the backend, it will drop this tick and keep polling.
     */
     void TickLLM()
     {
         if (_bridge == null || _snapshotManager == null)
         {
-            Debug.LogWarning("[PeriodicMind] LLM tick skipped: missing AgentMindBridge or SnapshotManager.");
+            Debug.LogWarning("[PeriodicMind] LLM tick skipped: missing AgentNetworkManager or SnapshotManager.");
             return;
         }
 
-        if (_bridge.TryConsume(out var intent))
-            ApplyLLMResponse(intent);
+        if (_bridge.TryConsumePlan(out var plan))
+            ApplyLLMPlan(plan);
+
+        if (_board.TryPopPlanExecutionReport(out var completedReport))
+            _pendingPlanReport = completedReport;
+
+        bool bodyBusy = _worker != null && _worker.IsBusy;
+        if (_board.HasMindPlan || bodyBusy)
+        {
+            if (logLLMTicks)
+            {
+                IntentMessage? current = _board.MindIntent;
+                string currentIntent = current.HasValue ? current.Value.Intent : "none";
+                Debug.Log($"[PeriodicMind] waiting for local plan current={currentIntent} queued={_board.QueuedMindIntentCount} bodyBusy={bodyBusy}");
+            }
+            LogBridgeFailures();
+            return;
+        }
 
         string requestId = $"t{_tickCounter++:X8}";
         _lastRequestId   = requestId;
-        string json      = _snapshotManager.BuildJson(requestId);
+        SnapshotPayload payload = _snapshotManager.BuildPayload(requestId);
         if (logLLMTicks)
-            Debug.Log($"[PeriodicMind] LLM tick requestId={requestId} bytes={json.Length}");
-        _bridge.SendTick(_board.CreatureId, json);
+            Debug.Log($"[PeriodicMind] LLM tick requestId={requestId} previousReport={(_pendingPlanReport != null ? _pendingPlanReport.status : "none")}");
+        if (_bridge.SendTick(_board.CreatureId, payload, _pendingPlanReport))
+            _pendingPlanReport = null;
 
         LogBridgeFailures();
     }
 
-    void ApplyLLMResponse(AgentMindBridge.LLMIntent intent)
+    void ApplyLLMPlan(AgentNetworkManager.LLMPlan plan)
     {
-        if (intent == null || string.IsNullOrWhiteSpace(intent.intent))
+        if (plan == null || plan.steps == null || plan.steps.Length == 0)
             return;
 
-        string action = intent.intent.Trim().ToLowerInvariant();
-        string targetKey = NormalizeKey(intent.targetKey);
-        Vector3 destination = intent.destination;
-        Transform resolvedTarget = null;
+        string requestId = string.IsNullOrWhiteSpace(plan.requestId) ? _lastRequestId : plan.requestId;
+        var messages = new List<IntentMessage>(plan.steps.Length);
 
-        if (!string.IsNullOrWhiteSpace(targetKey))
+        for (int i = 0; i < plan.steps.Length; i++)
         {
-            if (_targetRegistry == null || !_targetRegistry.TryResolve(targetKey, out resolvedTarget))
+            var step = plan.steps[i];
+            if (!TryBuildMindIntent(step, requestId, out var message, out string rejectedReason))
             {
-                Report("", action, "rejected", $"unknown target '{targetKey}'");
-                Debug.LogWarning($"[Mind/LLM] rejected {action}: unknown target '{targetKey}'");
-                return;
+                Debug.LogWarning($"[Mind/LLM] rejected plan step {i}: {rejectedReason}");
+                continue;
             }
 
-            if (action == "go_to")
-                destination = resolvedTarget.position;
+            messages.Add(message);
         }
 
-        if (action == "follow" && resolvedTarget == null)
+        if (messages.Count == 0)
         {
-            Report("", action, "rejected", "follow requires a named target");
-            Debug.LogWarning("[Mind/LLM] rejected follow: missing target");
+            if (logLLMTicks)
+                Debug.LogWarning("[Mind/LLM] backend plan had no executable steps");
             return;
         }
 
-        if (action == "go_to" && resolvedTarget == null && destination == Vector3.zero)
-        {
-            Report("", action, "rejected", "go_to requires a target or non-zero destination");
-            Debug.LogWarning("[Mind/LLM] rejected go_to: missing target and destination");
-            return;
-        }
+        _board.ReplaceMindPlan(messages);
 
-        var previous = _board.MindIntent;
-        if (IsDuplicate(previous, action, targetKey, destination))
-            return;
-
-        if (previous.HasValue && !string.IsNullOrEmpty(previous.Value.CommandId))
-            Report(
-                previous.Value.CommandId,
-                previous.Value.Intent,
-                "cancelled",
-                "replaced by newer LLM command",
-                previous.Value.RequestId);
-
-        string commandId = $"{_board.CreatureId}:{_commandCounter++:X8}";
-
-        // LLM-only phase: do not let old tactical decisions mask accepted LLM commands.
-        _board.ClearTacticalIntent();
-        _board.followTarget = action == "follow" ? resolvedTarget : null;
-        _board.SetMindIntent(action, destination, commandId, _lastRequestId, targetKey);
-
-        Report(commandId, action, "accepted", "");
-        Debug.Log($"[Mind/LLM] accepted {action} ({commandId})");
+        if (logLLMTicks)
+            Debug.Log($"[Mind/LLM] queued {messages.Count} step(s): {PlanSummary(messages)}");
     }
 
-    bool IsDuplicate(IntentMessage? current, string action, string targetKey, Vector3 destination)
+    bool TryBuildMindIntent(
+        AgentNetworkManager.LLMIntent step,
+        string requestId,
+        out IntentMessage message,
+        out string rejectedReason)
     {
-        if (!current.HasValue || !current.Value.IsActive) return false;
+        message = default;
+        rejectedReason = "";
 
-        var existing = current.Value;
-        if (!string.Equals(existing.Intent, action, System.StringComparison.OrdinalIgnoreCase))
+        if (step == null)
+        {
+            rejectedReason = "missing step";
             return false;
+        }
 
-        if (!string.Equals(NormalizeKey(existing.TargetKey), targetKey, System.StringComparison.OrdinalIgnoreCase))
+        string action = NormalizeAction(step.intent);
+        string targetKey = NormalizeKey(step.targetKey);
+
+        if (string.IsNullOrWhiteSpace(action))
+        {
+            rejectedReason = "missing action";
             return false;
+        }
 
-        return Vector3.SqrMagnitude(existing.DirectionHint - destination) < 0.01f;
+        string commandId = $"{_board.CreatureId}:{_commandCounter++:X8}";
+        message = IntentMessage.Create(
+            action,
+            LayerSource.Mind,
+            -1f,
+            step.destination,
+            commandId,
+            requestId,
+            targetKey);
+        return true;
+    }
+
+    static string NormalizeAction(string action)
+    {
+        if (string.IsNullOrWhiteSpace(action)) return "";
+        action = action.Trim().ToLowerInvariant();
+        if (action == "wait") return "idle";
+        if (action == "stop") return "stop_moving";
+        if (action == "move") return "go_to";
+        return action;
     }
 
     static string NormalizeKey(string key) => string.IsNullOrWhiteSpace(key) ? "" : key.Trim();
+
+    static string PlanSummary(List<IntentMessage> messages)
+    {
+        var parts = new List<string>(messages.Count);
+        foreach (var message in messages)
+        {
+            string target = string.IsNullOrWhiteSpace(message.TargetKey) ? "" : $"->{message.TargetKey}";
+            parts.Add($"{message.Intent}{target}");
+        }
+        return string.Join(", ", parts);
+    }
 
     void LogBridgeFailures()
     {
@@ -283,22 +315,6 @@ public class PeriodicMind : MonoBehaviour
 
         Debug.LogWarning($"[PeriodicMind] observed {failed - _lastObservedBridgeFailureCount} new LLM bridge failure(s); total={failed}");
         _lastObservedBridgeFailureCount = failed;
-    }
-
-    void Report(string commandId, string action, string status, string reason, string requestId = null)
-    {
-        if (_reporter == null || _board == null) return;
-
-        _reporter.Report(new ActionReport
-        {
-            agent_id  = _board.CreatureId,
-            commandId = commandId ?? "",
-            requestId = requestId ?? _lastRequestId,
-            action    = action ?? "",
-            status    = status,
-            reason    = reason ?? "",
-            time      = Time.time,
-        });
     }
 
     string SelectIntentLocal(MoodModel mood)

@@ -77,9 +77,17 @@ class TestEmbedText:
 class TestEmbeddingServiceInit:
     def test_falls_back_to_llm_key_when_embedding_key_empty(self, settings):
         settings.embedding.api_key = ""
+        settings.openai_api_key = ""
         settings.llm.api_key = "llm-key-123"
         svc = EmbeddingService(settings)
         assert svc._client.api_key == "llm-key-123"
+
+    def test_prefers_openai_key_before_llm_key(self, settings):
+        settings.embedding.api_key = ""
+        settings.openai_api_key = "openai-key-123"
+        settings.llm.api_key = "llm-key-456"
+        svc = EmbeddingService(settings)
+        assert svc._client.api_key == "openai-key-123"
 
     def test_uses_embedding_key_when_set(self, settings):
         settings.embedding.api_key = "emb-key-456"

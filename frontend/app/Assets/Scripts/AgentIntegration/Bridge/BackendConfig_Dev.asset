@@ -18,3 +18,4 @@ MonoBehaviour:
   pollIntervalSeconds: 1.5
   maxPollAttempts: 20
   requestTimeoutSeconds: 30
+  websocketResponseTimeoutSeconds: 0

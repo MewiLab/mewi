@@ -7,12 +7,9 @@ public class CreatureController : MonoBehaviour
     public CreatureConfig  config;
     CreatureBlackboard     _board;
     CreaturePerception     _perception;
-    CreatureReflexRunner   _reflex;
-    CreatureBrain          _brain;
     PeriodicMind           _mind;
-    CreatureMotor          _motor;
+    CreatureWorker         _worker;
     CreatureAgent          _agent;
-    AgentMindBridge        _mindBridge;
     SnapshotManager        _snapshot;
     SmartZoneTracker       _zoneTracker;
     ZoneScanner            _zoneScanner;
@@ -25,12 +22,9 @@ public class CreatureController : MonoBehaviour
     {
         _board       = GetComponent<CreatureBlackboard>();
         _perception  = GetComponent<CreaturePerception>();
-        _reflex      = GetComponent<CreatureReflexRunner>();
-        _brain       = GetComponent<CreatureBrain>();
         _mind        = GetComponent<PeriodicMind>();
-        _motor       = GetComponent<CreatureMotor>();
+        _worker      = GetComponent<CreatureWorker>();
         _agent       = GetComponent<CreatureAgent>();
-        _mindBridge  = GetComponent<AgentMindBridge>();
         _snapshot    = GetComponent<SnapshotManager>();
         _zoneTracker = GetComponent<SmartZoneTracker>();
         _zoneScanner = GetComponent<ZoneScanner>();
@@ -50,10 +44,8 @@ public class CreatureController : MonoBehaviour
         }
 
         if (_perception != null)  _perception.Init(_board, config);
-        if (_reflex != null)      _reflex.Init(_board, config);
-        if (_brain != null)       _brain.Init(_board, config);
         if (_mind != null)        _mind.Init(_board, config);
-        if (_motor != null)       _motor.Init(_board, config);
+        if (_worker != null)      _worker.Init(_board);
         if (_agent != null)       _agent.Init(_board);
         if (_snapshot != null)    _snapshot.Init(_board);
         if (_zoneTracker != null) _zoneTracker.Init(_board);
@@ -71,17 +63,11 @@ public class CreatureController : MonoBehaviour
 
     void Update()
     {
-        _board.ClearFrameFlags();
         _board.ScoreDrives();
 
         if (_perception != null)  _perception.Tick();
         if (_zoneScanner != null) _zoneScanner.Tick();
-
-        bool llmOnly = _mind != null && _mind.mode == MindMode.LLM;
-        if (!llmOnly && _reflex != null) _reflex.Tick();
-        if (!llmOnly && _brain != null)  _brain.Tick();
-
-        if (_motor != null)       _motor.Tick();
+        if (_worker != null)      _worker.Tick();
 
         _board.UpdateDebugDisplay();
     }

@@ -1,9 +1,10 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
 // ScriptableObject holding all connection parameters for the Mewi backend.
 // Create separate assets per environment (BackendConfig_Dev, BackendConfig_Prod)
-// and swap the reference on AgentMindBridge in the Inspector.
+// and swap the reference on AgentNetworkManager in the Inspector.
 // Unity only ever needs to know one URL — the base. Routes live in ApiRoutes.cs.
 [CreateAssetMenu(fileName = "BackendConfig_Dev", menuName = "Mewi/Backend Config")]
 public class BackendConfig : ScriptableObject
@@ -27,6 +28,9 @@ public class BackendConfig : ScriptableObject
     [Tooltip("Per-request timeout in seconds. 0 = no timeout.")]
     public float requestTimeoutSeconds = 30f;
 
+    [Tooltip("WebSocket response timeout in seconds. 0 = wait until backend replies or socket closes.")]
+    public float websocketResponseTimeoutSeconds = 0f;
+
     public void ApplyAuth(UnityWebRequest request)
     {
         if (request == null) return;
@@ -34,5 +38,15 @@ public class BackendConfig : ScriptableObject
         if (string.IsNullOrWhiteSpace(apiKey)) return;
 
         request.SetRequestHeader(apiKeyHeader, apiKey);
+    }
+
+    public Dictionary<string, string> BuildAuthHeaders()
+    {
+        var headers = new Dictionary<string, string>();
+        if (string.IsNullOrWhiteSpace(apiKeyHeader)) return headers;
+        if (string.IsNullOrWhiteSpace(apiKey)) return headers;
+
+        headers[apiKeyHeader] = apiKey;
+        return headers;
     }
 }

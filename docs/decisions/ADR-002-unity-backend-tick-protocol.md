@@ -1,6 +1,6 @@
 # ADR-002: Unity ↔ Backend Tick Protocol (Async Job + Poll)
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-004 for the Unity runtime
 - **Date:** 2026-05-18
 - **Scope:** `backend/app/api/routes/agent_router.py`, `backend/app/services/agent_tick_service.py`, `backend/app/workers/agent_tick_worker.py`
 
@@ -88,8 +88,8 @@ TTL'd by `agent_status_ttl` (default 300 s) so the store self-cleans.
 |----------------------------------|--------|-----------------------------------------------|
 | `agent:jobs`                     | LIST   | FIFO job queue consumed by the worker (BLPOP) |
 | `agent:job:{job_id}`             | STRING | JSON job row (input + status + result)        |
-| `agent:status:{creature_id}`     | STRING | Latest status per creature                    |
-| `agent:latest_job:{creature_id}` | STRING | Most recent job_id per creature               |
+| `agent:status:{creature_id}`     | STRING | Deprecated; no longer written by the websocket runtime |
+| `agent:latest_job:{creature_id}` | STRING | Deprecated; no longer written by the websocket runtime |
 
 ## Consequences
 

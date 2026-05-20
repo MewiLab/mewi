@@ -1,51 +1,135 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
-from pydantic import model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+ENV_FILE = BACKEND_DIR / ".env"
+
+LLMProviderName = Literal["openai", "anthropic", "ollama", "openrouter", "groq"]
+
+_LLM_DEFAULTS: dict[str, dict[str, str]] = {
+    "openai": {
+        "model": "gpt-4o-mini",
+        "api_key": "",
+        "base_url": "",
+    },
+    "anthropic": {
+        "model": "claude-3-5-sonnet-latest",
+        "api_key": "",
+        "base_url": "",
+    },
+    "ollama": {
+        "model": "llama3.1",
+        "api_key": "ollama",
+        "base_url": "http://localhost:11434/v1",
+    },
+    "openrouter": {
+        "model": "openai/gpt-4o-mini",
+        "api_key": "",
+        "base_url": "https://openrouter.ai/api/v1",
+    },
+    "groq": {
+        "model": "llama-3.3-70b-versatile",
+        "api_key": "",
+        "base_url": "https://api.groq.com/openai/v1",
+    },
+}
+
 
 class LLMSettings(BaseSettings):
     """
-    All LLM config in one place. Switch provider with a single env var.
-    Examples (.env):
-        LLM_PROVIDER=openai
-        LLM_PROVIDER=ollama        LLM_BASE_URL=http://localhost:11434
-        LLM_PROVIDER=openrouter    LLM_API_KEY=sk-or-...  LLM_MODEL=anthropic/claude-sonnet-4-5
+    Active LLM config.
+
+    Switch providers with LLM_PROVIDER. Keep provider-specific values in
+    LLM_OPENAI_*, LLM_OLLAMA_*, LLM_OPENROUTER_*, etc. The generic
+    LLM_MODEL / LLM_API_KEY / LLM_BASE_URL remain as optional active-provider
+    overrides, but provider-specific values win when present.
     """
     model_config = SettingsConfigDict(
-        env_prefix="LLM_", 
-        env_file=".env", 
-        extra="ignore"
+        env_prefix="LLM_",
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+        str_strip_whitespace=True,
     )
 
-    provider: Literal["openai", "anthropic", "ollama", "openrouter", "groq"] = "openai"
-    model: str = "gpt-4-turbo"  # Updated to a valid default model
+    provider: LLMProviderName = "openai"
+
+    # Optional active-provider overrides.
+    model: str = ""
     api_key: str = ""
-    base_url: str = ""          # Override via LLM_BASE_URL in .env
+    base_url: str = ""
+
     temperature: float = 0.0
     max_tokens: int = 1024
     timeout: float = 30.0
 
+    # Provider-specific blocks. These let you switch only LLM_PROVIDER.
+    openai_model: str = _LLM_DEFAULTS["openai"]["model"]
+    openai_api_key: str = ""
+    openai_base_url: str = ""
+
+    anthropic_model: str = _LLM_DEFAULTS["anthropic"]["model"]
+    anthropic_api_key: str = ""
+    anthropic_base_url: str = ""
+
+    ollama_model: str = _LLM_DEFAULTS["ollama"]["model"]
+    ollama_api_key: str = _LLM_DEFAULTS["ollama"]["api_key"]
+    ollama_base_url: str = _LLM_DEFAULTS["ollama"]["base_url"]
+
+    openrouter_model: str = _LLM_DEFAULTS["openrouter"]["model"]
+    openrouter_api_key: str = ""
+    openrouter_base_url: str = _LLM_DEFAULTS["openrouter"]["base_url"]
+
+    groq_model: str = _LLM_DEFAULTS["groq"]["model"]
+    groq_api_key: str = ""
+    groq_base_url: str = _LLM_DEFAULTS["groq"]["base_url"]
+
+    @field_validator("provider", mode="before")
+    @classmethod
+    def _normalize_provider(cls, value):
+        return value.strip().lower() if isinstance(value, str) else value
+
     @model_validator(mode="after")
-    def _set_defaults(self):
-        """Fill in sensible base_url defaults so callers never have to."""
-        if self.provider == "ollama" and not self.base_url:
-            self.base_url = "http://localhost:11434/v1"
-        if self.provider == "openrouter" and not self.base_url:
-            self.base_url = "https://openrouter.ai/api/v1"
-        if self.provider == "groq" and not self.base_url:
-            self.base_url = "https://api.groq.com/openai/v1"
+    def _resolve_active_provider(self):
+        """Copy the selected provider block into model/api_key/base_url."""
+        defaults = _LLM_DEFAULTS[self.provider]
+
+        provider_model = getattr(self, f"{self.provider}_model", "")
+        provider_api_key = getattr(self, f"{self.provider}_api_key", "")
+        provider_base_url = getattr(self, f"{self.provider}_base_url", "")
+
+        self.model = provider_model or self.model or defaults["model"]
+        self.base_url = provider_base_url or self.base_url or defaults["base_url"]
+
+        if self.provider == "ollama":
+            self.api_key = provider_api_key or defaults["api_key"]
+            self.base_url = self._normalize_ollama_base_url(self.base_url)
+        else:
+            self.api_key = provider_api_key or self.api_key or defaults["api_key"]
+
         return self
+
+    @staticmethod
+    def _normalize_ollama_base_url(base_url: str) -> str:
+        base = (base_url or _LLM_DEFAULTS["ollama"]["base_url"]).rstrip("/")
+        return base if base.endswith("/v1") else f"{base}/v1"
 
 
 class EmbeddingSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="EMBEDDING_",
-        env_file=".env",
-        extra="ignore"
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+        str_strip_whitespace=True,
     )
 
+    provider: Literal["openai", "openrouter", "custom"] = "openai"
     model:    str = "text-embedding-3-small"
-    api_key:  str = ""        # falls back to LLM_API_KEY if empty
+    api_key:  str = ""        # falls back to OPENAI_API_KEY, then active LLM key
     base_url: str = ""        # leave empty for OpenAI default
 
 
@@ -56,8 +140,10 @@ class LangSmithSettings(BaseSettings):
     """
     model_config = SettingsConfigDict(
         env_prefix="LANGSMITH_",
-        env_file=".env",
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
         extra="ignore",
+        str_strip_whitespace=True,
     )
 
     tracing:  bool = False
@@ -68,9 +154,10 @@ class LangSmithSettings(BaseSettings):
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env", 
-        env_file_encoding="utf-8", 
-        extra="ignore"
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+        str_strip_whitespace=True,
     )
 
     env: str = "production"
@@ -97,16 +184,16 @@ class Settings(BaseSettings):
     log_max_bytes: int = 5_000_000         # 5 MB
     log_backup_count: int = 3
     
-    # Ollama
+    # Legacy compatibility; prefer LLM_OLLAMA_BASE_URL now.
     ollama_base_url: str = ""
 
     # OpenAI API key fallback for services that need a real embedding key
     openai_api_key: str = ""
 
     # Nested LLM Config
-    llm: LLMSettings = LLMSettings()
-    embedding: EmbeddingSettings = EmbeddingSettings()
-    langsmith: LangSmithSettings = LangSmithSettings()
+    llm: LLMSettings = Field(default_factory=LLMSettings)
+    embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
+    langsmith: LangSmithSettings = Field(default_factory=LangSmithSettings)
     
     # Auth
     API_SECRET_TOKEN: str = "dev-secret-change-me"
@@ -119,6 +206,27 @@ class Settings(BaseSettings):
     # Workers
     agent_worker_interval: float = 10.0       # seconds between agent ticks
     microlog_worker_interval: float = 30.0    # seconds between embedding batches
+
+    # Agent prompts
+    agent_persona: str = "cat"
+    agent_personas: str = "default:cat,mewi:cat,sora:sora,miso:miso"
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def _parse_debug(cls, value):
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"1", "true", "yes", "on", "debug", "dev", "development"}:
+                return True
+            if normalized in {"0", "false", "no", "off", "release", "prod", "production"}:
+                return False
+        return value
+
+    @model_validator(mode="after")
+    def _apply_cross_setting_fallbacks(self):
+        if self.llm.provider == "openai" and not self.llm.api_key:
+            self.llm.api_key = self.openai_api_key
+        return self
 
 
 @lru_cache

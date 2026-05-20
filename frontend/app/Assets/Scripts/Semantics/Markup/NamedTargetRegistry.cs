@@ -16,8 +16,19 @@ public class NamedTargetRegistry : MonoBehaviour
     }
 
     [SerializeField] List<Entry> entries = new List<Entry>();
+    [SerializeField] bool autoRegisterSmartObjects = true;
+    [SerializeField] bool fallbackToGameObjectName = true;
 
     Dictionary<string, Transform> _map;
+
+    public IReadOnlyCollection<string> KnownKeys
+    {
+        get
+        {
+            if (_map == null) Rebuild();
+            return _map.Keys;
+        }
+    }
 
     void Awake()
     {
@@ -33,9 +44,30 @@ public class NamedTargetRegistry : MonoBehaviour
     {
         if (_map == null) Rebuild();
         target = null;
-        return !string.IsNullOrWhiteSpace(key)
-            && _map.TryGetValue(key.Trim(), out target)
-            && target != null;
+        if (string.IsNullOrWhiteSpace(key))
+            return false;
+
+        string normalized = key.Trim();
+        if (_map.TryGetValue(normalized, out target) && target != null)
+            return true;
+
+        if (autoRegisterSmartObjects)
+        {
+            Rebuild();
+            if (_map.TryGetValue(normalized, out target) && target != null)
+                return true;
+        }
+
+        if (!fallbackToGameObjectName)
+            return false;
+
+        GameObject found = GameObject.Find(normalized);
+        if (found == null)
+            return false;
+
+        target = found.transform;
+        _map[normalized] = target;
+        return true;
     }
 
     void Rebuild()
@@ -46,7 +78,32 @@ public class NamedTargetRegistry : MonoBehaviour
             if (entry == null || entry.target == null || string.IsNullOrWhiteSpace(entry.key))
                 continue;
 
-            _map[entry.key.Trim()] = entry.target;
+            Register(entry.key, entry.target);
         }
+
+        if (!autoRegisterSmartObjects) return;
+
+        var smartObjects = FindObjectsByType<SmartObject>(FindObjectsSortMode.None);
+        foreach (var smartObject in smartObjects)
+        {
+            if (smartObject == null) continue;
+
+            Transform target = smartObject.perceptionCenter != null
+                ? smartObject.perceptionCenter
+                : smartObject.transform;
+
+            Register(smartObject.Label, target);
+            Register(smartObject.gameObject.name, target);
+            if (smartObject.transform.parent != null)
+                Register(smartObject.transform.parent.name, smartObject.transform.parent);
+        }
+    }
+
+    void Register(string key, Transform target)
+    {
+        if (string.IsNullOrWhiteSpace(key) || target == null)
+            return;
+
+        _map[key.Trim()] = target;
     }
 }

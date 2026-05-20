@@ -1,6 +1,6 @@
 // SnapshotPayload.cs
 //
-// The wire format sent to POST /api/v1/agent/tick.
+// The full snapshot embedded in the /api/v1/agent/ws/{creature_id} tick envelope.
 //
 // Each channel owns one slot of this payload. Adding a channel means adding a
 // field here AND a class under Snapshot/Channels/.

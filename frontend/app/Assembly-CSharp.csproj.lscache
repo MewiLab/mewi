@@ -51,7 +51,7 @@ TemporaryDependencyNodeTargetIdentifier=netstandard2.1
 
 [sourceFiles]
 Assets/Scripts/AgentIntegration/Bridge/
- AgentMindBridge.cs
+ AgentNetworkManager.cs
  ApiRoutes.cs
  BackendConfig.cs
  PeriodicMind.cs
