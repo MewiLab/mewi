@@ -50,17 +50,16 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: M_Cat_Orange_Mask_Fur 1
-  m_Shader: {fileID: -6465566751694194690, guid: 77c9b624bcbc9954e914594e9fc0c0c0,
-    type: 3}
-  m_Parent: {fileID: 2100000, guid: fb5cf9b8ad40a4d41a1cfcfb61e84366, type: 2}
+  m_Shader: {fileID: -6465566751694194690, guid: 8efe21194fc0b284f835463b5e667ead, type: 3}
+  m_Parent: {fileID: 2100000, guid: 96f46903052c9e247a673698d4f0a176, type: 2}
   m_ModifiedSerializedProperties: 16
   m_ValidKeywords:
   - _ALPHATEST_ON
   - _BUILTIN_ALPHATEST_ON
   - _BUILTIN_AlphaClip
+  m_InvalidKeywords:
   - _DISABLE_SSR_TRANSPARENT
   - _MASK_INDEX_A
-  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
