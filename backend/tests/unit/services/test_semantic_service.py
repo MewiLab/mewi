@@ -196,12 +196,65 @@ class TestGenerateSummary:
         assert result.count("lantern") == 1
         assert "box" in result
 
+    def test_entity_id_is_used_when_tags_are_absent(self, svc):
+        snap = _snap(entities=[{"id": "e1", "distance": 2.0, "direction": "n"}])
+        result = svc.generate_summary([snap])
+        assert "e1" in result
+
+    def test_feelings_summary_appears_in_output(self, svc):
+        snap = _snap()
+        snap["feelings"] = {"summary": "It smelled a distant bonfire"}
+        result = svc.generate_summary([snap])
+        assert "bonfire" in result
+
+    def test_feelings_arrays_are_described_in_output(self, svc):
+        snap = _snap()
+        snap["feelings"] = {
+            "smells": ["smoke"],
+            "sounds": ["waterfall"],
+            "signals": ["warmth"]
+        }
+        result = svc.generate_summary([snap])
+        assert "smelled smoke" in result
+        assert "heard waterfall" in result
+        assert "detected warmth" in result
+
+    def test_zone_labels_are_included_when_present(self, svc):
+        snap = _snap()
+        snap["spatial_context"] = {"zones": [{"id": "market", "type": "area"}]}
+        result = svc.generate_summary([snap])
+        assert "market" in result
+
+    def test_zone_details_are_included_when_present(self, svc):
+        snap = _snap()
+        snap["spatial_context"] = {
+            "zones": [{"id": "dock", "type": "surface", "confinement": "Open", "surface": "wet wood"}]
+        }
+        result = svc.generate_summary([snap])
+        assert "dock" in result
+        assert "wet wood" in result
+
+    def test_feelings_from_earlier_snapshot_are_kept_in_window(self, svc):
+        first = _snap(request_id="req-001")
+        first["feelings"] = {"sounds": ["sudden left near: barrel thud"]}
+        last = _snap(request_id="req-002")
+        result = svc.generate_summary([first, last])
+        assert "barrel thud" in result
+
+    def test_unknown_feeling_arrays_are_described(self, svc):
+        snap = _snap()
+        snap["feelings"] = {"textures": ["slick below contact: wet dock boards"]}
+        result = svc.generate_summary([snap])
+        assert "textures" in result
+        assert "wet dock boards" in result
+
     def test_no_entities_omits_noticed_sentence(self, svc):
         assert "noticed" not in svc.generate_summary([_snap()])
 
-    def test_empty_tags_list_is_skipped(self, svc):
+    def test_empty_tags_falls_back_to_entity_id(self, svc):
         snap = _snap(entities=[{"id": "e1", "tags": [], "distance": 1.0, "direction": "n"}])
-        assert "noticed" not in svc.generate_summary([snap])
+        result = svc.generate_summary([snap])
+        assert "e1" in result
 
     # ── Robustness: missing / partial keys ───────────────────────────────────
 
@@ -227,7 +280,43 @@ class TestGenerateSummary:
         result = svc.generate_summary([snap])
         assert "fearful" in result
 
-    def test_entity_without_tags_key_is_skipped(self, svc):
+    def test_entity_without_tags_key_falls_back_to_id(self, svc):
         snap = _snap(entities=[{"id": "e1", "distance": 2.0}])  # no "tags" key
         result = svc.generate_summary([snap])
-        assert "noticed" not in result
+        assert "e1" in result
+
+
+class TestPromptContext:
+    def test_prompt_context_translates_payload_to_high_level_meaning(self, svc):
+        snap = _snap(
+            action="idle",
+            fear=0.2,
+            trust=0.3,
+            curiosity=0.5,
+            social=0.4,
+            energy=0.54,
+            hunger=1.0,
+            entities=[
+                {"id": "Cat", "tags": [], "distance": 1.2, "direction": "front"},
+                {"id": "SM_Boat_1_01", "tags": ["prop.boat"], "distance": 3.8, "direction": "front_left"},
+                {"id": "SM_Lantern_2_01", "tags": ["prop.lantern"], "distance": 3.8, "direction": "front_left"},
+            ],
+        )
+        snap["agent_id"] = "cat"
+        snap["self"]["location"] = "Bamboo_Boardwalk"
+        snap["spatial_context"] = {
+            "zones": [
+                {"id": "Harbor", "type": "district", "confinement": "", "surface": ""},
+                {"id": "Bamboo_Boardwalk", "type": "path", "confinement": "Semi", "surface": "Wood"},
+            ]
+        }
+
+        context = svc.build_prompt_context(snap)
+
+        assert "Bamboo Boardwalk" in context["situation"]
+        assert "food is urgent" in context["body_state"]
+        assert any("boat" in target and "SM_Boat_1_01" in target for target in context["relevant_targets"])
+        assert any("lantern" in target for target in context["relevant_targets"])
+        assert not any("Cat;" in target or "target: Cat" in target for target in context["relevant_targets"])
+        assert "3.8" not in " ".join(context["relevant_targets"])
+        assert "front_left" not in " ".join(context["relevant_targets"])

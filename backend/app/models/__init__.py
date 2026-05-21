@@ -1,5 +1,6 @@
 from app.models.tick import (
     EntitySnapshot,
+    FeelingsData,
     HealthState,
     Location,
     MoodState,
@@ -11,6 +12,7 @@ from app.models.tick import (
 
 __all__ = [
     "EntitySnapshot",
+    "FeelingsData",
     "HealthState",
     "Location",
     "MoodState",

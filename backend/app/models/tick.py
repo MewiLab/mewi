@@ -48,6 +48,13 @@ class SpatialContext(BaseModel):
     zones: list[ZoneEntry] = Field(default_factory=list)
 
 
+class FeelingsData(BaseModel):
+    summary: str = ""
+    smells:  list[str] = Field(default_factory=list)
+    sounds:  list[str] = Field(default_factory=list)
+    signals: list[str] = Field(default_factory=list)
+
+
 class TickPayload(BaseModel):
     """
     One full environment snapshot pushed from Unity over the agent websocket.
@@ -67,4 +74,5 @@ class TickPayload(BaseModel):
     health:     HealthState          = Field(default_factory=HealthState)
     entities:   list[EntitySnapshot] = Field(default_factory=list)
     spatial_context: SpatialContext  = Field(default_factory=SpatialContext)
+    feelings:   FeelingsData         = Field(default_factory=FeelingsData)
     action_result: dict[str, Any] | None = None

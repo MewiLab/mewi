@@ -108,6 +108,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
 
     bool _hasArrived;
     bool _actionInFlight;
+    Transform _activeFollowTarget;
 
     // ═══════════════════════════════════════════════
     //  INIT
@@ -153,6 +154,9 @@ public class MalbersAnimalAdapter : MonoBehaviour
 
         animal.PreInput -= OnPreInput;
         animal.PreInput += OnPreInput;
+        aiControl.OnArrived.RemoveListener(OnAiArrived);
+        aiControl.OnTargetPositionArrived.RemoveListener(OnAiPositionArrived);
+        animal.OnModeEnd.RemoveListener(OnAnimalModeEnded);
         aiControl.OnArrived.AddListener(OnAiArrived);
         aiControl.OnTargetPositionArrived.AddListener(OnAiPositionArrived);
         animal.OnModeEnd.AddListener(OnAnimalModeEnded);
@@ -285,7 +289,9 @@ public class MalbersAnimalAdapter : MonoBehaviour
         animal.Sprint = false;
 
         StopManualNavigation(false);
-        _hasActiveNavigationDestination = false;
+        _activeFollowTarget = target;
+        _activeNavigationDestination = target.position;
+        _hasActiveNavigationDestination = true;
         _hasArrived = false;
         aiControl.SetTarget(target, true);
 
@@ -329,6 +335,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
     public void Stop()
     {
         StopManualNavigation(true);
+        _activeFollowTarget = null;
         _hasActiveNavigationDestination = false;
         if (aiControl != null) aiControl.Stop();
     }
@@ -341,6 +348,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
     {
         _hasArrived = false;
         _hasActiveNavigationDestination = false;
+        _activeFollowTarget = null;
         StopManualNavigation(false);
 
         if (!TryProjectDestination(requestedDestination, out Vector3 destination, out string reason))
@@ -561,6 +569,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
 
     public bool HasActiveNavigationDestination => _hasActiveNavigationDestination;
     public Vector3 ActiveNavigationDestination => _activeNavigationDestination;
+    public Transform ActiveFollowTarget => _activeFollowTarget;
     public bool IsUsingManualNavigation => _usingManualNavigation;
     public Vector3 ManualNavigationDirection => _manualNavigationDirection;
     public Vector3 ManualNavigationCorner => _manualNavigationCorner;

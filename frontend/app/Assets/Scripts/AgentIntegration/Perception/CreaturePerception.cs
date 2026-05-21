@@ -28,6 +28,11 @@ public class CreaturePerception : MonoBehaviour
     public LayerMask semanticLayer;
     readonly Collider[] _semanticBuffer = new Collider[32];
 
+    [Header("Feeling Scan")]
+    [Tooltip("Layers carrying FeelingEmitter colliders. Empty defaults to SemanticProp + SemanticZone.")]
+    public LayerMask feelingLayer;
+    readonly Collider[] _feelingBuffer = new Collider[64];
+
     // State for approach speed estimation for MULTIPLE creatures simultaneously
     readonly Dictionary<Transform, Vector3> _prevPositions  = new Dictionary<Transform, Vector3>();
     readonly Dictionary<Transform, float>   _speedEstimates = new Dictionary<Transform, float>();
@@ -37,6 +42,9 @@ public class CreaturePerception : MonoBehaviour
         _board  = board;
         _config = config;
         _self   = transform;
+
+        if (feelingLayer.value == 0)
+            feelingLayer = BuildDefaultFeelingLayer();
     }
 
     public void Tick()
@@ -57,7 +65,10 @@ public class CreaturePerception : MonoBehaviour
 
     void ScanEnvironment()
     {
+        if (_board.sensorEvents == null) _board.sensorEvents = new List<SensoryEvent>();
+        if (_board.feelingEvents == null) _board.feelingEvents = new List<FeelingEvent>();
         _board.sensorEvents.Clear();
+        _board.feelingEvents.Clear();
 
         int n = Physics.OverlapSphereNonAlloc(_self.position, scanRadius, _scanBuffer, scanLayers);
 
@@ -146,6 +157,7 @@ public class CreaturePerception : MonoBehaviour
         CleanupOldPositions(seenThisFrame);
 
         ScanSmartObjects();
+        ScanFeelings();
     }
 
     void ScanSmartObjects()
@@ -173,6 +185,47 @@ public class CreaturePerception : MonoBehaviour
                 so.tags != null ? so.tags.ToArray() : System.Array.Empty<string>()
             ));
         }
+    }
+
+    void ScanFeelings()
+    {
+        float radius = _config != null && _config.feelingScanRadius > 0f
+            ? _config.feelingScanRadius
+            : scanRadius;
+        int n = Physics.OverlapSphereNonAlloc(
+            _self.position,
+            radius,
+            _feelingBuffer,
+            feelingLayer,
+            QueryTriggerInteraction.Collide);
+
+        HashSet<FeelingEmitter> emitted = new HashSet<FeelingEmitter>();
+        var found = new List<FeelingEvent>();
+
+        for (int i = 0; i < n; i++)
+        {
+            Collider col = _feelingBuffer[i];
+            if (col == null) continue;
+
+            FeelingEmitter emitter = col.GetComponentInParent<FeelingEmitter>();
+            if (emitter == null) continue;
+            if (!emitted.Add(emitter)) continue;
+
+            List<FeelingAspect> aspects = emitter.aspects;
+            if (aspects == null) continue;
+
+            for (int j = 0; j < aspects.Count; j++)
+            {
+                if (emitter.TryBuildEvent(aspects[j], _self, _config, out FeelingEvent evt))
+                    found.Add(evt);
+            }
+        }
+
+        found.Sort(FeelingEvent.ComparePriority);
+
+        int max = _config != null && _config.maxFeelingEvents > 0 ? _config.maxFeelingEvents : 16;
+        for (int i = 0; i < found.Count && i < max; i++)
+            _board.feelingEvents.Add(found[i]);
     }
 
     bool IsInSight(Vector3 toTarget, float dist)
@@ -221,10 +274,41 @@ public class CreaturePerception : MonoBehaviour
 
     public void OnSoundHeard(Vector3 soundPos, float loudness)
     {
-        float dist = Vector3.Distance(_self.position, soundPos);
-        if (dist > _config.hearingRange) return;
+        if (_board == null || _self == null || _config == null) return;
 
-        EmitEvent(SensoryEvent.SenseType.SoundHeard, null, Mathf.Clamp01(loudness * (1f - dist / _config.hearingRange)), "Sound");
+        float dist = Vector3.Distance(_self.position, soundPos);
+        float range = Mathf.Max(0.01f, _config.hearingRange);
+        if (dist > range) return;
+
+        float intensity = Mathf.Clamp01(loudness * (1f - dist / range));
+
+        _board.sensorEvents.Add(SensoryEvent.Create(
+            SensoryEvent.SenseType.SoundHeard,
+            soundPos,
+            intensity,
+            null,
+            "Sound",
+            "sound"));
+
+        _board.feelingEvents.Add(FeelingEvent.Create(
+            FeelingSense.Sound,
+            soundPos,
+            intensity,
+            null,
+            "Sound",
+            "unidentified sound",
+            "something made noise",
+            "heard"));
+    }
+
+    static LayerMask BuildDefaultFeelingLayer()
+    {
+        int mask = 0;
+        int semanticProp = LayerMask.NameToLayer("SemanticProp");
+        int semanticZone = LayerMask.NameToLayer("SemanticZone");
+        if (semanticProp >= 0) mask |= 1 << semanticProp;
+        if (semanticZone >= 0) mask |= 1 << semanticZone;
+        return mask;
     }
 
     // ── Debug ────────────────────────────────────────────────────

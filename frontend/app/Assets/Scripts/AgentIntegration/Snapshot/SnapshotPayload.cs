@@ -24,6 +24,7 @@ public class SnapshotPayload
     public HealthData     health;
     public EntityData[]   entities;
     public SpatialData    spatial_context;
+    public FeelingsData   feelings;
 }
 
 [Serializable]
@@ -69,4 +70,13 @@ public class ZoneEntry
 public class SpatialData
 {
     public ZoneEntry[] zones;
+}
+
+[Serializable]
+public class FeelingsData
+{
+    public string summary;
+    public string[] smells;
+    public string[] sounds;
+    public string[] signals;
 }

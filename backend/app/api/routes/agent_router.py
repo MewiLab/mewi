@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from typing import Any
 
@@ -46,6 +47,7 @@ async def agent_tick_ws(
                 continue
 
             tick_payload = _tick_payload_from_ws(raw_payload)
+            _log_unity_snapshot(creature_id, raw_payload, tick_payload)
 
             try:
                 payload = TickPayload.model_validate(tick_payload)
@@ -160,6 +162,32 @@ def _tick_payload_from_ws(raw_payload: Any) -> Any:
         payload["agent_id"] = agent_id
 
     return payload
+
+
+def _log_unity_snapshot(creature_id: str, raw_payload: Any, tick_payload: Any) -> None:
+    request_id = _raw_request_id(tick_payload)
+    snapshot_json = _to_log_json(tick_payload)
+    logger.info(
+        "[UnitySnapshot] creature_id=%s request_id=%s payload=%s",
+        creature_id,
+        request_id,
+        snapshot_json,
+    )
+
+    if raw_payload is not tick_payload:
+        logger.debug(
+            "[UnitySnapshotEnvelope] creature_id=%s request_id=%s raw=%s",
+            creature_id,
+            request_id,
+            _to_log_json(raw_payload),
+        )
+
+
+def _to_log_json(value: Any) -> str:
+    try:
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    except TypeError:
+        return str(value)
 
 
 def _websocket_plan_response(job: dict[str, Any]) -> dict[str, Any]:

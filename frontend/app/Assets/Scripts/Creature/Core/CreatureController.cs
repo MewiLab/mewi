@@ -29,6 +29,9 @@ public class CreatureController : MonoBehaviour
         _zoneTracker = GetComponent<SmartZoneTracker>();
         _zoneScanner = GetComponent<ZoneScanner>();
 
+        if (_worker == null) _worker = GetComponentInChildren<CreatureWorker>();
+        if (_worker == null) _worker = GetComponentInParent<CreatureWorker>();
+
         if (config == null)
         {
             Debug.LogError("[CreatureController] No CreatureConfig assigned!");
@@ -42,6 +45,9 @@ public class CreatureController : MonoBehaviour
             enabled = false;
             return;
         }
+
+        if (_worker == null)
+            Debug.LogWarning("[CreatureController] Missing CreatureWorker; mind plans can queue, but no body commands will be ticked.");
 
         if (_perception != null)  _perception.Init(_board, config);
         if (_mind != null)        _mind.Init(_board, config);

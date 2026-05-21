@@ -8,6 +8,7 @@ from app.agent.creature_runtime import CreatureRuntime, CreatureRuntimeState
 from app.agent.llm_provider import LLMProvider
 from app.agent.prompts import format_strategic_prompt
 from app.agent.schemas.perception_schema import PerceptionError
+from app.services.semantic_service import SemanticService
 
 
 def _runtime(state: CreatureRuntimeState) -> CreatureRuntime:
@@ -32,20 +33,19 @@ def remember(state: CreatureRuntimeState) -> dict[str, Any]:
 def make_reason(llm: LLMProvider):
     async def reason(state: CreatureRuntimeState) -> dict[str, Any]:
         raw = state.get("raw_payload", {})
-        self_state = raw.get("self", {})
+        semantic_context = SemanticService().build_prompt_context(raw)
         prompt = format_strategic_prompt(
             temperament="curious",
             trust="unknown",
-            position=_format_position(
-                self_state.get("location", ""),
-                raw.get("spatial_context", {}),
-            ),
-            current_action=self_state.get("current_action", "idle"),
-            mood=raw.get("mood", {}),
-            health=raw.get("health", {}),
-            entities=raw.get("entities", []),
+            position="",
+            current_action="",
+            mood={},
+            health={},
+            entities=[],
             actions=state.get("actions_for_prompt")
             or _runtime(state).action_prompt_descriptions,
+            feelings={},
+            semantic_context=semantic_context,
             persona=state.get("persona") or _runtime(state).persona,
             previous_action_result=_format_previous_action_result(raw.get("action_result")),
         )
@@ -181,16 +181,12 @@ def _format_previous_action_result(value: Any) -> str:
         return ""
 
     status = _clean_text(value.get("status")) or "unknown"
-    plan_id = _clean_text(value.get("planId") or value.get("plan_id"))
-    header = f"  plan_status={status}"
-    if plan_id:
-        header += f" plan_id={plan_id}"
+    lines = [_status_sentence(status)]
 
     steps = value.get("steps")
     if not isinstance(steps, list) or not steps:
-        return header
+        return "\n".join(f"  - {line}" for line in lines)
 
-    lines = [header]
     for step in steps[:6]:
         if not isinstance(step, dict):
             continue
@@ -198,10 +194,31 @@ def _format_previous_action_result(value: Any) -> str:
         step_status = _clean_text(step.get("status")) or "unknown"
         target = _clean_text(step.get("target"))
         reason = _clean_text(step.get("reason"))
-        target_text = f" target={target}" if target else ""
-        reason_text = f" reason={reason}" if reason else ""
-        lines.append(f"  - {action}: {step_status}{target_text}{reason_text}")
-    return "\n".join(lines)
+        lines.append(_step_feedback(action, step_status, target, reason))
+    return "\n".join(f"  - {line}" for line in lines)
+
+
+def _status_sentence(status: str) -> str:
+    if status == "completed":
+        return "The previous plan completed."
+    if status == "completed_with_rejections":
+        return "The previous plan partly worked, but at least one step was rejected."
+    if status in {"failed", "rejected"}:
+        return "The previous plan did not work; choose a different small action."
+    return f"The previous plan status was {status.replace('_', ' ')}."
+
+
+def _step_feedback(action: str, status: str, target: str, reason: str) -> str:
+    target_text = f" on {target}" if target else ""
+    if status == "completed":
+        return f"{action}{target_text} worked."
+    if status == "rejected":
+        if "unmapped_action" in reason:
+            return f"Avoid {action} for now; Unity rejected it as unmapped."
+        return f"{action}{target_text} was rejected."
+    if status == "failed":
+        return f"{action}{target_text} failed."
+    return f"{action}{target_text} ended as {status.replace('_', ' ')}."
 
 
 def _format_location(location: Any) -> str:

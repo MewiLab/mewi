@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -198,7 +199,35 @@ public class CreatureBlackboard : MonoBehaviour
     /// <summary>Recent sensory events for this frame, cleared each tick.</summary>
     public List<SensoryEvent> sensorEvents = new List<SensoryEvent>();
 
-    /// <summary>Semantic zones the cat currently stands in. Written by SmartZoneTracker.</summary>
+    /// <summary>Recent visible target keys mapped back to their Unity transforms.</summary>
+    readonly Dictionary<string, Transform> _recentTargets =
+        new Dictionary<string, Transform>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Recent felt-world events for this frame, cleared each perception tick.</summary>
+    public List<FeelingEvent> feelingEvents = new List<FeelingEvent>();
+
+    public void RememberPerceivedTarget(string key, Transform target)
+    {
+        if (string.IsNullOrWhiteSpace(key) || target == null) return;
+        _recentTargets[key.Trim()] = target;
+    }
+
+    public bool TryResolveRecentTarget(string key, out Transform target)
+    {
+        target = null;
+        if (string.IsNullOrWhiteSpace(key)) return false;
+
+        string normalized = key.Trim();
+        if (_recentTargets.TryGetValue(normalized, out target) && target != null)
+            return true;
+
+        if (target == null)
+            _recentTargets.Remove(normalized);
+
+        return false;
+    }
+
+    /// <summary>Legacy flat zone tags. Prefer activeZones for current spatial location.</summary>
     [HideInInspector] public HashSet<string> currentZones = new HashSet<string>();
 
     /// <summary>

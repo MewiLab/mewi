@@ -13,6 +13,13 @@ public class CreatureConfig : ScriptableObject
     public float fieldOfViewDeg    = 160f;
     public float fastApproachSpeed = 3f;   // player speed above this = "approaching fast"
 
+    [Header("Feelings")]
+    public float feelingScanRadius = 12f;
+    public int maxFeelingEvents    = 16;
+    public int maxSmellStrings     = 4;
+    public int maxSoundStrings     = 4;
+    public int maxSignalStrings    = 6;
+
     [Header("Reflex")]
     public float flinchDistance       = 1.5f;   // how close before startle
     public float flinchCooldown       = 2f;     // seconds between flinches

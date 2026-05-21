@@ -22,6 +22,14 @@ public class SnapshotManager : MonoBehaviour
     [Tooltip("Max entities of any single category. Prevents 12 lanterns crowding out the boat.")]
     public int maxPerCategory = 2;
 
+    [Header("Feelings Filter")]
+    [Tooltip("Max smell strings sent per tick.")]
+    public int maxSmellStrings = 4;
+    [Tooltip("Max sound strings sent per tick.")]
+    public int maxSoundStrings = 4;
+    [Tooltip("Max non-smell/non-sound feeling strings sent per tick.")]
+    public int maxSignalStrings = 6;
+
     [Header("Debug")]
     public bool logPayload = false;
 
@@ -45,6 +53,7 @@ public class SnapshotManager : MonoBehaviour
         Register(new HealthChannel());
         Register(new EntitiesChannel(maxEntities, maxPerCategory));
         Register(new SpatialChannel());
+        Register(new FeelingsChannel(maxSmellStrings, maxSoundStrings, maxSignalStrings));
     }
 
     /// <summary>

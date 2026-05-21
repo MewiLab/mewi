@@ -49,9 +49,13 @@ public sealed class EntitiesChannel : ISnapshotChannel
             perCat[cat] = count + 1;
 
             Vector3 local = self.InverseTransformPoint(evt.position);
+            string id = evt.label;
+            if (!string.IsNullOrWhiteSpace(id) && evt.source != null)
+                board.RememberPerceivedTarget(id, evt.source);
+
             result.Add(new EntityData
             {
-                id        = evt.label,
+                id        = id,
                 tags      = evt.tags ?? System.Array.Empty<string>(),
                 distance  = Vector3.Distance(self.position, evt.position),
                 direction = DirectionBucket(local),

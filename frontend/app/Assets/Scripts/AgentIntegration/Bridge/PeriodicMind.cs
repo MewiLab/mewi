@@ -51,6 +51,8 @@ public class PeriodicMind : MonoBehaviour
         if (_bridge == null)          _bridge          = GetComponent<AgentNetworkManager>();
         if (_snapshotManager == null) _snapshotManager = GetComponent<SnapshotManager>();
         if (_worker == null)          _worker          = GetComponent<CreatureWorker>();
+        if (_worker == null)          _worker          = GetComponentInChildren<CreatureWorker>();
+        if (_worker == null)          _worker          = GetComponentInParent<CreatureWorker>();
 
         if (logLLMTicks)
         {
@@ -66,6 +68,9 @@ public class PeriodicMind : MonoBehaviour
             if (_snapshotManager == null)
                 Debug.LogError("[PeriodicMind] LLM mode needs SnapshotManager on the same GameObject.");
         }
+
+        if (_worker == null)
+            Debug.LogWarning("[PeriodicMind] No CreatureWorker found; body busy state cannot be observed and queued mind plans will not move the body.");
     }
 
     public void StartThinking()
@@ -190,6 +195,14 @@ public class PeriodicMind : MonoBehaviour
         if (_board.TryPopPlanExecutionReport(out var completedReport))
             _pendingPlanReport = completedReport;
 
+        if (_bridge.RequestInFlight)
+        {
+            if (logLLMTicks)
+                Debug.Log("[PeriodicMind] waiting for backend response; no snapshot sent");
+            LogBridgeFailures();
+            return;
+        }
+
         bool bodyBusy = _worker != null && _worker.IsBusy;
         if (_board.HasMindPlan || bodyBusy)
         {
@@ -197,7 +210,8 @@ public class PeriodicMind : MonoBehaviour
             {
                 IntentMessage? current = _board.MindIntent;
                 string currentIntent = current.HasValue ? current.Value.Intent : "none";
-                Debug.Log($"[PeriodicMind] waiting for local plan current={currentIntent} queued={_board.QueuedMindIntentCount} bodyBusy={bodyBusy}");
+                string workerState = _worker != null ? _worker.DebugState : "worker=null";
+                Debug.Log($"[PeriodicMind] waiting for local plan current={currentIntent} queued={_board.QueuedMindIntentCount} bodyBusy={bodyBusy} {workerState}");
             }
             LogBridgeFailures();
             return;

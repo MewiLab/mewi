@@ -23,6 +23,9 @@ public class CreatureWorker : MonoBehaviour
 
     [SerializeField] NamedTargetRegistry _targetRegistry;
 
+    [Header("Debug")]
+    [SerializeField] bool logWorkerDispatch = true;
+
     static readonly HashSet<string> _loggedMissingTargetKeys =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -34,8 +37,18 @@ public class CreatureWorker : MonoBehaviour
     bool _hasActiveIntent;
     string _planRequestId = "";
     string _planId = "";
+    bool _warnedUninitialized;
 
     public bool IsBusy => _adapter != null && _adapter.IsBusy;
+    public string DebugState
+    {
+        get
+        {
+            if (_adapter == null) return "workerAdapter=null";
+            string active = _hasActiveIntent ? DescribeIntent(_activeIntent) : "none";
+            return $"workerAdapterBusy={_adapter.IsBusy} active={active} adapter=({_adapter.BuildNavigationDebug()})";
+        }
+    }
 
     public void Init(CreatureBlackboard board)
     {
@@ -56,7 +69,15 @@ public class CreatureWorker : MonoBehaviour
 
     public void Tick()
     {
-        if (_board == null || _adapter == null) return;
+        if (_board == null || _adapter == null)
+        {
+            if (!_warnedUninitialized)
+            {
+                Debug.LogWarning("[CreatureWorker] Tick skipped before Init completed; attach CreatureController or call Init(board).");
+                _warnedUninitialized = true;
+            }
+            return;
+        }
 
         if (_adapter.IsBusy) return;
         CompleteActiveIntentIfReady();
@@ -71,6 +92,8 @@ public class CreatureWorker : MonoBehaviour
 
         if (!TryBuildCommand(intent, out MotorCommand cmd, out string rejectedReason))
         {
+            if (logWorkerDispatch)
+                Debug.LogWarning($"[CreatureWorker] rejected {DescribeIntent(intent)}: {rejectedReason}");
             RecordStep(intent, "rejected", rejectedReason, Time.time, Time.time);
             _board.TryPopMindIntent(out _);
             CompletePlanIfReady();
@@ -79,11 +102,16 @@ public class CreatureWorker : MonoBehaviour
 
         if (!_adapter.Apply(cmd))
         {
+            if (logWorkerDispatch)
+                Debug.LogWarning($"[CreatureWorker] adapter refused {DescribeIntent(intent)} as {cmd.Kind}");
             RecordStep(intent, "rejected", "adapter_refused", Time.time, Time.time);
             _board.TryPopMindIntent(out _);
             CompletePlanIfReady();
             return;
         }
+
+        if (logWorkerDispatch)
+            Debug.Log($"[CreatureWorker] dispatched {DescribeIntent(intent)} as {cmd.Kind}");
 
         _activeIntent = intent;
         _activeStartedAt = Time.time;
@@ -118,8 +146,14 @@ public class CreatureWorker : MonoBehaviour
                 }
                 else if (destination == Vector3.zero)
                 {
-                    rejectedReason = "missing_target:go_to";
-                    return false;
+                    if (logWorkerDispatch)
+                    {
+                        Debug.LogWarning(
+                            "[CreatureWorker] go_to arrived without a target or destination; " +
+                            "falling back to wander. For directed movement, send a visible target id.");
+                    }
+                    cmd = MotorCommand.Wander();
+                    return true;
                 }
                 cmd = MotorCommand.GoTo(destination);
                 return true;
@@ -180,11 +214,21 @@ public class CreatureWorker : MonoBehaviour
             return false;
         }
 
+        if (_board != null && _board.TryResolveRecentTarget(key, out target))
+            return true;
+
         if (_targetRegistry == null)
             _targetRegistry = FindFirstObjectByType<NamedTargetRegistry>();
 
         if (_targetRegistry != null && _targetRegistry.TryResolve(key, out target))
             return true;
+
+        GameObject found = GameObject.Find(key.Trim());
+        if (found != null)
+        {
+            target = found.transform;
+            return true;
+        }
 
         rejectedReason = $"unknown_target:{key}";
         LogUnknownTargetOnce(key);
@@ -248,6 +292,13 @@ public class CreatureWorker : MonoBehaviour
             startedAt = startedAt,
             endedAt   = endedAt,
         });
+    }
+
+    static string DescribeIntent(IntentMessage intent)
+    {
+        string target = string.IsNullOrWhiteSpace(intent.TargetKey) ? "" : $" target={intent.TargetKey}";
+        string command = string.IsNullOrWhiteSpace(intent.CommandId) ? "" : $" command={intent.CommandId}";
+        return $"{intent.Intent}{target}{command}";
     }
 
     string BuildPlanStatus()

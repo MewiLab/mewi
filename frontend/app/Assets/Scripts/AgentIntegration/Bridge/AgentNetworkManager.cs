@@ -32,6 +32,7 @@ public class AgentNetworkManager : MonoBehaviour
     public bool logTraffic = true;
 
     public int FailedTickCount => _failedTickCount;
+    public bool RequestInFlight => _requestInFlight;
 
     bool _warnedMoveDeprecated;
     int  _failedTickCount;
