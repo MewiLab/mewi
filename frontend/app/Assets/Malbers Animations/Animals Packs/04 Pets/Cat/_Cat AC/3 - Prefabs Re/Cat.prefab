@@ -19606,6 +19606,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CreatureWorker
   _targetRegistry: {fileID: 0}
+  logWorkerDispatch: 1
 --- !u!114 &1749521231411699133
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19649,6 +19650,13 @@ MonoBehaviour:
   manualNavArrivalDistance: 0.65
   manualNavCornerDistance: 0.35
   manualNavRepathInterval: 0.5
+  recoveryConfig:
+    progressCheckInterval: 0.25
+    minProgressMeters: 0.15
+    repathDelaySeconds: 2
+    maxRepathAttempts: 2
+    hardTimeoutSeconds: 12
+    warpNavMeshSampleRadius: 2
   logIntentProof: 1
 --- !u!114 &2060576022285755172
 MonoBehaviour:

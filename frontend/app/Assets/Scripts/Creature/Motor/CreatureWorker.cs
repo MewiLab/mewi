@@ -252,7 +252,11 @@ public class CreatureWorker : MonoBehaviour
         if (!_hasActiveIntent || (_adapter != null && _adapter.IsBusy))
             return;
 
-        RecordStep(_activeIntent, "completed", "", _activeStartedAt, Time.time);
+        string reason = "";
+        if (_adapter != null && _adapter.LastNavigationCompletionReason != NavigationCompletionReason.None)
+            reason = _adapter.LastNavigationCompletionReason.ToString();
+
+        RecordStep(_activeIntent, "completed", reason, _activeStartedAt, Time.time);
         _hasActiveIntent = false;
     }
 

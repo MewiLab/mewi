@@ -68,6 +68,9 @@ public class MalbersAnimalAdapter : MonoBehaviour
     public float manualNavCornerDistance        = 0.35f;
     public float manualNavRepathInterval        = 0.5f;
 
+    [Header("Recovery")]
+    public NavigationRecoveryConfig recoveryConfig = new NavigationRecoveryConfig();
+
     [Header("Debug")]
     public bool logIntentProof = true;
 
@@ -110,6 +113,10 @@ public class MalbersAnimalAdapter : MonoBehaviour
     bool _actionInFlight;
     Transform _activeFollowTarget;
 
+    readonly NavigationWatchdog _navWatchdog = new NavigationWatchdog();
+    public NavigationCompletionReason LastNavigationCompletionReason { get; private set; }
+        = NavigationCompletionReason.None;
+
     // ═══════════════════════════════════════════════
     //  INIT
     // ═══════════════════════════════════════════════
@@ -137,6 +144,8 @@ public class MalbersAnimalAdapter : MonoBehaviour
         if (aiControl == null) { Debug.LogError("[MalbersAdapter] No MAnimalAIControl found! Add MAnimalAIControl manually or use the Malbers _AI prefab variant."); return; }
 
         if (aiControl.animal == null) aiControl.animal = animal;
+
+        _navWatchdog.Configure(recoveryConfig);
 
         var navAgent = aiControl.Agent;
         if (navAgent != null && navAgent.transform == animal.transform)
@@ -177,16 +186,34 @@ public class MalbersAnimalAdapter : MonoBehaviour
         }
     }
 
-    void OnAiArrived(Transform _) => _hasArrived = true;
+    void OnAiArrived(Transform _)
+    {
+        _hasArrived = true;
+        NotifyWatchdogArrived();
+    }
 
     void OnAiPositionArrived(Vector3 position)
     {
         if (!_hasActiveNavigationDestination) return;
         if (HorizontalDistance(position, _activeNavigationDestination) <= manualNavArrivalDistance)
+        {
             _hasArrived = true;
+            NotifyWatchdogArrived();
+        }
     }
 
-    void OnPreInput(MAnimal _) => UpdateManualNavigation();
+    void OnPreInput(MAnimal _)
+    {
+        UpdateManualNavigation();
+        TickNavigationWatchdog();
+    }
+
+    void NotifyWatchdogArrived()
+    {
+        if (!_navWatchdog.IsActive) return;
+        _navWatchdog.NotifyArrivedNaturally();
+        LastNavigationCompletionReason = _navWatchdog.CompletionReason;
+    }
 
     void OnAnimalModeEnded(int modeID, int abilityIndex)
     {
@@ -209,6 +236,8 @@ public class MalbersAnimalAdapter : MonoBehaviour
     public bool Apply(in MotorCommand cmd)
     {
         if (animal == null || aiControl == null) return false;
+
+        LastNavigationCompletionReason = NavigationCompletionReason.None;
 
         switch (cmd.Kind)
         {
@@ -293,6 +322,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
         _activeNavigationDestination = target.position;
         _hasActiveNavigationDestination = true;
         _hasArrived = false;
+        _navWatchdog.Begin(_activeNavigationDestination, AnimalPosition, Time.time);
         aiControl.SetTarget(target, true);
 
         if (logIntentProof)
@@ -337,6 +367,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
         StopManualNavigation(true);
         _activeFollowTarget = null;
         _hasActiveNavigationDestination = false;
+        _navWatchdog.Cancel();
         if (aiControl != null) aiControl.Stop();
     }
 
@@ -359,6 +390,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
 
         _activeNavigationDestination = destination;
         _hasActiveNavigationDestination = true;
+        _navWatchdog.Begin(destination, AnimalPosition, Time.time);
 
         if (TryNavigateWithMalbersAgent(destination))
             return true;
@@ -368,6 +400,8 @@ public class MalbersAnimalAdapter : MonoBehaviour
 
         Debug.LogWarning($"[MalbersAdapter] Navigation failed. requested={requestedDestination} projected={destination}. {BuildNavigationDebug()}");
         _hasActiveNavigationDestination = false;
+        _navWatchdog.NotifyFailed();
+        LastNavigationCompletionReason = _navWatchdog.CompletionReason;
         return false;
     }
 
@@ -494,6 +528,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
         {
             _hasArrived = true;
             StopManualNavigation(true);
+            NotifyWatchdogArrived();
             return;
         }
 
@@ -577,7 +612,10 @@ public class MalbersAnimalAdapter : MonoBehaviour
     public string BuildNavigationDebug()
     {
         var agent = aiControl != null ? aiControl.Agent : null;
-        if (agent == null) return "agent=null";
+        string watchdog =
+            $"watchdogActive={_navWatchdog.IsActive} repaths={_navWatchdog.RepathAttempts} lastReason={LastNavigationCompletionReason}";
+
+        if (agent == null) return $"agent=null {watchdog}";
 
         bool canReadNavState = agent.isActiveAndEnabled && agent.isOnNavMesh;
         return
@@ -585,6 +623,85 @@ public class MalbersAnimalAdapter : MonoBehaviour
             $"agentPos={agent.transform.position.ToString("F3")} animalPos={AnimalPosition.ToString("F3")} " +
             $"destination={(canReadNavState ? agent.destination.ToString("F3") : "n/a")} " +
             $"pathStatus={(canReadNavState ? agent.pathStatus.ToString() : "n/a")} " +
-            $"manualFallback={useManualNavMeshFallback}";
+            $"manualFallback={useManualNavMeshFallback} {watchdog}";
+    }
+
+    // ═══════════════════════════════════════════════
+    //  RECOVERY (driven by NavigationWatchdog)
+    // ═══════════════════════════════════════════════
+
+    void TickNavigationWatchdog()
+    {
+        if (!_hasActiveNavigationDestination || !_navWatchdog.IsActive) return;
+
+        if (_activeFollowTarget != null)
+        {
+            _activeNavigationDestination = _activeFollowTarget.position;
+            _navWatchdog.UpdateDestination(_activeNavigationDestination);
+        }
+
+        var decision = _navWatchdog.Tick(AnimalPosition, Time.time);
+        switch (decision)
+        {
+            case NavigationRecoveryAction.Continue:
+                break;
+            case NavigationRecoveryAction.Repath:
+                RepathActiveDestination();
+                break;
+            case NavigationRecoveryAction.Warp:
+                WarpToActiveDestination();
+                break;
+        }
+    }
+
+    void RepathActiveDestination()
+    {
+        if (logIntentProof)
+            Debug.Log(
+                $"[MalbersAdapter] Watchdog repath ({_navWatchdog.RepathAttempts}/{recoveryConfig.maxRepathAttempts}) → {_activeNavigationDestination}. {BuildNavigationDebug()}");
+
+        if (_usingManualNavigation)
+        {
+            TryBuildManualPath(_manualNavigationDestination, out _);
+            return;
+        }
+
+        if (_activeFollowTarget != null)
+        {
+            aiControl.SetTarget(_activeFollowTarget, true);
+            return;
+        }
+
+        if (TryEnsureMalbersAgentReady(out _))
+            aiControl.SetDestination(_activeNavigationDestination);
+    }
+
+    void WarpToActiveDestination()
+    {
+        Vector3 raw = _activeNavigationDestination;
+        bool projected = NavMesh.SamplePosition(
+            raw, out NavMeshHit hit, recoveryConfig.warpNavMeshSampleRadius, AgentAreaMask());
+
+        Vector3 warpPos = projected ? hit.position : raw;
+
+        animal.transform.position = warpPos;
+
+        var agent = aiControl != null ? aiControl.Agent : null;
+        if (agent != null && agent.gameObject.activeInHierarchy && agent.enabled)
+            agent.Warp(warpPos);
+
+        StopManualNavigation(true);
+        if (aiControl != null) aiControl.Stop();
+
+        _hasActiveNavigationDestination = false;
+        _hasArrived = true;
+        _activeFollowTarget = null;
+
+        if (projected) _navWatchdog.NotifyWarpedToNavMesh();
+        else           _navWatchdog.NotifyWarpedRaw();
+        LastNavigationCompletionReason = _navWatchdog.CompletionReason;
+
+        Debug.LogWarning(
+            $"[MalbersAdapter] Watchdog warped cat to {(projected ? "NavMesh-projected" : "raw")} destination {warpPos} (requested={raw}). reason={LastNavigationCompletionReason}");
     }
 }
