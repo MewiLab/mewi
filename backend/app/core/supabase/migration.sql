@@ -1,176 +1,160 @@
-CREATE EXTENSION IF NOT EXISTS vector;
+-- ============================================================================
+-- migration.sql
+--
+-- Declarative target schema for the Mewi backend. Only tables that the active
+-- Python repositories read or write live here. Legacy identity / perception /
+-- microlog / decision tables were dropped from this file because nothing in
+-- app/ references them anymore — keep the migration aligned with what the code
+-- actually expects.
+--
+-- Mapping (table → repository):
+--   agent_memory_raw_events       app/repositories/memory_repo.py
+--   agent_short_term_memories     app/repositories/memory_repo.py
+--   agent_place_memories          app/repositories/place_memory_repo.py
+--   agent_place_memory_state      app/repositories/place_memory_repo.py
+--   attachment_raw_events         app/repositories/attachment_repo.py
+--   attachment_session_features   app/repositories/attachment_repo.py
+--   attachment_results            app/repositories/attachment_repo.py
+--
+-- This file is idempotent (CREATE TABLE IF NOT EXISTS) and safe to re-run.
+-- It does NOT drop the legacy tables from existing databases — drop them
+-- manually if you want a clean slate. See "Manual cleanup" at the bottom.
+-- ============================================================================
 
--- ==========================================
--- Core Identity Tables
--- ==========================================
 
-CREATE TABLE IF NOT EXISTS users (
-  id         uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  aura       text,
-  movement   text,
-  identity   text,
-  created_at timestamptz DEFAULT now() NOT NULL
+-- ============================================================================
+-- Agent Cat Memory
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS agent_memory_raw_events (
+  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  creature_id text NOT NULL,
+  tick        integer NOT NULL,
+  request_id  text DEFAULT '',
+  source      text NOT NULL DEFAULT 'python',
+  event_type  text NOT NULL,
+  payload     jsonb NOT NULL DEFAULT '{}',
+  created_at  timestamptz DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS creatures (
-  id             uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  species        text DEFAULT 'cat',
-  name           text,
-  temperament    text,
-  global_traits  text[],
-  learned_fears  text[],
-  _wisdom        text,
-  created_at     timestamptz DEFAULT now() NOT NULL
-);
+CREATE INDEX IF NOT EXISTS idx_agent_memory_raw_creature_tick
+  ON agent_memory_raw_events(creature_id, tick DESC, created_at DESC);
 
-CREATE TABLE IF NOT EXISTS user_creature_relations (
-  id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id           uuid REFERENCES users(id) ON DELETE CASCADE,
-  creature_id       uuid REFERENCES creatures(id) ON DELETE CASCADE,
-  bond_score        integer DEFAULT 0,
-  episodic_memories text[],
-  emotional_tags    text[],
-  last_seen_at      timestamptz,
-  UNIQUE(user_id, creature_id)
-);
 
--- ==========================================
--- Internal State Layer
--- ==========================================
-
-CREATE TABLE IF NOT EXISTS creature_states (
-  creature_id uuid REFERENCES creatures(id) ON DELETE CASCADE PRIMARY KEY,
-  hunger      float DEFAULT 0.0,
-  energy      float DEFAULT 1.0,
-  mood        float DEFAULT 0.0,  -- scalar: trust - fear
-  curiosity   float DEFAULT 0.5,
-  fear        float DEFAULT 0.0,
-  updated_at  timestamptz DEFAULT now()
-);
-
--- ==========================================
--- Territory Layer
--- ==========================================
-
-CREATE TABLE IF NOT EXISTS zones (
-  id        uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  name      text NOT NULL,
-  zone_type text,
-  metadata  jsonb DEFAULT '{}'
-);
-
--- ==========================================
--- Semantic Perception Layer  (X-to-1 compression)
--- ==========================================
--- Each row is ONE aggregated summary of X raw Unity snapshots.
--- creature_id is NOT NULL — every record is anchored to a specific creature
--- for deterministic memory retrieval.
-
-CREATE TABLE IF NOT EXISTS perception_snapshots (
+CREATE TABLE IF NOT EXISTS agent_short_term_memories (
   id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  creature_id  uuid NOT NULL REFERENCES creatures(id) ON DELETE CASCADE,
-  request_id   text,                    -- requestId from the final snapshot in the window
-  summary_text text,                    -- Human-readable story from SemanticService
-  raw_payloads jsonb DEFAULT '[]',      -- Array of X original Unity JSONs for auditing
-  pos_x        float DEFAULT 0.0,
-  pos_y        float DEFAULT 0.0,
-  pos_z        float DEFAULT 0.0,
-  created_at   timestamptz DEFAULT now()
+  raw_event_id uuid REFERENCES agent_memory_raw_events(id) ON DELETE SET NULL,
+  creature_id  text NOT NULL,
+  tick         integer NOT NULL,
+  request_id   text DEFAULT '',
+  memory_kind  text NOT NULL DEFAULT 'working',
+  aspect       text NOT NULL DEFAULT 'general',
+  text         text NOT NULL,
+  salience     float DEFAULT 0.0,
+  evidence     jsonb NOT NULL DEFAULT '{}',
+  created_at   timestamptz DEFAULT now() NOT NULL
 );
 
--- Composite index optimises per-creature chronological memory retrieval
-CREATE INDEX IF NOT EXISTS idx_perception_creature_time
-  ON perception_snapshots(creature_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_short_term_creature_tick
+  ON agent_short_term_memories(creature_id, tick DESC, created_at DESC);
 
--- ==========================================
--- Decision & Action Audit Trail
--- ==========================================
+CREATE INDEX IF NOT EXISTS idx_agent_short_term_kind_aspect
+  ON agent_short_term_memories(creature_id, memory_kind, aspect, tick DESC);
 
-CREATE TABLE IF NOT EXISTS behavior_decisions (
-  id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  creature_id      uuid REFERENCES creatures(id) ON DELETE CASCADE,
-  snapshot_id      uuid REFERENCES perception_snapshots(id) ON DELETE SET NULL,
-  decision_type    text NOT NULL,
-  confidence       float,
-  reasoning        text,
-  raw_brain_output jsonb DEFAULT '{}',
-  status           text DEFAULT 'pending',
-  executed_at      timestamptz,
-  created_at       timestamptz DEFAULT now()
+
+-- ============================================================================
+-- Place Memory (per-creature zone coverage)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS agent_place_memories (
+  id                       uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  creature_id              text NOT NULL,
+  zone_id                  text NOT NULL,
+  visit_count              integer DEFAULT 0,
+  last_visited_at          float,
+  last_seen_at             float DEFAULT 0.0,
+  familiarity              float DEFAULT 0.0,
+  last_arrival_request_id  text DEFAULT '',
+  created_at               timestamptz DEFAULT now() NOT NULL,
+  updated_at               timestamptz DEFAULT now() NOT NULL,
+  UNIQUE(creature_id, zone_id)
 );
 
-CREATE TABLE IF NOT EXISTS action_logs (
-  id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  decision_id  uuid REFERENCES behavior_decisions(id) ON DELETE CASCADE,
-  action_type  text NOT NULL,
-  duration     float,
-  parameters   jsonb DEFAULT '{}',
-  outcome      text,
-  completed_at timestamptz,
-  created_at   timestamptz DEFAULT now()
+CREATE INDEX IF NOT EXISTS idx_agent_place_memories_seen
+  ON agent_place_memories(creature_id, last_seen_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_agent_place_memories_visits
+  ON agent_place_memories(creature_id, visit_count, last_visited_at DESC);
+
+
+CREATE TABLE IF NOT EXISTS agent_place_memory_state (
+  creature_id       text PRIMARY KEY,
+  last_zone_id      text DEFAULT '',
+  last_observed_at  float DEFAULT 0.0,
+  last_request_id   text DEFAULT '',
+  updated_at        timestamptz DEFAULT now() NOT NULL
 );
 
--- ==========================================
--- Long-term Reflection Layer
--- ==========================================
 
-CREATE TABLE IF NOT EXISTS micrologs (
+-- ============================================================================
+-- Attachment Research Pipeline
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS attachment_raw_events (
   id                 uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id            uuid REFERENCES users(id) ON DELETE CASCADE,
-  creature_id        uuid REFERENCES creatures(id) ON DELETE CASCADE,
-  content            text NOT NULL,
-  valence            float DEFAULT 0.0,
-  arousal            float DEFAULT 0.0,
-  image_url          text,
-  video_url          text,
-  voice_url          text,
-  embedding          vector(1536),
-  contextual_summary text,
-  importance_score   float4 DEFAULT 0.0,
-  session_id         uuid,
+  session_id         uuid NOT NULL,
+  cat_id             text NOT NULL,
+  cat_assigned_type  text NOT NULL,
+  event              text NOT NULL,
+  t                  float NOT NULL,
+  distance           float,
+  meta               jsonb DEFAULT '{}',
   created_at         timestamptz DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS memory_summaries (
-  id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  creature_id       uuid REFERENCES creatures(id) ON DELETE CASCADE,
-  zone_id           uuid REFERENCES zones(id),
-  period_start      timestamptz NOT NULL,
-  period_end        timestamptz NOT NULL,
-  summary_text      text NOT NULL,
-  dominant_mood     float,
-  dominant_behavior text,
-  interaction_count integer DEFAULT 0,
-  created_at        timestamptz DEFAULT now()
+CREATE INDEX IF NOT EXISTS idx_attachment_raw_session
+  ON attachment_raw_events(session_id, cat_id, t);
+
+
+CREATE TABLE IF NOT EXISTS attachment_session_features (
+  id                         uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id                 uuid NOT NULL,
+  cat_id                     text NOT NULL,
+  cat_assigned_type          text NOT NULL,
+  reapproach_latency_mean    float DEFAULT 0.0,
+  pursuit_ratio              float DEFAULT 0.0,
+  time_near_ratio            float DEFAULT 0.0,
+  reunion_response           float DEFAULT 0.0,
+  withdrawal_tolerance       float DEFAULT 0.0,
+  n_events                   integer DEFAULT 0,
+  created_at                 timestamptz DEFAULT now() NOT NULL,
+  UNIQUE(session_id, cat_id)
 );
 
--- ==========================================
--- Performance Indexes
--- ==========================================
 
-CREATE INDEX IF NOT EXISTS idx_micrologs_user_id        ON micrologs(user_id);
-CREATE INDEX IF NOT EXISTS idx_micrologs_creature_id    ON micrologs(creature_id);
-CREATE INDEX IF NOT EXISTS idx_micrologs_importance     ON micrologs(importance_score DESC);
-CREATE INDEX IF NOT EXISTS idx_micrologs_session        ON micrologs(session_id);
-CREATE INDEX IF NOT EXISTS idx_decisions_creature_time  ON behavior_decisions(creature_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_decisions_pending        ON behavior_decisions(status) WHERE status = 'pending';
-CREATE INDEX IF NOT EXISTS idx_perception_spatial       ON perception_snapshots(pos_x, pos_y, pos_z);
+CREATE TABLE IF NOT EXISTS attachment_results (
+  id                          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id                  uuid NOT NULL,
+  cat_id                      text NOT NULL,
+  cat_assigned_type           text NOT NULL,
+  player_attachment_estimate  text NOT NULL,
+  scores                      jsonb DEFAULT '{}',
+  confidence                  text DEFAULT 'low',
+  n_events                    integer DEFAULT 0,
+  features                    jsonb DEFAULT '{}',
+  rule_trace                  jsonb DEFAULT '[]',
+  created_at                  timestamptz DEFAULT now() NOT NULL,
+  UNIQUE(session_id, cat_id)
+);
 
--- ==========================================
--- RAG: Vector columns (safe to run on existing DB)
--- ==========================================
+CREATE INDEX IF NOT EXISTS idx_attachment_results_session
+  ON attachment_results(session_id, cat_id);
 
-ALTER TABLE perception_snapshots
-  ADD COLUMN IF NOT EXISTS embedding vector(1536);
 
-CREATE INDEX IF NOT EXISTS idx_perception_embedding
-  ON perception_snapshots
-  USING ivfflat (embedding vector_cosine_ops)
-  WITH (lists = 100);
-
--- ==========================================
+-- ============================================================================
 -- Utility: Python RPC tunnel
--- ==========================================
+--   Used by app/core/supabase/schema_manager.py to apply migrations from code.
+-- ============================================================================
 
 CREATE OR REPLACE FUNCTION exec_sql(query text)
 RETURNS void
@@ -181,3 +165,22 @@ BEGIN
   EXECUTE query;
 END;
 $$;
+
+
+-- ============================================================================
+-- Manual cleanup (legacy tables — run if you want to drop them from an
+-- existing database; nothing in current app/ references them):
+--
+--   DROP TABLE IF EXISTS users CASCADE;
+--   DROP TABLE IF EXISTS creatures CASCADE;
+--   DROP TABLE IF EXISTS user_creature_relations CASCADE;
+--   DROP TABLE IF EXISTS creature_states CASCADE;
+--   DROP TABLE IF EXISTS zones CASCADE;
+--   DROP TABLE IF EXISTS perception_snapshots CASCADE;
+--   DROP TABLE IF EXISTS behavior_decisions CASCADE;
+--   DROP TABLE IF EXISTS action_logs CASCADE;
+--   DROP TABLE IF EXISTS micrologs CASCADE;
+--   DROP TABLE IF EXISTS memory_summaries CASCADE;
+--   DROP TABLE IF EXISTS agent_tick_history CASCADE;  -- code-defined but unused
+--   DROP EXTENSION IF EXISTS vector;                  -- only used by dropped tables
+-- ============================================================================

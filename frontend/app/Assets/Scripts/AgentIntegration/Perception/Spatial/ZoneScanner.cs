@@ -1,220 +1,190 @@
 // ZoneScanner.cs
 //
-// Tracks which ZoneVolumes the cat is currently inside.
+// Current-location spatial source of truth.
 //
-// Tracks active COLLIDERS (not ZoneVolume components directly).
-// WriteToBlackboard() derives the active zone set by walking each collider's
-// ancestor chain — so a ZoneVolume with no collider of its own (a container
-// like ZV_Harbor) is automatically included whenever any of its descendant
-// trigger colliders are active.
+// Authoring model:
+//   ZV_Harbor                    ZoneVolume, no collider needed
+//     ZV_Bamboo_Boardwalk        ZoneVolume for this named place
+//       BoardwalkFootprint_A     trigger Collider on SemanticZone
+//       BoardwalkFootprint_B     trigger Collider on SemanticZone
 //
-// Sorting: hierarchy depth ascending → shallowest (broadest) zone first.
-// Python reads zones[0] for broad context, zones[-1] for most-specific place.
-//
-// Primary mechanism: OnTriggerEnter/Exit — instant, zero per-frame cost.
-// Safety net: periodic overlap recovery catches missed enters and XZ bounds
-//   checks catch missed exits
-//   (a known Unity edge case when colliders resize, objects teleport,
-//    or the Rigidbody goes to sleep). Checks XZ only — Y is ignored so
-//   the cat's elevated pivot does not falsely evict thin, ground-level volumes.
+// The collider children do not each need ZoneVolume. Only attach ZoneVolume to
+// semantic places you want in the snapshot. The scanner samples the cat's
+// current position, finds trigger colliders under ZoneVolume ancestors, walks
+// up the hierarchy, and writes activeZones broadest -> most specific.
 
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class ZoneScanner : MonoBehaviour
 {
-    [Tooltip("Layers containing ZoneVolume trigger volumes. Used only for the spawn-time seed.")]
+    [Tooltip("Preferred layers containing ZoneVolume trigger colliders.")]
     public LayerMask zoneLayers = ~0;
 
-    [Tooltip("How often (seconds) to run the missed-exit recovery check.")]
-    public float recoveryInterval = 0.5f;
+    [FormerlySerializedAs("recoveryInterval")]
+    [Tooltip("How often, in seconds, to rescan the cat's current containing zones.")]
+    public float scanInterval = 0.25f;
 
-    [Tooltip("Log zone enter/exit transitions for scene authoring verification.")]
-    public bool logTransitions = false;
+    [FormerlySerializedAs("seedRadius")]
+    [Tooltip("Overlap radius around the cat pivot. Increase if the pivot is above thin ground-level zone colliders.")]
+    public float sampleRadius = 1.0f;
 
-    [Tooltip("Radius for the spawn-time OverlapSphere seed. Must reach ground-level zone " +
-             "colliders from the cat's pivot (increase if cat pivot is well above the ground).")]
-    public float seedRadius = 1.0f;
+    [FormerlySerializedAs("logTransitions")]
+    [Tooltip("Log when the current zone chain changes.")]
+    public bool logChanges = false;
 
-    [Tooltip("Periodically discover zone colliders missed by trigger enter events or layer authoring.")]
-    public bool recoverMissedEntries = true;
+    [Tooltip("Also scan all layers and filter by ZoneVolume. Useful when child collider layers are mixed during scene authoring.")]
+    public bool scanAllLayersFallback = true;
 
-    readonly HashSet<Collider> _activeColliders = new();
-    readonly Collider[]        _seedBuffer      = new Collider[32];
-    readonly Collider[]        _recoveryBuffer  = new Collider[64];
-    float _recoveryTimer;
+    readonly Collider[] _buffer = new Collider[128];
+    readonly HashSet<Collider> _sampledColliders = new();
 
     CreatureBlackboard _board;
-
-    // ─── Init ────────────────────────────────────────────────────────────────
+    float _scanTimer;
 
     public void Init(CreatureBlackboard board)
     {
         _board = board;
-        SeedActiveZones();
-        WriteToBlackboard();
+        RefreshNow();
     }
-
-    // ─── Trigger events — primary source of truth ────────────────────────────
-
-    void OnTriggerEnter(Collider other)
-    {
-        if (!IsZoneTrigger(other) || !_activeColliders.Add(other)) return;
-        if (logTransitions)
-        {
-            var zv = other.GetComponentInParent<ZoneVolume>();
-            Debug.Log($"[ZoneScanner] enter → {other.name} ({zv?.EffectiveZoneId})");
-        }
-        if (_board != null) WriteToBlackboard();
-    }
-
-    void OnTriggerExit(Collider other)
-    {
-        if (!_activeColliders.Remove(other)) return;
-        if (logTransitions)
-        {
-            var zv = other.GetComponentInParent<ZoneVolume>();
-            Debug.Log($"[ZoneScanner] exit  ← {other.name} ({zv?.EffectiveZoneId})");
-        }
-        if (_board != null) WriteToBlackboard();
-    }
-
-    // ─── Tick — periodic safety net only ─────────────────────────────────────
 
     public void Tick()
     {
         if (_board == null) return;
 
-        _recoveryTimer += Time.deltaTime;
-        if (_recoveryTimer < recoveryInterval) return;
-        _recoveryTimer = 0f;
-
-        bool changed = false;
-        if (recoverMissedEntries)
-            changed |= RecoverMissedEntries();
-        changed |= RecoverMissedExits();
-
-        if (changed) WriteToBlackboard();
+        _scanTimer += Time.deltaTime;
+        if (_scanTimer < Mathf.Max(0.02f, scanInterval)) return;
+        RefreshNow();
     }
 
-    // ─── Internal ────────────────────────────────────────────────────────────
-
-    // One-shot probe at spawn: OnTriggerEnter doesn't fire for zones the cat
-    // starts inside. OverlapSphere is used here only once, not every frame.
-    void SeedActiveZones()
+    /// <summary>
+    /// Rebuild active zones immediately from the current position. Call after
+    /// teleports/warps because trigger callbacks are not the source of truth.
+    /// </summary>
+    public void RefreshNow()
     {
-        AddZoneCollidersAtPosition(transform.position, seedRadius, _seedBuffer, zoneLayers, _activeColliders);
+        if (_board == null) return;
 
-        // Some authored child ZoneVolumes are on Default/SemanticProp instead of
-        // SemanticZone. The ZoneVolume component is the truth, so do one broad
-        // fallback pass at spawn and filter by component.
-        if (zoneLayers.value != ~0)
-            AddZoneCollidersAtPosition(transform.position, seedRadius, _seedBuffer, ~0, _activeColliders);
+        _scanTimer = 0f;
+        _sampledColliders.Clear();
+        AddZoneCollidersAtPosition(transform.position, sampleRadius, zoneLayers, _sampledColliders);
+
+        if (scanAllLayersFallback && zoneLayers.value != ~0)
+            AddZoneCollidersAtPosition(transform.position, sampleRadius, ~0, _sampledColliders);
+
+        var zones = BuildZoneChain(_sampledColliders);
+        zones.Sort(CompareBroadToSpecific);
+        WriteToBlackboard(zones);
     }
 
-    // Recovery entry scan: catches spawn/teleport/layer-authoring cases where
-    // OnTriggerEnter did not populate the active collider set.
-    bool RecoverMissedEntries()
-    {
-        bool changed = false;
-        changed |= AddZoneCollidersAtPosition(transform.position, seedRadius, _recoveryBuffer, zoneLayers, _activeColliders);
-        if (zoneLayers.value != ~0)
-            changed |= AddZoneCollidersAtPosition(transform.position, seedRadius, _recoveryBuffer, ~0, _activeColliders);
-        return changed;
-    }
-
-    // XZ-only AABB check — no edge oscillation.
-    // Zone volumes are ground-level footprints; the cat's pivot may sit above a thin
-    // collider while the cat is clearly standing on it, so Y is intentionally ignored.
-    bool RecoverMissedExits()
-    {
-        bool changed = false;
-        Vector3 pos  = transform.position;
-
-        _activeColliders.RemoveWhere(col =>
-        {
-            if (col == null)
-            {
-                changed = true;
-                return true;
-            }
-            Bounds b = col.bounds;
-            bool outsideXZ = pos.x < b.min.x || pos.x > b.max.x ||
-                             pos.z < b.min.z || pos.z > b.max.z;
-            if (outsideXZ)
-            {
-                if (logTransitions)
-                    Debug.Log($"[ZoneScanner] recovery exit ← {col.name}");
-                changed = true;
-                return true;
-            }
-            return false;
-        });
-
-        return changed;
-    }
-
-    // A collider counts as a zone trigger if it shares the ZoneVolume object, or
-    // if it is a child trigger under a ZoneVolume container. The trigger check
-    // prevents ordinary prop colliders nested under a zone hierarchy from being
-    // mistaken for spatial volumes during broad recovery scans.
-    static bool IsZoneTrigger(Collider c)
-    {
-        if (c == null) return false;
-        if (c.GetComponent<ZoneVolume>() != null) return true;
-        return c.isTrigger && c.GetComponentInParent<ZoneVolume>() != null;
-    }
-
-    static bool AddZoneCollidersAtPosition(
-        Vector3 position,
-        float radius,
-        Collider[] buffer,
-        LayerMask layerMask,
-        HashSet<Collider> activeColliders)
-    {
-        bool changed = false;
-        int n = Physics.OverlapSphereNonAlloc(
-            position, radius, buffer, layerMask, QueryTriggerInteraction.Collide);
-
-        for (int i = 0; i < n; i++)
-        {
-            Collider col = buffer[i];
-            if (IsZoneTrigger(col) && activeColliders.Add(col))
-                changed = true;
-        }
-
-        return changed;
-    }
-
-    // Derive the active zone set by walking each active collider's ancestor chain.
-    // Container zones (ZoneVolume with no collider of their own, like ZV_Harbor) are
-    // included automatically when any descendant trigger is active.
-    void WriteToBlackboard()
+    static List<ZoneVolume> BuildZoneChain(HashSet<Collider> colliders)
     {
         var zones = new HashSet<ZoneVolume>();
 
-        foreach (var col in _activeColliders)
+        foreach (Collider col in colliders)
         {
-            var t = col.transform;
+            if (col == null) continue;
+
+            Transform t = col.transform;
             while (t != null)
             {
-                var zv = t.GetComponent<ZoneVolume>();
-                if (zv != null) zones.Add(zv);
+                ZoneVolume zone = t.GetComponent<ZoneVolume>();
+                if (zone != null)
+                    zones.Add(zone);
                 t = t.parent;
             }
         }
 
-        var sorted = new List<ZoneVolume>(zones);
-        sorted.Sort((a, b) => HierarchyDepth(a.transform).CompareTo(HierarchyDepth(b.transform)));
+        return new List<ZoneVolume>(zones);
+    }
+
+    void WriteToBlackboard(List<ZoneVolume> zones)
+    {
+        if (logChanges && ZoneChainChanged(_board.activeZones, zones))
+            Debug.Log($"[ZoneScanner] current zones: {FormatZoneChain(zones)}");
 
         _board.activeZones.Clear();
-        _board.activeZones.AddRange(sorted);
+        _board.activeZones.AddRange(zones);
+    }
+
+    void AddZoneCollidersAtPosition(
+        Vector3 position,
+        float radius,
+        LayerMask layerMask,
+        HashSet<Collider> activeColliders)
+    {
+        int n = Physics.OverlapSphereNonAlloc(
+            position,
+            Mathf.Max(0.01f, radius),
+            _buffer,
+            layerMask,
+            QueryTriggerInteraction.Collide);
+
+        for (int i = 0; i < n; i++)
+        {
+            Collider col = _buffer[i];
+            if (IsZoneTrigger(col))
+                activeColliders.Add(col);
+        }
+    }
+
+    static bool IsZoneTrigger(Collider c)
+    {
+        if (c == null || !c.isTrigger) return false;
+        return c.GetComponentInParent<ZoneVolume>() != null;
+    }
+
+    static int CompareBroadToSpecific(ZoneVolume a, ZoneVolume b)
+    {
+        float av = BoundsVolume(a);
+        float bv = BoundsVolume(b);
+        int bySize = bv.CompareTo(av);
+        if (bySize != 0) return bySize;
+        return HierarchyDepth(a.transform).CompareTo(HierarchyDepth(b.transform));
+    }
+
+    static float BoundsVolume(ZoneVolume zone)
+    {
+        if (ZoneVolumeUtility.TryGetBounds(zone, out Bounds bounds))
+            return Mathf.Max(0.0001f, bounds.size.x * bounds.size.y * bounds.size.z);
+        return float.PositiveInfinity;
     }
 
     static int HierarchyDepth(Transform t)
     {
         int d = 0;
-        while (t.parent != null) { d++; t = t.parent; }
+        while (t.parent != null)
+        {
+            d++;
+            t = t.parent;
+        }
         return d;
+    }
+
+    static bool ZoneChainChanged(List<ZoneVolume> previous, List<ZoneVolume> next)
+    {
+        int previousCount = previous != null ? previous.Count : 0;
+        int nextCount = next != null ? next.Count : 0;
+        if (previousCount != nextCount) return true;
+
+        for (int i = 0; i < previousCount; i++)
+        {
+            if (previous[i] != next[i]) return true;
+        }
+        return false;
+    }
+
+    static string FormatZoneChain(List<ZoneVolume> zones)
+    {
+        if (zones == null || zones.Count == 0) return "(none)";
+
+        var ids = new List<string>(zones.Count);
+        for (int i = 0; i < zones.Count; i++)
+        {
+            if (zones[i] != null)
+                ids.Add(zones[i].EffectiveZoneId);
+        }
+        return string.Join(" > ", ids);
     }
 }

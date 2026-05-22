@@ -58,6 +58,41 @@ def list_personas() -> list[str]:
     return sorted(path.stem for path in PERSONA_DIR.glob("*.md") if path.is_file())
 
 
+class PersonaManager:
+    """Resolves persona prompt text for a given creature_id.
+
+    Owns the creature_id -> persona text mapping plus the default fallback so
+    consumers (the tick worker, the runtime) do not each re-implement the
+    normalize-and-lookup pattern.
+    """
+
+    def __init__(self, personas: dict[str, str] | None = None) -> None:
+        self._personas = dict(personas or {})
+        self._default = self._personas.get(DEFAULT_PERSONA_KEY, "")
+
+    @classmethod
+    def from_spec(
+        cls,
+        spec: str = "",
+        *,
+        default_persona: str = DEFAULT_PERSONA,
+    ) -> "PersonaManager":
+        return cls(load_persona_map(spec, default_persona=default_persona))
+
+    def for_creature(self, creature_id: str) -> str:
+        return self._personas.get(self.key_for(creature_id), self._default)
+
+    @staticmethod
+    def key_for(creature_id: str) -> str:
+        return normalize_creature_id(creature_id)
+
+    def keys(self) -> list[str]:
+        return sorted(self._personas.keys())
+
+    def has_default(self) -> bool:
+        return DEFAULT_PERSONA_KEY in self._personas
+
+
 def _safe_prompt_name(name: str) -> str:
     value = name.strip()
     if not value:

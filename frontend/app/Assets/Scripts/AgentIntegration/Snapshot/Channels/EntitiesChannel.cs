@@ -51,7 +51,7 @@ public sealed class EntitiesChannel : ISnapshotChannel
             Vector3 local = self.InverseTransformPoint(evt.position);
             string id = evt.label;
             if (!string.IsNullOrWhiteSpace(id) && evt.source != null)
-                board.RememberPerceivedTarget(id, evt.source);
+                board.RememberPerceivedTarget(id, evt.source, evt.position);
 
             result.Add(new EntityData
             {

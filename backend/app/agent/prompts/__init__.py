@@ -1,3 +1,17 @@
+from typing import TYPE_CHECKING
+
+from app.agent.prompts.sections import (
+    action_lines as _action_lines,
+    build_dynamic_section as _build_dynamic_section,
+    bullet_lines as _bullet_lines,
+    place_memory_lines as _place_memory_lines,
+    section_text as _section_text,
+)
+
+if TYPE_CHECKING:
+    from app.agent.schemas.place_memory_schema import PlaceMemoryContextDict
+
+
 STRATEGIC_COMMANDER_PROMPT = """
 # ROLE: MEW (Strategic Commander)
 You are MEW, an autonomous digital cat embodied in a 3D environment.
@@ -15,6 +29,9 @@ Temperament: {temperament}. Trust Level: {trust}.
 # SENSORY MEANING
 {sensory_world}
 
+# PLACE MEMORY
+{place_memory}
+
 # RELEVANT TARGETS
 {relevant_targets}
 
@@ -27,10 +44,12 @@ Temperament: {temperament}. Trust Level: {trust}.
 - Use 1 to 4 plan steps. Keep the plan short, physical, and achievable from the current scene.
 - Every plan_steps action MUST be chosen from Available Affordances exactly.
 - Use exact target ids from Relevant Targets when acting on a visible object.
+- Use exact target ids from Place Memory only when it explicitly provides a target id.
 - Use JSON null when there is no specific target.
 - Do not invent coordinates, distances, hidden objects, or raw sensor values.
 - Treat the semantic context as already interpreted; reason from meaning, not numbers.
 - If recent feedback says an action was rejected or unmapped, avoid that action for now.
+- When curiosity and energy are available, and hunger/fear are not urgent, prefer new or stale places over overvisited places.
 - Prefer the smallest physical action that advances the current motivation.
 
 # DECISION FOCUS
@@ -50,6 +69,68 @@ Temperament: {temperament}. Trust Level: {trust}.
 }}
 """
 
+SLOW_MIND_PROMPT_STATIC = """
+# ROLE: MEW (Slow Mind)
+You are MEW, an autonomous digital cat embodied in a 3D environment.
+Temperament: {temperament}. Trust Level: {trust}.
+
+# PERSONA
+{persona}
+
+# INTENT CATALOG
+- EXPLORE: curiosity should carry the cat toward a new or stale place.
+- SEEK_FOOD: hunger and a food cue should guide the cat toward food.
+- SEEK_PLAYER: the cat wants to locate or stay near a trusted human.
+- SOCIALIZE: the cat wants gentle contact with a nearby trusted being.
+- INVESTIGATE: the cat wants to inspect a nearby cue, object, smell, or sound.
+- REST: low energy or comfort should guide stillness, sitting, lying, or sleep.
+- SAFETY: fear, danger, or failed movement should guide distance or alertness.
+- IDLE: nothing strong is pulling the body yet.
+
+# SLOW MIND RULES
+- Choose one durable intent, not a concrete action sequence.
+- Fast Mind will translate the intent and style into Unity actions.
+- Use exact target ids only from Place Memory or Relevant Targets.
+- Prefer EXPLORE when curiosity and energy are available and hunger/fear are not urgent.
+- Prefer SEEK_FOOD when hunger is urgent and food is visible or scented.
+- Prefer REST when energy is low.
+- Prefer SAFETY when fear or recent failed/rejected movement matters.
+- Express how this cat would physically approach the intent. The style should come from persona, mood, and recent feedback.
+
+# ONE-SHOT EXAMPLE
+If the current prompt says hunger is urgent and Relevant Targets contains "fish nearby; target: SM_Fish_1", a good Slow Mind output is:
+{{
+  "intent": "SEEK_FOOD",
+  "target_id": "SM_Fish_1",
+  "mood": "hungry but watchful",
+  "style": "cautious sniff-first approach",
+  "reasoning": "The food cue is strong, but this cat should confirm it with scent before committing."
+}}
+Use this only as an example of level and shape; use the current prompt's real target ids.
+
+# OUTPUT FORMAT
+Return exactly one JSON object, with no markdown and no extra text.
+Replace placeholders with real values from the current context; do not return angle brackets.
+{{
+  "intent": "<EXPLORE | SEEK_FOOD | SEEK_PLAYER | SOCIALIZE | INVESTIGATE | REST | SAFETY | IDLE>",
+  "target_id": null,
+  "mood": "brief embodied mood",
+  "style": "short physical style hint for Fast Mind, e.g. cautious sniff-first, direct hungry approach, gentle social approach",
+  "reasoning": "One sentence explaining why this intent fits."
+}}
+"""
+
+
+# The dynamic suffix is assembled from typed need-blocks rather than from a
+# fixed template, so empty blocks vanish entirely (saves tokens, reduces
+# "nothing here" noise). See format_slow_mind_prompt_parts below.
+SLOW_MIND_PROMPT_DYNAMIC = ""
+
+
+# Legacy single-string template kept for tests that still assert on the
+# combined output. New code should prefer format_slow_mind_prompt_parts.
+SLOW_MIND_PROMPT = SLOW_MIND_PROMPT_STATIC
+
 
 def format_strategic_prompt(
     temperament: str,
@@ -62,6 +143,7 @@ def format_strategic_prompt(
     actions: list,
     feelings: dict | None = None,
     semantic_context: dict | None = None,
+    place_memory_context: "PlaceMemoryContextDict | None" = None,
     persona: str = "",
     previous_action_result: str = "",
 ) -> str:
@@ -75,10 +157,6 @@ def format_strategic_prompt(
         feelings=feelings,
     )
 
-    action_lines = "\n".join(f"  - {action}" for action in actions)
-    if not action_lines:
-        action_lines = "  - idle\n  - wander\n  - go_to"
-
     return STRATEGIC_COMMANDER_PROMPT.format(
         temperament    = temperament,
         trust          = trust,
@@ -86,11 +164,72 @@ def format_strategic_prompt(
         situation      = _section_text(context.get("situation")),
         body_state     = _section_text(context.get("body_state")),
         sensory_world  = _bullet_lines(context.get("sensory_world")),
+        place_memory   = _bullet_lines(
+            _place_memory_lines(place_memory_context),
+            empty="  - no place memory yet",
+        ),
         relevant_targets = _bullet_lines(context.get("relevant_targets")),
         decision_focus = _bullet_lines(context.get("decision_focus")),
         previous_action_result = previous_action_result.rstrip() or "  - no previous plan result",
-        actions        = action_lines,
+        actions        = _action_lines(actions),
     )
+
+
+def format_slow_mind_prompt_parts(
+    temperament: str,
+    trust: str,
+    actions: list,
+    semantic_context: dict | None = None,
+    place_memory_context: "PlaceMemoryContextDict | None" = None,
+    memory_context: dict | None = None,
+    persona: str = "",
+    previous_action_result: str = "",
+) -> tuple[str, str]:
+    """Return (static_prefix, dynamic_suffix) for prompt caching.
+
+    The static prefix only depends on persona + temperament + trust and is safe
+    to cache across ticks for the same creature. The dynamic suffix carries
+    per-tick observations.
+    """
+    context = semantic_context or {}
+
+    static_text = SLOW_MIND_PROMPT_STATIC.format(
+        temperament=temperament,
+        trust=trust,
+        persona=persona.strip() or "No persona file was loaded; behave as a cautious, curious cat.",
+    )
+    dynamic_text = _build_dynamic_section(
+        context=context,
+        place_memory_context=place_memory_context,
+        memory_context=memory_context,
+        previous_action_result=previous_action_result,
+    )
+    return static_text, dynamic_text
+
+
+
+
+def format_slow_mind_prompt(
+    temperament: str,
+    trust: str,
+    actions: list,
+    semantic_context: dict | None = None,
+    place_memory_context: "PlaceMemoryContextDict | None" = None,
+    memory_context: dict | None = None,
+    persona: str = "",
+    previous_action_result: str = "",
+) -> str:
+    static_text, dynamic_text = format_slow_mind_prompt_parts(
+        temperament=temperament,
+        trust=trust,
+        actions=actions,
+        semantic_context=semantic_context,
+        place_memory_context=place_memory_context,
+        memory_context=memory_context,
+        persona=persona,
+        previous_action_result=previous_action_result,
+    )
+    return static_text + dynamic_text
 
 
 def _legacy_semantic_context(
@@ -180,22 +319,6 @@ def _meaningful_feeling(value: str) -> str:
     if ":" in text:
         _prefix, text = text.split(":", 1)
     return text.strip().replace("_", "-").rstrip(".")
-
-
-def _section_text(value) -> str:
-    if isinstance(value, str) and value.strip():
-        return value.strip()
-    return "(unknown)"
-
-
-def _bullet_lines(value) -> str:
-    if isinstance(value, str):
-        items = [value]
-    elif isinstance(value, list):
-        items = [str(item).strip() for item in value if str(item).strip()]
-    else:
-        items = []
-    return "\n".join(f"  - {item}" for item in items) if items else "  - (none)"
 
 
 def _number(value, default: float = 0.0) -> float:

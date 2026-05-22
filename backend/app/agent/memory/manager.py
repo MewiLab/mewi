@@ -2,29 +2,29 @@ import logging
 from collections import deque
 from typing import Any
 
-from app.agent.schemas.perception_schema import PerceptionSummary
-from app.agent.schemas.memory_schema import(
+from app.agent.memory.models import (
+    AspectMemory,
     MemoryRecall,
+    RawMemoryEvent,
     SpatialRecord,
+    TurnMemoryWrite,
 )
+from app.agent.schemas.perception_schema import PerceptionSummary
 
 logger = logging.getLogger(__name__)
 
 
 class MemoryManager:
     """
-    Maintains a bounded history of perception snapshots and a spatial
-    log of visited locations.
+    Maintains bounded in-process memory for one creature runtime.
 
-    Two storage structures:
+    Storage structures:
       - perception_history: ring buffer of recent PerceptionSummary objects.
-        Used by the LLM to reason about what just happened.
       - spatial_log: ring buffer of SpatialRecord entries.
-        Used by goal functions to avoid revisiting places or to find
-        previously discovered objects.
+      - raw_events: authoritative Python-owned turn records.
+      - short_term: aspect summaries derived from raw events.
 
-    Both are bounded by max_ticks so memory doesn't grow unbounded during
-    long play sessions.
+    All are bounded so memory does not grow unbounded during long sessions.
     """
 
     def __init__(
@@ -39,6 +39,8 @@ class MemoryManager:
         # Storage
         self._perception_history: deque[PerceptionSummary] = deque(maxlen=max_ticks)
         self._spatial_log: deque[SpatialRecord] = deque(maxlen=max_ticks * 2)
+        self._raw_events: deque[RawMemoryEvent] = deque(maxlen=max_ticks * 2)
+        self._short_term: dict[str, deque[AspectMemory]] = {}
 
     # ─── Write API ───────────────────────────────────────────────────────
 
@@ -71,10 +73,29 @@ class MemoryManager:
             SpatialRecord(x=pos.x, y=pos.y, z=pos.z, tick=summary.tick, label=label)
         )
 
+    def record_turn_memory(self, write: TurnMemoryWrite) -> None:
+        """Store an authoritative raw turn event and its short-term summaries."""
+        self.record_raw_event(write.raw_event)
+        for memory in write.aspect_memories:
+            self.record_short_term(memory)
+
+    def record_raw_event(self, event: RawMemoryEvent) -> None:
+        self._raw_events.append(event)
+
+    def record_short_term(self, memory: AspectMemory) -> None:
+        aspect = memory.aspect.strip().lower() or "general"
+        bucket = self._short_term.setdefault(
+            aspect,
+            deque(maxlen=max(3, self.max_ticks // 2)),
+        )
+        bucket.append(memory)
+
     def clear(self) -> None:
         """Reset all memory.  Useful between episodes or tests."""
         self._perception_history.clear()
         self._spatial_log.clear()
+        self._raw_events.clear()
+        self._short_term.clear()
 
     # ─── Read API ────────────────────────────────────────────────────────
 
@@ -104,6 +125,11 @@ class MemoryManager:
             ],
             threat_history=[p.threat_level for p in history],
             tick_range=tick_range,
+            recent_raw_events=list(self._raw_events)[-(last_n or 5):],
+            short_term={
+                aspect: list(items)[-(last_n or 5):]
+                for aspect, items in self._short_term.items()
+            },
         )
 
     def has_visited_near(self, x: float, z: float, radius: float = 5.0) -> bool:
@@ -139,6 +165,14 @@ class MemoryManager:
     @property
     def tick_count(self) -> int:
         return len(self._perception_history)
+
+    @property
+    def raw_event_count(self) -> int:
+        return len(self._raw_events)
+
+    @property
+    def short_term_count(self) -> int:
+        return sum(len(items) for items in self._short_term.values())
 
     # ─── Internal ────────────────────────────────────────────────────────
 

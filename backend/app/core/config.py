@@ -179,6 +179,8 @@ class Settings(BaseSettings):
     # System
     debug: bool = False
     agent_status_ttl: int = 300  
+    place_memory_ttl_seconds: int = 604_800
+    place_memory_refresh_seconds: float = 30.0
     log_level: str = "INFO"
     log_file_path: str | None = None  # Opt in locally via LOG_FILE_PATH=app.log in .env
     log_max_bytes: int = 5_000_000         # 5 MB

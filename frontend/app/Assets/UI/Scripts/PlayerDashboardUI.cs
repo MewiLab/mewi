@@ -977,7 +977,7 @@ public sealed class PlayerDashboardUI : MonoBehaviour
         if (text == null)
             return;
 
-        text.enableWordWrapping = true;
+        text.textWrappingMode = TextWrappingModes.Normal;
         text.maxVisibleLines = Mathf.Max(1, maxLines);
         text.overflowMode = TextOverflowModes.Ellipsis;
     }

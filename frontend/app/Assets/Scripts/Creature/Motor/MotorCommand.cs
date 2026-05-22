@@ -29,6 +29,7 @@ public struct MotorCommand
     public Transform Target;        // Follow
 
     public int AbilityIndex;        // Action
+    public string ActionIntent;      // Action
 
     public static MotorCommand Idle()                       => new MotorCommand { Kind = MotorCommandKind.Idle };
     public static MotorCommand Stop()                       => new MotorCommand { Kind = MotorCommandKind.Stop };
@@ -36,6 +37,6 @@ public struct MotorCommand
     public static MotorCommand Flee(Vector3 threat)         => new MotorCommand { Kind = MotorCommandKind.Flee, Destination = threat };
     public static MotorCommand GoTo(Vector3 destination)    => new MotorCommand { Kind = MotorCommandKind.GoTo, Destination = destination };
     public static MotorCommand Follow(Transform target)     => new MotorCommand { Kind = MotorCommandKind.Follow, Target = target };
-    public static MotorCommand Action(int abilityIndex)     => new MotorCommand { Kind = MotorCommandKind.Action, AbilityIndex = abilityIndex };
+    public static MotorCommand Action(string intent, int abilityIndex) => new MotorCommand { Kind = MotorCommandKind.Action, ActionIntent = intent, AbilityIndex = abilityIndex };
     public static MotorCommand Death()                      => new MotorCommand { Kind = MotorCommandKind.Death };
 }

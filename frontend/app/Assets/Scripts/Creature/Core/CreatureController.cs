@@ -11,7 +11,6 @@ public class CreatureController : MonoBehaviour
     CreatureWorker         _worker;
     CreatureAgent          _agent;
     SnapshotManager        _snapshot;
-    SmartZoneTracker       _zoneTracker;
     ZoneScanner            _zoneScanner;
 
 
@@ -26,7 +25,6 @@ public class CreatureController : MonoBehaviour
         _worker      = GetComponent<CreatureWorker>();
         _agent       = GetComponent<CreatureAgent>();
         _snapshot    = GetComponent<SnapshotManager>();
-        _zoneTracker = GetComponent<SmartZoneTracker>();
         _zoneScanner = GetComponent<ZoneScanner>();
 
         if (_worker == null) _worker = GetComponentInChildren<CreatureWorker>();
@@ -54,7 +52,6 @@ public class CreatureController : MonoBehaviour
         if (_worker != null)      _worker.Init(_board);
         if (_agent != null)       _agent.Init(_board);
         if (_snapshot != null)    _snapshot.Init(_board);
-        if (_zoneTracker != null) _zoneTracker.Init(_board);
         if (_zoneScanner != null) _zoneScanner.Init(_board);
     }
 
@@ -69,7 +66,7 @@ public class CreatureController : MonoBehaviour
 
     void Update()
     {
-        _board.ScoreDrives();
+        _board.ScoreDrives(config != null ? config.hungerGrowthRate : 0.005f);
 
         if (_perception != null)  _perception.Tick();
         if (_zoneScanner != null) _zoneScanner.Tick();

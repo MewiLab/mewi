@@ -19509,6 +19509,9 @@ MonoBehaviour:
   creatureId: cat
   _debugMindSlot: "\u2014"
   _debugMindQueue: "\u2014"
+  totalBitesEaten: 0
+  lastAteAt: -1
+  lastEatenFoodId: 
   closestPlayer: {fileID: 0}
   closestPlayerDist: Infinity
   playerInSight: 0
@@ -19636,6 +19639,14 @@ MonoBehaviour:
   smellAbilityIndex: 16
   alertAbilityIndex: 0
   vocalizeAbilityIndex: 20
+  actionExecutionConfig:
+    activationTimeoutSeconds: 1.5
+    maxActionSeconds: 8
+    postActionCooldownSeconds: 0.35
+    forceStopOnTimeout: 1
+    interruptLingeringModeBeforeNewCommand: 1
+    forceLocomotionWhenStateBlocksNavigation: 1
+    overrides: []
   defaultStance: {fileID: 11400000, guid: 87ae38bfe93fc3f449ecd25863e2a6fe, type: 2}
   sneakStance: {fileID: 11400000, guid: fbd7296ce55e10746a1ec32a2fcd406a, type: 2}
   walkSpeedIndex: 1
@@ -19650,9 +19661,11 @@ MonoBehaviour:
   manualNavArrivalDistance: 0.65
   manualNavCornerDistance: 0.35
   manualNavRepathInterval: 0.5
+  teleportGoToImmediately: 1
   recoveryConfig:
     progressCheckInterval: 0.25
     minProgressMeters: 0.15
+    destinationMoveResetMeters: 0.75
     repathDelaySeconds: 2
     maxRepathAttempts: 2
     hardTimeoutSeconds: 12
@@ -19675,6 +19688,9 @@ MonoBehaviour:
   maxSmellStrings: 4
   maxSoundStrings: 4
   maxSignalStrings: 6
+  maxReachableZones: 12
+  reachableZoneRadius: 60
+  requireNavMeshPathForReachableZones: 1
   logPayload: 1
 --- !u!114 &3820821128769718842
 MonoBehaviour:
@@ -19691,10 +19707,10 @@ MonoBehaviour:
   zoneLayers:
     serializedVersion: 2
     m_Bits: 4096
-  recoveryInterval: 0.5
-  logTransitions: 1
-  seedRadius: 1
-  recoverMissedEntries: 1
+  scanInterval: 0.5
+  sampleRadius: 1
+  logChanges: 1
+  scanAllLayersFallback: 1
 --- !u!114 &7743581106792053044
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19766,11 +19782,8 @@ MonoBehaviour:
   aiControl: {fileID: 1955296784507330068}
   agent: {fileID: 3408231075447620513}
   configureAgentForMalbers: 1
-  logStartup: 1
-  logTraversal: 1
-  logNavigationDiagnostics: 0
-  diagnosticIntervalSeconds: 1
-  stuckTimeoutSeconds: 0
+  resnapAgentOnExit: 1
+  logTransitions: 1
 --- !u!1 &4279416248121535137
 GameObject:
   m_ObjectHideFlags: 0

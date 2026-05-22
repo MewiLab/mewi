@@ -2,17 +2,19 @@
 // Distinct from SmartObject (name-pattern baked): zones are designer intent.
 //
 // Authoring:
-//   1. Create a GameObject for the zone (e.g. ZV_Sea_1).
-//   2. Add a trigger Collider sized to the zone's footprint on THE SAME object.
-//   3. Set the GameObject's Layer to "SemanticZone".
-//   4. Fill in zoneId, zoneType, and optionally confinement / surface.
+//   1. Create a GameObject for the semantic place (e.g. ZV_Harbor).
+//   2. Add ZoneVolume to that semantic place object.
+//   3. Put one or more trigger Collider children under it for the footprint.
+//   4. Set the collider children to the "SemanticZone" layer when possible.
+//   5. Fill in zoneId, zoneType, and optionally confinement / surface.
 //
-// Container zones (e.g. ZV_Harbor) need NO collider. ZoneScanner walks the
-// ancestor chain of every triggered collider, so ZV_Harbor is included in the
-// snapshot automatically whenever any of its descendants (ZV_Sea_1 etc.) are active.
+// Parent/container zones (e.g. ZV_Harbor) need no collider. ZoneScanner samples
+// the cat's current position, finds trigger collider children, and walks the
+// ancestor chain, so Harbor is included whenever the cat is inside a descendant
+// zone such as Harbor/Bamboo_Boardwalk.
 //
-// Hierarchy is implicit: zones are sorted by hierarchy depth — shallowest
-// (broadest) first, deepest (most specific) last. No manual ordering needed.
+// Hierarchy is implicit: active zones are sent broadest first, most specific
+// last. No manual ordering needed.
 //
 // For moving objects (boats): parent ZoneVolume children to the vessel root
 // so they follow its position. The scanner sees updated world positions automatically.
@@ -41,8 +43,8 @@ public class ZoneVolume : MonoBehaviour
 
     void Awake()
     {
-        // If this ZoneVolume shares a GameObject with a Collider (leaf zone),
-        // ensure it is a trigger. Container zones with no direct Collider are left alone.
+        // If this ZoneVolume shares a GameObject with a Collider, ensure it is
+        // a trigger. Child footprint colliders should also be triggers.
         var c = GetComponent<Collider>();
         if (c != null && !c.isTrigger) c.isTrigger = true;
     }

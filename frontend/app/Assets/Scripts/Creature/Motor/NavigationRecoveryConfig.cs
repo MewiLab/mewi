@@ -10,8 +10,11 @@ public class NavigationRecoveryConfig
     [Tooltip("How often the watchdog samples progress (seconds).")]
     public float progressCheckInterval = 0.25f;
 
-    [Tooltip("Horizontal meters the animal must cover per check to count as 'making progress'.")]
+    [Tooltip("Horizontal meters the animal must get closer to the destination per check to count as 'making progress'.")]
     public float minProgressMeters = 0.15f;
+
+    [Tooltip("When following a moving target, reset progress if the destination moves by at least this many meters.")]
+    public float destinationMoveResetMeters = 0.75f;
 
     [Tooltip("Stuck this long without progress → try to repath.")]
     public float repathDelaySeconds = 2f;

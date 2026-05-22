@@ -48,6 +48,12 @@ class SpatialContext(BaseModel):
     zones: list[ZoneEntry] = Field(default_factory=list)
 
 
+class PlaceContext(BaseModel):
+    current_zone_id: str = ""
+    active_zone_ids: list[str] = Field(default_factory=list)
+    reachable_zone_ids: list[str] = Field(default_factory=list)
+
+
 class FeelingsData(BaseModel):
     summary: str = ""
     smells:  list[str] = Field(default_factory=list)
@@ -74,5 +80,6 @@ class TickPayload(BaseModel):
     health:     HealthState          = Field(default_factory=HealthState)
     entities:   list[EntitySnapshot] = Field(default_factory=list)
     spatial_context: SpatialContext  = Field(default_factory=SpatialContext)
+    place_context: PlaceContext      = Field(default_factory=PlaceContext)
     feelings:   FeelingsData         = Field(default_factory=FeelingsData)
     action_result: dict[str, Any] | None = None

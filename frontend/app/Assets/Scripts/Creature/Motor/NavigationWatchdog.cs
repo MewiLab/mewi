@@ -38,7 +38,9 @@ public class NavigationWatchdog
 
     bool _active;
     Vector3 _destination;
+    Vector3 _progressReferenceDestination;
     Vector3 _lastPosition;
+    float _bestDistanceToDestination;
     float _startedAt;
     float _lastProgressAt;
     float _lastCheckAt;
@@ -59,7 +61,9 @@ public class NavigationWatchdog
     {
         _active = true;
         _destination = destination;
+        _progressReferenceDestination = destination;
         _lastPosition = currentPosition;
+        _bestDistanceToDestination = HorizontalDistance(currentPosition, destination);
         _startedAt = now;
         _lastProgressAt = now;
         _lastCheckAt = now;
@@ -69,16 +73,31 @@ public class NavigationWatchdog
 
     public void UpdateDestination(Vector3 destination) => _destination = destination;
 
+    public void UpdateDestination(Vector3 destination, Vector3 currentPosition, float now)
+    {
+        if (HorizontalDistance(destination, _progressReferenceDestination) >= _config.destinationMoveResetMeters)
+        {
+            _bestDistanceToDestination = HorizontalDistance(currentPosition, destination);
+            _progressReferenceDestination = destination;
+            _lastPosition = currentPosition;
+            _lastProgressAt = now;
+        }
+
+        _destination = destination;
+    }
+
     public NavigationRecoveryAction Tick(Vector3 currentPosition, float now)
     {
         if (!_active) return NavigationRecoveryAction.Continue;
         if (now - _lastCheckAt < _config.progressCheckInterval) return NavigationRecoveryAction.Continue;
         _lastCheckAt = now;
 
-        if (HorizontalDistance(currentPosition, _lastPosition) >= _config.minProgressMeters)
+        float distanceToDestination = HorizontalDistance(currentPosition, _destination);
+        if (_bestDistanceToDestination - distanceToDestination >= _config.minProgressMeters)
         {
             _lastProgressAt = now;
             _lastPosition = currentPosition;
+            _bestDistanceToDestination = distanceToDestination;
         }
 
         float stuckFor = now - _lastProgressAt;

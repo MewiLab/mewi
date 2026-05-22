@@ -1,10 +1,8 @@
 // SelfChannel.cs
 //
 // Writes "where I am" + "what I'm currently doing" — the basic self-context.
-// Prefer ZoneScanner's activeZones, because it is the current spatial source
-// of truth. currentZones is kept only as a legacy SmartZoneTracker fallback.
+// ZoneScanner's activeZones is the current spatial source of truth.
 
-using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class SelfChannel : ISnapshotChannel
@@ -28,12 +26,6 @@ public sealed class SelfChannel : ISnapshotChannel
             return mostSpecific != null ? mostSpecific.EffectiveZoneId : "";
         }
 
-        return board != null ? JoinZones(board.currentZones) : "";
-    }
-
-    static string JoinZones(HashSet<string> zones)
-    {
-        if (zones == null || zones.Count == 0) return "";
-        return string.Join(",", zones);
+        return "";
     }
 }

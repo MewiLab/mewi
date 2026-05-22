@@ -14,6 +14,14 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from app.core.logger import get_logger
+from app.services.text_signals import recently_ate
+
+
+def _format_previous_action_result(value: Any) -> str:
+    # Lazy import: app.agent.mind.context lives behind a package whose __init__
+    # transitively imports SemanticService, so a top-level import would cycle.
+    from app.agent.mind.context import format_previous_action_result
+    return format_previous_action_result(value)
 
 if TYPE_CHECKING:
     from app.services.embedding_service import EmbeddingService
@@ -81,6 +89,14 @@ FOOD_TERMS = {
     "treat",
     "meat",
     "milk",
+}
+SOCIAL_TERMS = {
+    "cat",
+    "kitten",
+    "player",
+    "human",
+    "person",
+    "child",
 }
 DANGER_TERMS = {
     "danger",
@@ -423,13 +439,24 @@ class SemanticService:
         snapshot = snapshot if isinstance(snapshot, dict) else {}
         targets = self._semantic_targets(snapshot)
         sensory = self._semantic_sensory_lines(snapshot)
+        typed = self._semantic_typed_targets(snapshot)
 
         return {
+            # Legacy keys — still consumed by the strategic-commander prompt
+            # and a handful of tests. New prompts use the typed blocks below.
             "situation": self._semantic_situation(snapshot),
             "body_state": self._semantic_body_state(snapshot),
             "sensory_world": sensory,
             "relevant_targets": targets or ["No meaningful nearby target is currently visible."],
             "decision_focus": self._semantic_decision_focus(snapshot, targets, sensory),
+            # New typed blocks — keep each list short, with empty lists for
+            # missing sections so the prompt formatter can decide whether to
+            # render or skip a heading.
+            "body_lines": self._semantic_body_lines(snapshot),
+            "food_nearby": typed["food_nearby"],
+            "social_cues": typed["social_cues"],
+            "objects_nearby": typed["objects_nearby"],
+            "whats_changed": self._semantic_whats_changed(snapshot),
         }
 
     def _semantic_situation(self, snapshot: Snapshot) -> str:
@@ -483,8 +510,10 @@ class SemanticService:
         social = self._metric_value(snapshot, MOOD_METRICS[3])
         energy = self._metric_value(snapshot, MOOD_METRICS[4])
 
+        action_text = _format_previous_action_result(snapshot.get("action_result"))
+
         parts = [
-            self._hunger_meaning(hunger),
+            self._hunger_meaning(hunger, action_text),
             self._fear_meaning(fear),
             self._curiosity_meaning(curiosity),
             self._social_meaning(trust, social),
@@ -492,12 +521,119 @@ class SemanticService:
         ]
         return self._ensure_sentence(self._natural_join([part for part in parts if part]))
 
-    def _hunger_meaning(self, value: float) -> str:
+    def _hunger_meaning(self, value: float, action_text: str = "") -> str:
+        if recently_ate(action_text):
+            return "food is satisfied — she just took a bite"
         if value >= 0.7:
             return "food is urgent"
         if value >= 0.3:
             return "food matters but is not desperate"
         return "food is not pressing"
+
+    def _semantic_body_lines(self, snapshot: Snapshot) -> list[str]:
+        """One short line per drive — easier for the model to weigh than a
+        comma-spaghetti sentence. Order matches the original phrasing."""
+        hunger = self._metric_value(snapshot, HEALTH_METRICS[0])
+        fear = self._metric_value(snapshot, MOOD_METRICS[0])
+        trust = self._metric_value(snapshot, MOOD_METRICS[1])
+        curiosity = self._metric_value(snapshot, MOOD_METRICS[2])
+        social = self._metric_value(snapshot, MOOD_METRICS[3])
+        energy = self._metric_value(snapshot, MOOD_METRICS[4])
+
+        action_text = _format_previous_action_result(snapshot.get("action_result"))
+        return [
+            f"food: {self._hunger_meaning(hunger, action_text)}",
+            f"fear: {self._fear_meaning(fear)}",
+            f"curiosity: {self._curiosity_meaning(curiosity)}",
+            f"social: {self._social_meaning(trust, social)}",
+            f"energy: {self._energy_meaning(energy)}",
+        ]
+
+    def _semantic_typed_targets(self, snapshot: Snapshot) -> dict[str, list[str]]:
+        """Split visible entities into FOOD / SOCIAL / OTHER buckets so the
+        prompt can show typed need-blocks instead of one mixed list."""
+        food: list[str] = []
+        social: list[str] = []
+        other: list[str] = []
+        agent_id = self._clean_text(snapshot.get("agent_id")).lower()
+
+        groups: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+        for entity in self._as_dicts(snapshot.get("entities")):
+            if self._is_self_entity(entity, agent_id):
+                continue
+            target_id = self._clean_text(entity.get("id"))
+            label = self._entity_label(entity)
+            if not label:
+                continue
+            bucket = self._entity_bucket(entity, label)
+            direction = self._direction_phrase(entity.get("direction"))
+            nearness = self._nearness_phrase(entity.get("distance"))
+            key = (bucket, label, direction, nearness)
+            group = groups.setdefault(key, {
+                "bucket": bucket,
+                "label": label,
+                "direction": direction,
+                "nearness": nearness,
+                "ids": [],
+            })
+            if target_id and target_id not in group["ids"]:
+                group["ids"].append(target_id)
+
+        for group in groups.values():
+            line = self._format_target_line(group)
+            if not line:
+                continue
+            if group["bucket"] == "food":
+                food.append(line)
+            elif group["bucket"] == "social":
+                social.append(line)
+            else:
+                other.append(line)
+
+        return {
+            "food_nearby": food[:MAX_OBSERVATIONS],
+            "social_cues": social[:MAX_OBSERVATIONS],
+            "objects_nearby": other[:MAX_OBSERVATIONS],
+        }
+
+    def _entity_bucket(self, entity: dict[str, Any], label: str) -> str:
+        tag_text = " ".join(self._as_text_list(entity.get("tags"))).lower()
+        label_lower = label.lower()
+        if self._contains_any(tag_text, FOOD_TERMS) or self._contains_any(label_lower, FOOD_TERMS):
+            return "food"
+        if self._contains_any(tag_text, SOCIAL_TERMS) or self._contains_any(label_lower, SOCIAL_TERMS):
+            return "social"
+        return "other"
+
+    def _format_target_line(self, group: dict[str, Any]) -> str:
+        label = group["label"]
+        ids = group["ids"]
+        count_prefix = self._count_prefix(len(ids), label)
+        relation = self._natural_join([item for item in [group["nearness"], group["direction"]] if item])
+        target_text = self._target_text(ids)
+        if relation and target_text:
+            return f"{count_prefix} {relation}; {target_text}."
+        if target_text:
+            return f"{count_prefix}; {target_text}."
+        return f"{count_prefix}."
+
+    def _semantic_whats_changed(self, snapshot: Snapshot) -> list[str]:
+        """Surface signals that 'something happened since last tick' so the
+        model doesn't have to compute the diff. Today: just_ate + just_drank.
+        Place-change and new-affordance diffs can layer on later once Unity
+        exposes per-tick deltas."""
+        action_text = _format_previous_action_result(snapshot.get("action_result"))
+        lines: list[str] = []
+        if recently_ate(action_text):
+            lines.append("she just took a bite — hunger has eased")
+        from app.services.text_signals import recently_drank, recently_fled, recently_failed_to_reach
+        if recently_drank(action_text):
+            lines.append("she just drank")
+        if recently_fled(action_text):
+            lines.append("she just fled from something")
+        if recently_failed_to_reach(action_text):
+            lines.append("she just failed to reach a target — try a smaller step")
+        return lines
 
     def _fear_meaning(self, value: float) -> str:
         if value >= 0.7:
@@ -540,18 +676,8 @@ class SemanticService:
             ("sounds", "Sound"),
             ("signals", "Body signal"),
         ]:
-            for value in self._as_text_list(feelings.get(key))[:4]:
+            for value in self._as_text_list(feelings.get(key))[:3]:
                 meaning = self._meaningful_feeling(value)
-                if meaning:
-                    lines.append(f"{label}: {meaning}.")
-
-        known = {"summary", "smells", "sounds", "signals"}
-        for key, value in feelings.items():
-            if key in known:
-                continue
-            label = self._display_name(key) or "Sensation"
-            for item in self._as_text_list(value)[:3]:
-                meaning = self._meaningful_feeling(item)
                 if meaning:
                     lines.append(f"{label}: {meaning}.")
 
@@ -689,7 +815,10 @@ class SemanticService:
             focus.append("No clear danger is present, so fleeing is unnecessary unless a new threat appears.")
 
         food_cue = self._contains_any(sensory_text, FOOD_TERMS) or self._contains_any(target_text, FOOD_TERMS)
-        if hunger >= 0.7 and food_cue:
+        ate_recently = recently_ate(_format_previous_action_result(snapshot.get("action_result")))
+        if ate_recently:
+            focus.append("She just took a bite, so hunger is no longer pressing; consider exploring, resting, or socializing.")
+        elif hunger >= 0.7 and food_cue:
             focus.append("Hunger is urgent and there is an edible cue, so smelling or eating is well motivated.")
         elif hunger >= 0.7:
             focus.append("Hunger is urgent, but no definite food cue is visible; use smell or a small search before eating.")

@@ -4,7 +4,9 @@ from typing import Annotated, Any, TypedDict
 from app.agent.action_registry import ActionRegistry, ActionResult
 from app.agent.memory import MemoryManager, MemoryRecall
 from app.agent.perception import SnapshotManager
+from app.agent.prompt_loader import PersonaManager
 from app.agent.schemas.perception_schema import PerceptionError, PerceptionSummary
+from app.agent.schemas.place_memory_schema import PlaceMemoryContextDict
 
 
 class CreatureRuntime:
@@ -16,11 +18,17 @@ class CreatureRuntime:
         memory: MemoryManager | None = None,
         actions: ActionRegistry | None = None,
         persona: str = "",
+        persona_manager: PersonaManager | None = None,
+        creature_id: str = "",
     ):
         self.eye = eye or SnapshotManager()
         self.memory = memory or MemoryManager()
         self.actions = actions or ActionRegistry()
-        self.persona = persona
+        self.creature_id = creature_id
+        if persona_manager is not None:
+            self.persona = persona_manager.for_creature(creature_id)
+        else:
+            self.persona = persona
 
     def perceive(self, raw_json: dict[str, Any]) -> PerceptionSummary | PerceptionError:
         result = self.eye.process(raw_json)
@@ -56,10 +64,13 @@ class CreatureRuntime:
             "perception": None,
             "perception_error": None,
             "memory_context": None,
+            "place_memory_context": None,
+            "intent_decision": None,
             "chosen_action": None,
             "plan_steps": [],
             "reasoning": None,
             "action_result": None,
+            "memory_write": None,
             "messages": [],
             "runtime": self,
             "persona": self.persona,
@@ -76,10 +87,13 @@ class CreatureRuntimeState(TypedDict):
     perception: dict[str, Any] | None
     perception_error: str | None
     memory_context: dict[str, Any] | None
+    place_memory_context: PlaceMemoryContextDict | None
+    intent_decision: dict[str, Any] | None
     chosen_action: dict[str, Any] | None
     plan_steps: list[dict[str, Any]]
     reasoning: str | None
     action_result: dict[str, Any] | None
+    memory_write: dict[str, Any] | None
     messages: Annotated[list, operator.add]
     runtime: CreatureRuntime
     persona: str

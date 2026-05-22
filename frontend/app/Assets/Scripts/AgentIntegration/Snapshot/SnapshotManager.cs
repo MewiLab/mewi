@@ -30,6 +30,14 @@ public class SnapshotManager : MonoBehaviour
     [Tooltip("Max non-smell/non-sound feeling strings sent per tick.")]
     public int maxSignalStrings = 6;
 
+    [Header("Place Memory")]
+    [Tooltip("Max zone ids sent as nearby exploration candidates.")]
+    public int maxReachableZones = 12;
+    [Tooltip("Only zones within this distance are considered for exploration candidates.")]
+    public float reachableZoneRadius = 60f;
+    [Tooltip("Prefer zones with a complete NavMesh path, but still send nearby candidates so the backend can explore and Unity can validate execution.")]
+    public bool requireNavMeshPathForReachableZones = true;
+
     [Header("Debug")]
     public bool logPayload = false;
 
@@ -52,7 +60,11 @@ public class SnapshotManager : MonoBehaviour
         Register(new MoodChannel());
         Register(new HealthChannel());
         Register(new EntitiesChannel(maxEntities, maxPerCategory));
-        Register(new SpatialChannel());
+        Register(new SpatialChannel(
+            maxReachableZones,
+            reachableZoneRadius,
+            requireNavMeshPathForReachableZones
+        ));
         Register(new FeelingsChannel(maxSmellStrings, maxSoundStrings, maxSignalStrings));
     }
 

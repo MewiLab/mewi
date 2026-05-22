@@ -17,6 +17,7 @@ public class NamedTargetRegistry : MonoBehaviour
 
     [SerializeField] List<Entry> entries = new List<Entry>();
     [SerializeField] bool autoRegisterSmartObjects = true;
+    [SerializeField] bool autoRegisterZoneVolumes = true;
     [SerializeField] bool fallbackToGameObjectName = true;
 
     Dictionary<string, Transform> _map;
@@ -51,7 +52,7 @@ public class NamedTargetRegistry : MonoBehaviour
         if (_map.TryGetValue(normalized, out target) && target != null)
             return true;
 
-        if (autoRegisterSmartObjects)
+        if (autoRegisterSmartObjects || autoRegisterZoneVolumes)
         {
             Rebuild();
             if (_map.TryGetValue(normalized, out target) && target != null)
@@ -70,6 +71,16 @@ public class NamedTargetRegistry : MonoBehaviour
         return true;
     }
 
+    public bool TryResolvePosition(string key, out Vector3 position, out Transform target)
+    {
+        position = Vector3.zero;
+        if (!TryResolve(key, out target))
+            return false;
+
+        position = ResolveTargetPosition(target);
+        return true;
+    }
+
     void Rebuild()
     {
         _map = new Dictionary<string, Transform>(StringComparer.OrdinalIgnoreCase);
@@ -81,21 +92,33 @@ public class NamedTargetRegistry : MonoBehaviour
             Register(entry.key, entry.target);
         }
 
-        if (!autoRegisterSmartObjects) return;
-
-        var smartObjects = FindObjectsByType<SmartObject>(FindObjectsSortMode.None);
-        foreach (var smartObject in smartObjects)
+        if (autoRegisterSmartObjects)
         {
-            if (smartObject == null) continue;
+            var smartObjects = FindObjectsByType<SmartObject>(FindObjectsSortMode.None);
+            foreach (var smartObject in smartObjects)
+            {
+                if (smartObject == null) continue;
 
-            Transform target = smartObject.perceptionCenter != null
-                ? smartObject.perceptionCenter
-                : smartObject.transform;
+                Transform target = smartObject.perceptionCenter != null
+                    ? smartObject.perceptionCenter
+                    : smartObject.transform;
 
-            Register(smartObject.Label, target);
-            Register(smartObject.gameObject.name, target);
-            if (smartObject.transform.parent != null)
-                Register(smartObject.transform.parent.name, smartObject.transform.parent);
+                Register(smartObject.Label, target);
+                Register(smartObject.gameObject.name, target);
+                if (smartObject.transform.parent != null)
+                    Register(smartObject.transform.parent.name, smartObject.transform.parent);
+            }
+        }
+
+        if (autoRegisterZoneVolumes)
+        {
+            var zoneVolumes = FindObjectsByType<ZoneVolume>(FindObjectsSortMode.None);
+            foreach (var zone in zoneVolumes)
+            {
+                if (zone == null) continue;
+                Register(zone.EffectiveZoneId, zone.transform);
+                Register(zone.gameObject.name, zone.transform);
+            }
         }
     }
 
@@ -105,5 +128,24 @@ public class NamedTargetRegistry : MonoBehaviour
             return;
 
         _map[key.Trim()] = target;
+    }
+
+    static Vector3 ResolveTargetPosition(Transform target)
+    {
+        if (target == null) return Vector3.zero;
+
+        SmartObject smartObject = target.GetComponent<SmartObject>()
+            ?? target.GetComponentInParent<SmartObject>()
+            ?? target.GetComponentInChildren<SmartObject>();
+        if (smartObject != null)
+            return smartObject.Position;
+
+        ZoneVolume zone = target.GetComponent<ZoneVolume>()
+            ?? target.GetComponentInParent<ZoneVolume>()
+            ?? target.GetComponentInChildren<ZoneVolume>();
+        if (zone != null)
+            return ZoneVolumeUtility.CenterOrTransform(zone);
+
+        return target.position;
     }
 }

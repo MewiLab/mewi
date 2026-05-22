@@ -1,9 +1,21 @@
+from app.models.attachment import (
+    AttachmentAnalysisResult,
+    AttachmentConfidence,
+    AttachmentEventInput,
+    AttachmentEventType,
+    AttachmentSessionFeatures,
+    AttachmentSessionPayload,
+    CatAssignedType,
+    PlayerAttachmentEstimate,
+    RawAttachmentEvent,
+)
 from app.models.tick import (
     EntitySnapshot,
     FeelingsData,
     HealthState,
     Location,
     MoodState,
+    PlaceContext,
     SelfState,
     SpatialContext,
     TickPayload,
@@ -11,11 +23,21 @@ from app.models.tick import (
 )
 
 __all__ = [
+    "AttachmentAnalysisResult",
+    "AttachmentConfidence",
+    "AttachmentEventInput",
+    "AttachmentEventType",
+    "AttachmentSessionFeatures",
+    "AttachmentSessionPayload",
+    "CatAssignedType",
     "EntitySnapshot",
     "FeelingsData",
     "HealthState",
     "Location",
     "MoodState",
+    "PlaceContext",
+    "PlayerAttachmentEstimate",
+    "RawAttachmentEvent",
     "SelfState",
     "SpatialContext",
     "TickPayload",

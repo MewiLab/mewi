@@ -6,6 +6,7 @@ public static class ApiRoutes
 {
     public const string AgentTickWs  = "/api/v1/agent/ws/";        // append creature_id
     public const string AgentReport  = "/api/v1/agent/report";
+    public const string AttachmentSession = "/api/v1/attachment/session";
 
     public static string Resolve(BackendConfig cfg, string path) =>
         cfg.baseUrl.TrimEnd('/') + path;

@@ -168,6 +168,33 @@ public class CreatureBlackboard : MonoBehaviour
     public float GetCurrentHunger() => health.hunger;
 
     // ─────────────────────────────────────────────
+    // EATING INVENTORY (see ADR-008)
+    // ─────────────────────────────────────────────
+
+    /// <summary>Total bites consumed across all food sources this session.</summary>
+    [HideInInspector] public int totalBitesEaten;
+
+    /// <summary>Time of the most recent bite. -1 if the cat has never eaten.</summary>
+    [HideInInspector] public float lastAteAt = -1f;
+
+    /// <summary>Most recently consumed food's id (SmartObject label or GameObject name).</summary>
+    [HideInInspector] public string lastEatenFoodId = "";
+
+    /// <summary>
+    /// Called by <see cref="EdibleObject"/> when this cat takes a bite. Updates
+    /// inventory counters used by perception and by future episodic memory, and
+    /// drops hunger by the food's nutrition value so the next planning tick sees
+    /// the cat as satisfied.
+    /// </summary>
+    public void RecordBite(string foodId, float t, float hungerRelief = 0.35f)
+    {
+        totalBitesEaten++;
+        lastAteAt = t;
+        lastEatenFoodId = string.IsNullOrWhiteSpace(foodId) ? "" : foodId.Trim();
+        health.hunger = Mathf.Clamp01(health.hunger - Mathf.Max(0f, hungerRelief));
+    }
+
+    // ─────────────────────────────────────────────
     // EVENT LOG
     // ─────────────────────────────────────────────
 
@@ -199,17 +226,32 @@ public class CreatureBlackboard : MonoBehaviour
     /// <summary>Recent sensory events for this frame, cleared each tick.</summary>
     public List<SensoryEvent> sensorEvents = new List<SensoryEvent>();
 
-    /// <summary>Recent visible target keys mapped back to their Unity transforms.</summary>
-    readonly Dictionary<string, Transform> _recentTargets =
-        new Dictionary<string, Transform>(StringComparer.OrdinalIgnoreCase);
+    struct RecentTargetRecord
+    {
+        public Transform target;
+        public Vector3 perceivedPosition;
+        public bool hasPerceivedPosition;
+    }
+
+    /// <summary>Recent visible target keys mapped back to their Unity transforms and perceived positions.</summary>
+    readonly Dictionary<string, RecentTargetRecord> _recentTargets =
+        new Dictionary<string, RecentTargetRecord>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Recent felt-world events for this frame, cleared each perception tick.</summary>
     public List<FeelingEvent> feelingEvents = new List<FeelingEvent>();
 
     public void RememberPerceivedTarget(string key, Transform target)
+        => RememberPerceivedTarget(key, target, target != null ? target.position : Vector3.zero);
+
+    public void RememberPerceivedTarget(string key, Transform target, Vector3 perceivedPosition)
     {
         if (string.IsNullOrWhiteSpace(key) || target == null) return;
-        _recentTargets[key.Trim()] = target;
+        _recentTargets[key.Trim()] = new RecentTargetRecord
+        {
+            target = target,
+            perceivedPosition = perceivedPosition,
+            hasPerceivedPosition = true,
+        };
     }
 
     public bool TryResolveRecentTarget(string key, out Transform target)
@@ -218,8 +260,11 @@ public class CreatureBlackboard : MonoBehaviour
         if (string.IsNullOrWhiteSpace(key)) return false;
 
         string normalized = key.Trim();
-        if (_recentTargets.TryGetValue(normalized, out target) && target != null)
+        if (_recentTargets.TryGetValue(normalized, out var record) && record.target != null)
+        {
+            target = record.target;
             return true;
+        }
 
         if (target == null)
             _recentTargets.Remove(normalized);
@@ -227,12 +272,30 @@ public class CreatureBlackboard : MonoBehaviour
         return false;
     }
 
-    /// <summary>Legacy flat zone tags. Prefer activeZones for current spatial location.</summary>
-    [HideInInspector] public HashSet<string> currentZones = new HashSet<string>();
+    public bool TryResolveRecentTargetPosition(string key, out Vector3 position, out Transform target)
+    {
+        position = Vector3.zero;
+        target = null;
+        if (string.IsNullOrWhiteSpace(key)) return false;
+
+        string normalized = key.Trim();
+        if (!_recentTargets.TryGetValue(normalized, out var record))
+            return false;
+
+        if (record.target == null)
+        {
+            _recentTargets.Remove(normalized);
+            return false;
+        }
+
+        target = record.target;
+        position = record.hasPerceivedPosition ? record.perceivedPosition : record.target.position;
+        return true;
+    }
 
     /// <summary>
-    /// Spatial zones, outermost → innermost by collider volume. Written by ZoneScanner,
-    /// read by SpatialChannel.
+    /// Current spatial zones, outermost → innermost. Written by ZoneScanner,
+    /// read by SelfChannel and SpatialChannel.
     /// </summary>
     [HideInInspector] public List<ZoneVolume> activeZones = new List<ZoneVolume>();
 
@@ -254,9 +317,14 @@ public class CreatureBlackboard : MonoBehaviour
         _debugMindQueue = _mindQueue.Count > 0 ? $"{_mindQueue.Count} queued" : "empty";
     }
 
-    /// <summary>Cheap simulation of hunger climb between perception ticks.</summary>
-    public void ScoreDrives()
+    /// <summary>
+    /// Cheap simulation of hunger climb between perception ticks. Pass the
+    /// per-second growth rate from <see cref="CreatureConfig.hungerGrowthRate"/>
+    /// so the design value isn't shadowed by a hardcoded constant.
+    /// </summary>
+    public void ScoreDrives(float hungerGrowthPerSecond)
     {
-        health.hunger = Mathf.Clamp01(health.hunger + Time.deltaTime * 0.05f);
+        if (hungerGrowthPerSecond <= 0f) return;
+        health.hunger = Mathf.Clamp01(health.hunger + Time.deltaTime * hungerGrowthPerSecond);
     }
 }

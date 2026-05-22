@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.exceptions import AppError
 from app.core.lifespan import lifespan
-from app.api.routes import agent_router
+from app.api.routes import agent_router, attachment_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
 
     # Register routers
     app.include_router(agent_router.router, prefix="/api/v1")
+    app.include_router(attachment_router.router, prefix="/api/v1")
 
 
     @app.get("/health", tags=["infra"])

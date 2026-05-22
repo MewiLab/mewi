@@ -200,6 +200,8 @@ def _websocket_plan_response(job: dict[str, Any]) -> dict[str, Any]:
         "request_id": job.get("request_id", ""),
         "status": job.get("status", "pending"),
         "tick": job.get("tick"),
+        "intent": job.get("intent"),
+        "place_memory": job.get("place_memory"),
         "actions": plan_steps,
         "reasoning": job.get("reasoning"),
         "error": job.get("error"),

@@ -314,9 +314,22 @@ class TestPromptContext:
         context = svc.build_prompt_context(snap)
 
         assert "Bamboo Boardwalk" in context["situation"]
+        # Legacy body_state still produced for the strategic-commander prompt.
         assert "food is urgent" in context["body_state"]
+        # New typed body_lines: one bullet per drive, easier for the model to weigh.
+        assert any("food: food is urgent" in line for line in context["body_lines"])
+        assert any("energy:" in line for line in context["body_lines"])
+        # Legacy mixed relevant_targets stays available.
         assert any("boat" in target and "SM_Boat_1_01" in target for target in context["relevant_targets"])
         assert any("lantern" in target for target in context["relevant_targets"])
         assert not any("Cat;" in target or "target: Cat" in target for target in context["relevant_targets"])
         assert "3.8" not in " ".join(context["relevant_targets"])
         assert "front_left" not in " ".join(context["relevant_targets"])
+        # New typed buckets: boat and lantern are inert objects, not food/social.
+        assert any("SM_Boat_1_01" in line for line in context["objects_nearby"])
+        assert any("SM_Lantern_2_01" in line for line in context["objects_nearby"])
+        assert context["food_nearby"] == []
+        # "Cat" without tags is filtered as a self-entity, so social_cues is empty.
+        assert context["social_cues"] == []
+        # No recent eating in this snapshot.
+        assert context["whats_changed"] == []

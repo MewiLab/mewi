@@ -118,6 +118,15 @@ public class CreatureWorker : MonoBehaviour
         _hasActiveIntent = true;
         _board.TryPopMindIntent(out _);
 
+        if (IsValidatableIntent(intent.Intent))
+        {
+            GoalEventBus.Declare(
+                CreatureIdForBus(),
+                intent.Intent,
+                intent.TargetKey ?? "",
+                _activeStartedAt);
+        }
+
         CompleteActiveIntentIfReady();
         CompletePlanIfReady();
     }
@@ -140,9 +149,8 @@ public class CreatureWorker : MonoBehaviour
                 Vector3 destination = intent.DirectionHint;
                 if (!string.IsNullOrWhiteSpace(intent.TargetKey))
                 {
-                    if (!TryResolveTarget(intent.TargetKey, out Transform t, out rejectedReason))
+                    if (!TryResolveTargetPosition(intent.TargetKey, out destination, out _, out rejectedReason))
                         return false;
-                    destination = t.position;
                 }
                 else if (destination == Vector3.zero)
                 {
@@ -195,7 +203,7 @@ public class CreatureWorker : MonoBehaviour
                     rejectedReason = $"unmapped_action:{intent.Intent}";
                     return false;
                 }
-                cmd = MotorCommand.Action(abilityIndex);
+                cmd = MotorCommand.Action(intent.Intent, abilityIndex);
                 return true;
 
             default:
@@ -235,6 +243,39 @@ public class CreatureWorker : MonoBehaviour
         return false;
     }
 
+    bool TryResolveTargetPosition(string key, out Vector3 position, out Transform target, out string rejectedReason)
+    {
+        position = Vector3.zero;
+        target = null;
+        rejectedReason = "";
+
+        if (_board != null && _board.TryResolveRecentTargetPosition(key, out position, out target))
+            return true;
+
+        if (_targetRegistry == null)
+            _targetRegistry = FindFirstObjectByType<NamedTargetRegistry>();
+
+        if (_targetRegistry != null && _targetRegistry.TryResolvePosition(key, out position, out target))
+            return true;
+
+        if (!TryResolveTarget(key, out target, out rejectedReason))
+            return false;
+
+        position = ResolveTargetPosition(target);
+        return true;
+    }
+
+    static Vector3 ResolveTargetPosition(Transform target)
+    {
+        if (target == null) return Vector3.zero;
+
+        SmartObject smartObject = target.GetComponent<SmartObject>()
+            ?? target.GetComponentInParent<SmartObject>()
+            ?? target.GetComponentInChildren<SmartObject>();
+
+        return smartObject != null ? smartObject.Position : target.position;
+    }
+
     void BeginPlanIfNeeded(IntentMessage intent)
     {
         if (_currentPlanSteps.Count > 0 || _hasActiveIntent)
@@ -252,12 +293,147 @@ public class CreatureWorker : MonoBehaviour
         if (!_hasActiveIntent || (_adapter != null && _adapter.IsBusy))
             return;
 
-        string reason = "";
-        if (_adapter != null && _adapter.LastNavigationCompletionReason != NavigationCompletionReason.None)
-            reason = _adapter.LastNavigationCompletionReason.ToString();
+        string adapterReason = "";
+        NavigationCompletionReason navReason = NavigationCompletionReason.None;
+        if (_adapter != null)
+        {
+            adapterReason = _adapter.LastCommandCompletionReason ?? "";
+            navReason = _adapter.LastNavigationCompletionReason;
+        }
 
-        RecordStep(_activeIntent, "completed", reason, _activeStartedAt, Time.time);
+        SelfConfirmIfGeometric(_activeIntent, navReason);
+
+        string status;
+        string reason;
+        if (IsValidatableIntent(_activeIntent.Intent))
+        {
+            bool confirmed = GoalEventBus.TryConsume(
+                CreatureIdForBus(),
+                _activeIntent.Intent,
+                _activeIntent.TargetKey ?? "",
+                _activeStartedAt,
+                out string confirmedReason);
+
+            if (!confirmed && _activeIntent.Intent == "go_to" && TryRecoverGoTo(_activeIntent, navReason))
+            {
+                confirmed = GoalEventBus.TryConsume(
+                    CreatureIdForBus(),
+                    _activeIntent.Intent,
+                    _activeIntent.TargetKey ?? "",
+                    _activeStartedAt,
+                    out confirmedReason);
+            }
+
+            if (confirmed)
+            {
+                bool isRecovered = !string.IsNullOrEmpty(confirmedReason)
+                    && confirmedReason.StartsWith("recovered_via_teleport", StringComparison.Ordinal);
+                status = isRecovered ? "recovered" : "completed";
+                reason = string.IsNullOrWhiteSpace(confirmedReason) ? adapterReason : confirmedReason;
+            }
+            else
+            {
+                status = "failed";
+                reason = ComposeFailureReason("not_confirmed_by_world", adapterReason, navReason);
+            }
+        }
+        else
+        {
+            status = "completed";
+            reason = !string.IsNullOrWhiteSpace(adapterReason)
+                ? adapterReason
+                : (navReason != NavigationCompletionReason.None ? navReason.ToString() : "");
+        }
+
+        RecordStep(_activeIntent, status, reason, _activeStartedAt, Time.time);
         _hasActiveIntent = false;
+    }
+
+    /// <summary>
+    /// For purely geometric intents (currently <c>go_to</c>) the cat itself
+    /// confirms arrival when the watchdog reports an honest arrival. Warps,
+    /// failures, and cancels do not produce a confirm — so TryConsume will
+    /// miss and the step will report as <c>failed</c> downstream.
+    /// </summary>
+    void SelfConfirmIfGeometric(IntentMessage intent, NavigationCompletionReason navReason)
+    {
+        if (intent.Intent != "go_to") return;
+        if (navReason != NavigationCompletionReason.Arrived &&
+            navReason != NavigationCompletionReason.ArrivedAfterRepath)
+            return;
+
+        GoalEventBus.Confirm(
+            CreatureIdForBus(),
+            "go_to",
+            intent.TargetKey ?? "",
+            Time.time,
+            navReason.ToString());
+    }
+
+    /// <summary>
+    /// Last-resort recovery for <c>go_to</c>: when the world refused to confirm
+    /// natural arrival, resolve the target position and ask the adapter to
+    /// teleport the cat there. Fires a <see cref="GoalEventBus.Confirm"/> with a
+    /// <c>recovered_via_teleport:*</c> reason so the second TryConsume picks it
+    /// up and the step is reported as <c>recovered</c> rather than <c>failed</c>.
+    /// </summary>
+    bool TryRecoverGoTo(IntentMessage intent, NavigationCompletionReason navReason)
+    {
+        if (_adapter == null) return false;
+        if (string.IsNullOrWhiteSpace(intent.TargetKey)) return false;
+
+        if (!TryResolveTargetPosition(intent.TargetKey, out Vector3 destination, out _, out _))
+            return false;
+
+        string warpReason;
+        if (navReason == NavigationCompletionReason.WarpedToNavMesh ||
+            navReason == NavigationCompletionReason.WarpedRaw)
+        {
+            warpReason = navReason.ToString();
+        }
+        else
+        {
+            if (!_adapter.TryWarpTo(destination, out warpReason))
+                return false;
+        }
+
+        if (logWorkerDispatch)
+            Debug.Log($"[CreatureWorker] recovery teleport for go_to target={intent.TargetKey} reason={warpReason}");
+
+        GoalEventBus.Confirm(
+            CreatureIdForBus(),
+            "go_to",
+            intent.TargetKey,
+            Time.time,
+            "recovered_via_teleport:" + warpReason);
+        return true;
+    }
+
+    static bool IsValidatableIntent(string intentName)
+    {
+        if (string.IsNullOrWhiteSpace(intentName)) return false;
+        switch (intentName)
+        {
+            case "go_to":
+            case "eat":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    static string ComposeFailureReason(string primary, string adapterReason, NavigationCompletionReason navReason)
+    {
+        if (!string.IsNullOrWhiteSpace(adapterReason))
+            return $"{primary}:{adapterReason}";
+        if (navReason != NavigationCompletionReason.None)
+            return $"{primary}:{navReason}";
+        return primary;
+    }
+
+    string CreatureIdForBus()
+    {
+        return _board != null ? _board.CreatureId : name;
     }
 
     void CompletePlanIfReady()
@@ -308,6 +484,7 @@ public class CreatureWorker : MonoBehaviour
     string BuildPlanStatus()
     {
         bool sawCompleted = false;
+        bool sawRecovered = false;
         bool sawRejected = false;
         bool sawFailed = false;
 
@@ -315,12 +492,14 @@ public class CreatureWorker : MonoBehaviour
         {
             string status = _currentPlanSteps[i].status;
             if (status == "completed") sawCompleted = true;
+            else if (status == "recovered") sawRecovered = true;
             else if (status == "failed") sawFailed = true;
             else if (status == "rejected") sawRejected = true;
         }
 
-        if (sawFailed) return sawCompleted || sawRejected ? "completed_with_failures" : "failed";
-        if (sawRejected) return sawCompleted ? "completed_with_rejections" : "rejected";
+        if (sawFailed) return (sawCompleted || sawRecovered || sawRejected) ? "completed_with_failures" : "failed";
+        if (sawRejected) return (sawCompleted || sawRecovered) ? "completed_with_rejections" : "rejected";
+        if (sawRecovered) return "completed_with_recoveries";
         return "completed";
     }
 

@@ -43,7 +43,7 @@ public class CreatureConfig : ScriptableObject
     public float mindTickInterval     = 3f;     // seconds between periodic updates
     public float trustDecayRate       = 0.01f;  // per tick, toward neutral
     public float fearDecayRate        = 0.02f;
-    public float hungerGrowthRate     = 0.05f;  // per second
+    public float hungerGrowthRate     = 0.005f; // per second (≈200s to fill from 0→1)
 
     [Header("General")]
     public float personalSpaceRadius  = 2f;     // cat's comfort zone

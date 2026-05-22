@@ -24,6 +24,7 @@ public class SnapshotPayload
     public HealthData     health;
     public EntityData[]   entities;
     public SpatialData    spatial_context;
+    public PlaceContextData place_context;
     public FeelingsData   feelings;
 }
 
@@ -70,6 +71,14 @@ public class ZoneEntry
 public class SpatialData
 {
     public ZoneEntry[] zones;
+}
+
+[Serializable]
+public class PlaceContextData
+{
+    public string current_zone_id;
+    public string[] active_zone_ids;
+    public string[] reachable_zone_ids;
 }
 
 [Serializable]

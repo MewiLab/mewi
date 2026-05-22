@@ -10,8 +10,14 @@ from app.core.redis import create_redis, close_redis
 from app.core.supabase import create_supabase
 from app.agent.llm_provider import create_llm_provider, log_llm_provider_selection
 from app.agent.behavior_graph import build_behavior_graph
-from app.agent.prompt_loader import DEFAULT_PERSONA_KEY, load_persona_map
+from app.agent.prompt_loader import PersonaManager
+from app.repositories.memory_repo import MemoryRepository
+from app.repositories.place_memory_cache import PlaceMemoryCache
+from app.repositories.place_memory_repo import PlaceMemoryRepository
 from app.services.agent_tick_service import AgentTickService
+from app.services.memory_service import MemoryService
+from app.services.place_memory_store import PlaceMemoryStoreChain
+from app.services.place_memory_service import PlaceMemoryService
 from app.workers.agent_tick_worker import AgentTickWorker
 
 logger = get_logger(__name__)
@@ -57,17 +63,34 @@ async def lifespan(app: FastAPI):
     logger.info("Compiling behavior graph…")
     app.state.llm_provider_info = log_llm_provider_selection(settings.llm, logger)
     llm = create_llm_provider(settings.llm)
-    app.state.behavior_graph = build_behavior_graph(llm).compile()
-    app.state.creature_personas = load_persona_map(
+    app.state.place_memory_cache = PlaceMemoryCache(
+        app.state.redis,
+        ttl_seconds=settings.place_memory_ttl_seconds,
+        refresh_seconds=settings.place_memory_refresh_seconds,
+    )
+    app.state.place_memory_repository = PlaceMemoryRepository(app.state.supabase)
+    app.state.place_memory_store = PlaceMemoryStoreChain(
+        app.state.place_memory_cache,
+        app.state.place_memory_repository,
+    )
+    app.state.place_memory_service = PlaceMemoryService(app.state.place_memory_store)
+    app.state.memory_repository = MemoryRepository(app.state.supabase)
+    app.state.memory_service = MemoryService(app.state.memory_repository)
+    app.state.behavior_graph = build_behavior_graph(
+        llm,
+        place_memory=app.state.place_memory_service,
+        memory_service=app.state.memory_service,
+    ).compile()
+    app.state.persona_manager = PersonaManager.from_spec(
         settings.agent_personas,
         default_persona=settings.agent_persona,
     )
     logger.info(
         "Loaded %d creature persona mapping(s): %s",
-        len(app.state.creature_personas),
-        ", ".join(sorted(app.state.creature_personas.keys())),
+        len(app.state.persona_manager.keys()),
+        ", ".join(app.state.persona_manager.keys()),
     )
-    if DEFAULT_PERSONA_KEY not in app.state.creature_personas:
+    if not app.state.persona_manager.has_default():
         logger.warning("Creature persona mapping has no default entry")
 
     logger.info("Creating agent tick service…")
@@ -79,7 +102,7 @@ async def lifespan(app: FastAPI):
     app.state.agent_tick_worker = AgentTickWorker(
         service=app.state.agent_tick_service,
         graph=app.state.behavior_graph,
-        personas=app.state.creature_personas,
+        persona_manager=app.state.persona_manager,
     )
     app.state.agent_tick_worker_task = (
         asyncio.create_task(app.state.agent_tick_worker.start())
