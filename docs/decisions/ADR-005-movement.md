@@ -2,7 +2,7 @@
 
 ## Context
 
-The cat frequently gets stuck on obstacles during NavMesh navigation. `MalbersAnimalAdapter.IsBusy` currently equals `_actionInFlight || (_hasActiveNavigationDestination && !_hasArrived)`, so when Malbers/NavMesh never raises an arrival event and the cat stops making world-space progress, the worker waits forever and the entire plan stalls (go_to → eat fish never reaches "eat").
+The cat frequently gets stuck on obstacles during NavMesh navigation. `MalbersAnimalAdapter.IsBusy` now includes navigation, action execution, and action cooldown, but the core risk is the same: if Malbers/NavMesh never raises an arrival event and the cat stops getting closer to the destination, the worker can wait forever and the plan stalls (`go_to -> eat` never reaches `eat`).
 
 For this prototype, the user has decided reliability beats naturalism: when the cat is stuck, we should briefly try to repath and then **warp/teleport** to the requested destination so the rest of the plan can continue. This applies to all navigation-style commands (`go_to`, `follow`, `wander`, `flee`).
 
@@ -10,7 +10,7 @@ For this prototype, the user has decided reliability beats naturalism: when the 
 
 Add a self-recovering navigation watchdog that:
 
-1. Detects "no world-space progress for N seconds" while a navigation command is active.
+1. Detects "not getting closer to the destination for N seconds" while a navigation command is active.
 2. First tries a repath (re-issue destination to Malbers or rebuild the manual NavMesh path).
 3. If repath attempts are exhausted, warps the animal to the destination (NavMesh-projected if possible, raw transform position as final fallback) and marks the command complete so the next intent runs.
 4. Records *why* the command completed (`Arrived`, `ArrivedAfterRepath`, `WarpedToNavMesh`, `WarpedRaw`, `Failed`) into the plan step report.
@@ -19,20 +19,19 @@ Add a self-recovering navigation watchdog that:
 
 `MalbersAnimalAdapter.cs` is already ~590 lines. To avoid bloating it, recovery logic lives in two small, single-purpose files:
 
-- **NEW** [frontend/app/Assets/Scripts/Creature/Motor/NavigationRecoveryConfig.cs](frontend/app/Assets/Scripts/Creature/Motor/NavigationRecoveryConfig.cs)
+- **DONE** [frontend/app/Assets/Scripts/Creature/Motor/NavigationRecoveryConfig.cs](frontend/app/Assets/Scripts/Creature/Motor/NavigationRecoveryConfig.cs)
   - `[Serializable]` class of tunables (intervals, thresholds, sample radius).
   - Exposed once on the adapter via `public NavigationRecoveryConfig recoveryConfig`.
-  - **Status: already written before plan mode started.** Inspect and approve, or ask me to revert.
 
-- **NEW** [frontend/app/Assets/Scripts/Creature/Motor/NavigationWatchdog.cs](frontend/app/Assets/Scripts/Creature/Motor/NavigationWatchdog.cs) — *not yet written*
+- **DONE** [frontend/app/Assets/Scripts/Creature/Motor/NavigationWatchdog.cs](frontend/app/Assets/Scripts/Creature/Motor/NavigationWatchdog.cs)
   - Pure C# state machine. No Malbers, no NavMesh ops. ~120 lines.
-  - Holds: start time, last-progress time, last position, repath attempt count, completion reason, active flag, destination.
+  - Holds: start time, last-progress time, best distance to destination, repath attempt count, completion reason, active flag, destination.
   - Public API:
     - `enum NavigationRecoveryAction { Continue, Repath, Warp }`
     - `enum NavigationCompletionReason { None, Arrived, ArrivedAfterRepath, WarpedToNavMesh, WarpedRaw, Failed, Cancelled }`
     - `void Configure(NavigationRecoveryConfig)`
     - `void Begin(Vector3 destination, Vector3 currentPosition, float now)`
-    - `void UpdateDestination(Vector3 destination)` — for follow (moving target)
+    - `void UpdateDestination(Vector3 destination, Vector3 currentPosition, float now)` — for follow (moving target)
     - `NavigationRecoveryAction Tick(Vector3 currentPosition, float now)` — driven by adapter each frame
     - `void NotifyArrivedNaturally()` / `NotifyWarpedToNavMesh()` / `NotifyWarpedRaw()` / `NotifyFailed()` / `Cancel()`
     - `NavigationCompletionReason CompletionReason { get; }`, `bool IsActive { get; }`, `int RepathAttempts { get; }`
@@ -60,6 +59,14 @@ Add a self-recovering navigation watchdog that:
         4. `StopManualNavigation(true)`, `aiControl?.Stop()`, set `_hasArrived = true`, `_hasActiveNavigationDestination = false`, clear `_activeFollowTarget`. This makes `IsBusy` flip to false → worker advances.
         5. Mirror `LastNavigationCompletionReason`.
   - Augment `BuildNavigationDebug()` with `watchdogActive`, `repathAttempts`, `lastReason`.
+  - If NavMesh projection fails for a non-zero destination, raw-warp instead of rejecting the command.
+  - Include `ActionWatchdog` busy/cooldown state in `IsBusy` so snapshots wait for full animation/cooldown completion.
+
+- **DONE** [frontend/app/Assets/Scripts/Creature/Motor/ActionExecutionConfig.cs](frontend/app/Assets/Scripts/Creature/Motor/ActionExecutionConfig.cs)
+  - Configurable action start timeout, max duration, post-action cooldown, and cleanup behavior.
+
+- **DONE** [frontend/app/Assets/Scripts/Creature/Motor/ActionWatchdog.cs](frontend/app/Assets/Scripts/Creature/Motor/ActionWatchdog.cs)
+  - Pure timing state for Malbers action modes. Lets animations finish naturally, but asks the adapter to clean up if they never start or never end.
 
 - **EDIT** [frontend/app/Assets/Scripts/Creature/Motor/CreatureWorker.cs](frontend/app/Assets/Scripts/Creature/Motor/CreatureWorker.cs)
   - In `CompleteActiveIntentIfReady()`, when the adapter reports a non-`None` `LastNavigationCompletionReason`, pass `reason.ToString()` into `RecordStep(... "completed", reason, ...)` so the backend sees `stuck_warped_to_navmesh` etc.
@@ -76,7 +83,8 @@ Add a self-recovering navigation watchdog that:
 | Field | Value | Notes |
 | --- | --- | --- |
 | `progressCheckInterval` | `0.25s` | Sample 4× / sec, cheap. |
-| `minProgressMeters` | `0.15m` | Smaller than one cat step; jitter doesn't reset stuck timer. |
+| `minProgressMeters` | `0.15m` | Cat must get this much closer to the destination. |
+| `destinationMoveResetMeters` | `0.75m` | Moving follow targets can reset the progress reference when they really move. |
 | `repathDelaySeconds` | `2s` | Give Malbers a chance to wiggle through. |
 | `maxRepathAttempts` | `2` | After two repaths without progress → warp. |
 | `hardTimeoutSeconds` | `12s` | Belt-and-suspenders escape even if progress is barely happening. |
@@ -94,8 +102,9 @@ Add a self-recovering navigation watchdog that:
    - Aim at a point clearly off the NavMesh. Expect a warning + raw warp; cat ends up at requested transform position; plan continues.
 4. **Follow / wander / flee:**
    - Force the cat against a wall while following. Expect repath then warp; `bodyBusy=True` never sticks.
-5. **Action commands unaffected:**
-   - eat / sit / sleep still complete via `OnAnimalModeEnded`. `LastNavigationCompletionReason` resets to `None` when a non-nav command is dispatched, so non-nav step reports stay empty.
+5. **Action commands:**
+   - eat / sit / sleep complete via `OnAnimalModeEnded` when Malbers emits it.
+   - If Malbers loops or never starts the mode, `ActionWatchdog` times out, forces cleanup, waits through cooldown, and releases the queue.
 
 ## Out of Scope
 
@@ -103,6 +112,7 @@ Add a self-recovering navigation watchdog that:
 - No tuning of obstacle layout or NavMesh bake settings — recovery is the fallback.
 - Cosmetic teleport effects (particles, brief fade) — easy to add later if naturalism becomes a priority.
 
-## Open Item
+## Current Companion Docs
 
-`NavigationRecoveryConfig.cs` was created before plan mode was entered. It matches the spec above. If you'd prefer I revert it and recreate it as part of the implementation pass, say so before approval; otherwise I'll proceed with the remaining three files on approval.
+- [docs/current_workflow.md](../current_workflow.md) has the current backend/Unity/worker flow.
+- [docs/current_need_to_fix.md](../current_need_to_fix.md) has the Unity play-mode verification checklist and remaining risks.
