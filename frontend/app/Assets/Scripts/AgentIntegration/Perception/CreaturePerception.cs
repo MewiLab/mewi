@@ -58,7 +58,6 @@ public class CreaturePerception : MonoBehaviour
         _elapsed = 0f;
 
         ScanEnvironment();
-        //LogSensorBatch();
     }
 
     // ── Unified Perception ────────────────────────────────────────────────────
@@ -253,7 +252,7 @@ public class CreaturePerception : MonoBehaviour
 
     void CleanupOldPositions(HashSet<Transform> currentlySeen)
     {
-        // Remove tracking data for creatures that have walked out of range to prevent memory leaks
+        // Remove tracking data for creatures that have walked out of range.
         List<Transform> keysToRemove = new List<Transform>();
         foreach (var key in _prevPositions.Keys)
         {
@@ -311,15 +310,4 @@ public class CreaturePerception : MonoBehaviour
         return mask;
     }
 
-    // ── Debug ────────────────────────────────────────────────────
-    
-    void LogSensorBatch()
-    {
-        if (_board.sensorEvents.Count == 0) return;
-
-        string report = string.Join("\n", _board.sensorEvents);
-        Debug.Log($"<color=cyan>Perception Tick Report ({_board.sensorEvents.Count} events):</color>\n" + report);
-        
-        // _board.sensorEvents.Clear(); 
-    }
 }

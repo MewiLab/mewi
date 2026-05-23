@@ -54,7 +54,7 @@ async def test_two_cats_in_same_zone_open_one_room_and_speak_once() -> None:
     # Relationship updated for the pair.
     rel = social.relationships_for("cat_mewi")
     assert len(rel) == 1
-    assert rel[0].pair == ("cat_milo", "cat_mewi")
+    assert rel[0].pair == ("cat_mewi", "cat_milo")
     assert rel[0].trust > 0
     assert rel[0].encounters >= 1
 
@@ -71,6 +71,11 @@ async def test_repeat_turn_by_same_speaker_stays_silent() -> None:
     assert first.decision.spoke is True
     assert second.decision.spoke is False
     assert second.decision.note == "recently spoke"
+
+    reply = await social.run_turn("cat_b")
+    third = await social.run_turn("cat_a")
+    assert reply.decision.spoke is True
+    assert third.decision.spoke is False
 
 
 async def test_leaving_zone_dissolves_room_for_new_set() -> None:

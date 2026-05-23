@@ -148,6 +148,52 @@ def test_slow_mind_prompt_outputs_intent_not_action_sequence():
     assert "# WHAT CHANGED" not in prompt
 
 
+def test_slow_mind_prompt_includes_backend_social_context():
+    prompt = format_slow_mind_prompt(
+        temperament="curious",
+        trust="unknown",
+        actions=["vocalize: Make a sound.", "sit: Sit down."],
+        semantic_context={
+            "situation": "The cat is idle on the dock.",
+            "body_lines": ["fullness: fullness is high"],
+        },
+        world_view={
+            "peers_in_zone": [
+                {
+                    "creature_id": "cat_milo",
+                    "last_action": "sit",
+                    "mood": {"social": 0.7},
+                },
+            ],
+        },
+        social_context={
+            "delivered_inbox": [
+                {
+                    "from": "cat_milo",
+                    "text": "Milo chirps from the crate.",
+                    "tone": "friendly",
+                    "target": "cat_mewi",
+                },
+            ],
+            "decision": {
+                "spoke": True,
+                "utterance": {
+                    "from": "cat_mewi",
+                    "text": "Mewi sniffs back softly.",
+                    "tone": "friendly",
+                    "target": "cat_milo",
+                },
+            },
+        },
+    )
+
+    assert "# OTHER CATS HERE" in prompt
+    assert "cat_milo is here" in prompt
+    assert "# SOCIAL EXCHANGE" in prompt
+    assert "Heard cat_milo: Milo chirps from the crate." in prompt
+    assert "You expressed: Mewi sniffs back softly." in prompt
+
+
 def test_previous_action_result_uses_semantic_step_recap():
     # Unity currently guarantees go_to ends up at the target (recovery teleport
     # fallback). The LLM-visible recap must therefore treat "recovered" the

@@ -83,10 +83,9 @@ class Moderator(Protocol):
 class DeterministicModerator:
     """Phase-3 moderator. No LLM, pure rules.
 
-    Rule of thumb: first co-location turn produces a quiet "notice"
-    utterance from the cat that just ticked. Repeat turns inside the
-    same room stay silent unless someone new joined, so we don't spam
-    the transcript while two cats sit next to each other.
+    Rule of thumb: each cat gets one quiet "notice" utterance per room.
+    Repeat turns inside the same room stay silent until the membership
+    changes and a new room key is minted.
     """
 
     GREETING_TEMPLATES = {
@@ -110,9 +109,8 @@ class DeterministicModerator:
         if not peers:
             return ModeratorDecision(note="no peers")
 
-        last = room.transcript[-1] if room.transcript else None
-        already_noticed = bool(last and last.speaker_id == driver_id)
-        if already_noticed and room.turn_count > 1:
+        already_noticed = any(line.speaker_id == driver_id for line in room.transcript)
+        if already_noticed:
             return ModeratorDecision(note="recently spoke")
 
         template_key = "group" if len(peers) > 1 else (

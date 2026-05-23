@@ -2,8 +2,8 @@
 //
 // Responsibilities:
 //   - Hold an ordered list of ISnapshotChannel implementations.
-//   - On BuildJson(), iterate channels and let each populate its slot on
-//     a fresh SnapshotPayload, then JsonUtility-serialise the whole thing.
+//   - On BuildPayload(), iterate channels and let each populate its slot on
+//     a fresh SnapshotPayload.
 //
 // Adding a new perception channel = create a class implementing
 // ISnapshotChannel + register it here. AgentNetworkManager does NOT change.
@@ -30,7 +30,7 @@ public class SnapshotManager : MonoBehaviour
     [Tooltip("Max non-smell/non-sound feeling strings sent per tick.")]
     public int maxSignalStrings = 6;
 
-    [Header("Place Memory")]
+    [Header("Exploration Candidates")]
     [Tooltip("Max zone ids sent as nearby exploration candidates.")]
     public int maxReachableZones = 12;
     [Tooltip("Only zones within this distance are considered for exploration candidates.")]
@@ -69,7 +69,7 @@ public class SnapshotManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Public registration hook so future channels (Ambient, Affordance, Social)
+    /// Public registration hook so future physical-world channels
     /// can be added from other call sites without editing this class.
     /// </summary>
     public void Register(ISnapshotChannel channel)
@@ -100,17 +100,7 @@ public class SnapshotManager : MonoBehaviour
         for (int i = 0; i < _channels.Count; i++)
             _channels[i].Write(payload, _board, transform);
 
+        if (logPayload) Debug.Log($"[SnapshotManager] {JsonUtility.ToJson(payload)}");
         return payload;
-    }
-
-    /// <summary>
-    /// Serialise the current blackboard state to the legacy raw snapshot JSON.
-    /// </summary>
-    public string BuildJson(string requestId)
-    {
-        SnapshotPayload payload = BuildPayload(requestId);
-        string json = JsonUtility.ToJson(payload);
-        if (logPayload) Debug.Log($"[SnapshotManager] {json}");
-        return json;
     }
 }

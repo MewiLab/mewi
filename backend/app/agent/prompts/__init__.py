@@ -182,6 +182,8 @@ def format_slow_mind_prompt_parts(
     semantic_context: dict | None = None,
     place_memory_context: "PlaceMemoryContextDict | None" = None,
     memory_context: dict | None = None,
+    world_view: dict | None = None,
+    social_context: dict | None = None,
     persona: str = "",
     previous_action_result: str = "",
 ) -> tuple[str, str]:
@@ -202,6 +204,8 @@ def format_slow_mind_prompt_parts(
         context=context,
         place_memory_context=place_memory_context,
         memory_context=memory_context,
+        world_view=world_view,
+        social_context=social_context,
         previous_action_result=previous_action_result,
     )
     return static_text, dynamic_text
@@ -216,6 +220,8 @@ def format_slow_mind_prompt(
     semantic_context: dict | None = None,
     place_memory_context: "PlaceMemoryContextDict | None" = None,
     memory_context: dict | None = None,
+    world_view: dict | None = None,
+    social_context: dict | None = None,
     persona: str = "",
     previous_action_result: str = "",
 ) -> str:
@@ -226,6 +232,8 @@ def format_slow_mind_prompt(
         semantic_context=semantic_context,
         place_memory_context=place_memory_context,
         memory_context=memory_context,
+        world_view=world_view,
+        social_context=social_context,
         persona=persona,
         previous_action_result=previous_action_result,
     )

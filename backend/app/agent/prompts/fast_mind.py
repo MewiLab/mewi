@@ -77,6 +77,8 @@ def format_fast_mind_prompt(
     previous_action_result: str,
     max_plan_steps: int,
     memory_context: dict[str, Any] | None = None,
+    world_view: dict[str, Any] | None = None,
+    social_context: dict[str, Any] | None = None,
 ) -> str:
     decision = intent_decision if isinstance(intent_decision, dict) else {}
     context = semantic_context or {}
@@ -88,6 +90,8 @@ def format_fast_mind_prompt(
         context=context,
         place_memory_context=place_memory_context,
         memory_context=memory_context,
+        world_view=world_view,
+        social_context=social_context,
         previous_action_result=previous_action_result,
         extra_prefix=_slow_mind_decision_block(decision),
     )

@@ -23,6 +23,8 @@ def build_slow_mind_prompt_parts(
         semantic_context=semantic_context,
         place_memory_context=state.get("place_memory_context"),
         memory_context=state.get("memory_context"),
+        world_view=state.get("world_view"),
+        social_context=state.get("social_context"),
         persona=state.get("persona") or runtime.persona,
         previous_action_result=format_previous_action_result(raw.get("action_result")),
     )
@@ -42,6 +44,8 @@ def build_fast_mind_prompt(
         semantic_context=semantic_context,
         place_memory_context=state.get("place_memory_context"),
         memory_context=state.get("memory_context"),
+        world_view=state.get("world_view"),
+        social_context=state.get("social_context"),
         previous_action_result=format_previous_action_result(raw.get("action_result")),
         max_plan_steps=max_plan_steps,
     )

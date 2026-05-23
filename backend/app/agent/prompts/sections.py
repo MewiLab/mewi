@@ -65,6 +65,97 @@ def short_term_memory_lines(memory_context: dict[str, Any] | None) -> list[str]:
     return result
 
 
+def world_view_lines(world_view: dict[str, Any] | None) -> list[str]:
+    if not isinstance(world_view, dict):
+        return []
+
+    peers = world_view.get("peers_in_zone")
+    if not isinstance(peers, list):
+        return []
+
+    lines: list[str] = []
+    for peer in peers[:6]:
+        if not isinstance(peer, dict):
+            continue
+        creature_id = clean_text(peer.get("creature_id"))
+        if not creature_id:
+            continue
+        line = f"{creature_id} is here"
+        last_action = clean_text(peer.get("last_action"))
+        last_target = clean_text(peer.get("last_action_target"))
+        if last_action:
+            line += f"; last did {last_action}"
+            if last_target:
+                line += f" near {last_target}"
+        mood = peer.get("mood")
+        if isinstance(mood, dict):
+            cues = [
+                f"{key}={float(value):.2f}"
+                for key, value in mood.items()
+                if key in {"fear", "social", "trust"}
+                and isinstance(value, (int, float))
+            ]
+            if cues:
+                line += f"; mood cues: {', '.join(cues[:3])}"
+        lines.append(line + ".")
+    return lines
+
+
+def social_context_lines(social_context: dict[str, Any] | None) -> list[str]:
+    if not isinstance(social_context, dict):
+        return []
+
+    lines: list[str] = []
+    delivered = social_context.get("delivered_inbox")
+    if isinstance(delivered, list):
+        for item in delivered[-4:]:
+            line = _utterance_line(item, prefix="Heard")
+            if line:
+                lines.append(line)
+
+    decision = social_context.get("decision")
+    if isinstance(decision, dict) and decision.get("spoke"):
+        utterance = decision.get("utterance")
+        line = _utterance_line(utterance, prefix="You expressed")
+        if line:
+            lines.append(line)
+
+    relationships = social_context.get("relationships")
+    if isinstance(relationships, list):
+        for relationship in relationships[:4]:
+            if not isinstance(relationship, dict):
+                continue
+            pair = relationship.get("pair")
+            pair_text = ", ".join(clean_text(item) for item in pair if clean_text(item)) \
+                if isinstance(pair, list) else ""
+            if not pair_text:
+                continue
+            trust = _metric_text(relationship.get("trust"))
+            affinity = _metric_text(relationship.get("affinity"))
+            encounters = relationship.get("encounters")
+            parts = [f"bond {pair_text}"]
+            if trust:
+                parts.append(f"trust {trust}")
+            if affinity:
+                parts.append(f"affinity {affinity}")
+            if isinstance(encounters, int):
+                parts.append(f"{encounters} encounter(s)")
+            lines.append("; ".join(parts) + ".")
+
+    if lines:
+        return lines
+
+    room = social_context.get("room")
+    if isinstance(room, dict):
+        recent = room.get("recent_transcript")
+        if isinstance(recent, list):
+            return [
+                line for item in recent[-4:]
+                if (line := _utterance_line(item, prefix="Recent"))
+            ]
+    return []
+
+
 def section_text(value: Any) -> str:
     if isinstance(value, str) and value.strip():
         return value.strip()
@@ -125,6 +216,8 @@ def build_dynamic_section(
     context: dict[str, Any],
     place_memory_context: PlaceMemoryContextDict | None,
     memory_context: dict[str, Any] | None,
+    world_view: dict[str, Any] | None = None,
+    social_context: dict[str, Any] | None = None,
     previous_action_result: str,
     extra_prefix: str = "",
 ) -> str:
@@ -133,7 +226,7 @@ def build_dynamic_section(
     Empty blocks are omitted so the model only sees signal it can act on.
 
     Block order is deliberate:
-      WHERE → BODY → typed affordances → SENSORY → diff → LAST TICK → STM → focus.
+      WHERE → BODY → typed affordances/social → SENSORY → diff → LAST TICK → STM → focus.
 
     extra_prefix lets Fast Mind paste its "SLOW MIND DECISION" block above
     the shared context without duplicating the rest of the layout.
@@ -145,6 +238,8 @@ def build_dynamic_section(
     body_lines = context.get("body_lines") or []
     food_nearby = context.get("food_nearby") or []
     social_cues = context.get("social_cues") or []
+    other_cats = world_view_lines(world_view)
+    social_exchange = social_context_lines(social_context)
     objects_nearby = context.get("objects_nearby") or []
     explore_frontiers = explore_frontier_lines(place_memory_context)
     sensory_world = context.get("sensory_world") or []
@@ -165,6 +260,8 @@ def build_dynamic_section(
         f"{render_block('BODY', body_lines)}"
         f"{render_block('FOOD NEARBY', food_nearby)}"
         f"{render_block('SOCIAL CUES', social_cues)}"
+        f"{render_block('OTHER CATS HERE', other_cats)}"
+        f"{render_block('SOCIAL EXCHANGE', social_exchange)}"
         f"{render_block('EXPLORE FRONTIERS', explore_frontiers)}"
         f"{render_block('OBJECTS NEARBY', objects_nearby)}"
         f"{render_block('SENSORY CUES (this tick)', sensory_world)}"
@@ -173,3 +270,30 @@ def build_dynamic_section(
         f"{render_block('SHORT TERM MEMORY', short_term_lines)}"
         f"{render_block('DECISION FOCUS', decision_focus)}"
     )
+
+
+def _utterance_line(value: Any, *, prefix: str) -> str:
+    if not isinstance(value, dict):
+        return ""
+    speaker = clean_text(value.get("from") or value.get("speaker_id"))
+    text = clean_text(value.get("text"))
+    target = clean_text(value.get("target") or value.get("target_id"))
+    tone = clean_text(value.get("tone"))
+    if not text:
+        return ""
+    subject = speaker if speaker else "someone"
+    if prefix == "You expressed":
+        line = f"{prefix}: {text}"
+    else:
+        line = f"{prefix} {subject}: {text}"
+    if target:
+        line += f" (toward {target})"
+    if tone:
+        line += f" [{tone}]"
+    return line + "."
+
+
+def _metric_text(value: Any) -> str:
+    if not isinstance(value, (int, float)):
+        return ""
+    return f"{float(value):+.2f}"

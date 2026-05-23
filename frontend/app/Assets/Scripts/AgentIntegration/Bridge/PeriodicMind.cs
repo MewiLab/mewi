@@ -135,10 +135,6 @@ public class PeriodicMind : MonoBehaviour
         mood.fear  = Mathf.MoveTowards(mood.fear,  0.2f, _config.fearDecayRate);
         mood.trust = Mathf.MoveTowards(mood.trust, 0.3f, _config.trustDecayRate);
 
-        string events = _board.GetRecentEventsSummary();
-        if (events.Contains("startled")) { mood.fear += 0.15f; mood.trust -= 0.1f; }
-        if (events.Contains("fed") || events.Contains("food")) { mood.trust += 0.1f; mood.social += 0.05f; }
-
         if (_board.playerInSight && _board.closestPlayerDist < _config.personalSpaceRadius)
         {
             if (mood.trust < 0.4f) mood.fear   += 0.1f;

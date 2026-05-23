@@ -49,7 +49,6 @@ public class CreatureBlackboard : MonoBehaviour
     {
         _mindQueue.Clear();
         _mindQueue.Enqueue(IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint, commandId, requestId, targetKey));
-        LogEvent($"mind suggests: {intent}");
     }
 
     public void ReplaceMindPlan(IEnumerable<IntentMessage> intents)
@@ -65,9 +64,6 @@ public class CreatureBlackboard : MonoBehaviour
                 _mindQueue.Enqueue(intent);
             }
         }
-
-        int stepCount = ActiveMindIntentCount();
-        LogEvent($"mind plan queued: {stepCount} step(s)");
     }
 
     public void ClearMindPlan()
@@ -155,55 +151,10 @@ public class CreatureBlackboard : MonoBehaviour
         return Mathf.Max(0, _mindQueue.Count - 1);
     }
 
-    int ActiveMindIntentCount()
+    /// <summary>Called by <see cref="EdibleObject"/> when this cat takes a bite.</summary>
+    public void RecordBite(float fullnessGain = 0.35f)
     {
-        TrimInactiveMindIntents();
-        return _mindQueue.Count;
-    }
-
-    // ─────────────────────────────────────────────
-    // EATING INVENTORY (see ADR-008)
-    // ─────────────────────────────────────────────
-
-    /// <summary>Total bites consumed across all food sources this session.</summary>
-    [HideInInspector] public int totalBitesEaten;
-
-    /// <summary>Time of the most recent bite. -1 if the cat has never eaten.</summary>
-    [HideInInspector] public float lastAteAt = -1f;
-
-    /// <summary>Most recently consumed food's id (SmartObject label or GameObject name).</summary>
-    [HideInInspector] public string lastEatenFoodId = "";
-
-    /// <summary>
-    /// Called by <see cref="EdibleObject"/> when this cat takes a bite. Updates
-    /// inventory counters used by perception and by future episodic memory, and
-    /// raises fullness by the food's nutrition value so the next planning tick
-    /// sees the cat as satisfied.
-    /// </summary>
-    public void RecordBite(string foodId, float t, float fullnessGain = 0.35f)
-    {
-        totalBitesEaten++;
-        lastAteAt = t;
-        lastEatenFoodId = string.IsNullOrWhiteSpace(foodId) ? "" : foodId.Trim();
         health.AddFullness(fullnessGain);
-    }
-
-    // ─────────────────────────────────────────────
-    // EVENT LOG
-    // ─────────────────────────────────────────────
-
-    public Queue<string> recent_events = new Queue<string>();
-
-    public void LogEvent(string e)
-    {
-        recent_events.Enqueue(e);
-        if (recent_events.Count > 10) recent_events.Dequeue();
-    }
-
-    public string GetRecentEventsSummary()
-    {
-        if (recent_events.Count == 0) return "nothing notable";
-        return string.Join("; ", recent_events);
     }
 
     // ─────────────────────────────────────────────
@@ -311,5 +262,4 @@ public class CreatureBlackboard : MonoBehaviour
         _debugMindSlot  = TryPeekMindIntent(out var head) ? head.ToString() : "—";
         _debugMindQueue = queued > 0 ? $"{queued} queued" : "empty";
     }
-
 }

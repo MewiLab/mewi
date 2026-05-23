@@ -127,11 +127,6 @@ public class AgentNetworkManager : MonoBehaviour
         return SendTickJson(creatureId, JsonUtility.ToJson(envelope));
     }
 
-    public bool SendTick(string creatureId, string json)
-    {
-        return SendTickJson(creatureId, json);
-    }
-
     bool SendTickJson(string creatureId, string json)
     {
         if (string.IsNullOrWhiteSpace(creatureId))
@@ -159,16 +154,6 @@ public class AgentNetworkManager : MonoBehaviour
         if (logTraffic) Debug.Log($"[AgentNetworkManager] sending websocket tick creature={creatureId} bytes={json.Length}");
         SendTickAsync(creatureId, json, _cts.Token).Forget();
         return true;
-    }
-
-    public bool TryConsume(out LLMIntent intent)
-    {
-        intent = null;
-        if (!TryConsumePlan(out var plan) || plan.steps == null || plan.steps.Length == 0)
-            return false;
-
-        intent = plan.steps[0];
-        return intent != null;
     }
 
     public bool TryConsumePlan(out LLMPlan plan)

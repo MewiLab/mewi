@@ -126,7 +126,9 @@ async def test_graph_reflects_place_then_fast_mind_builds_explore_plan() -> None
     assert "# ROLE: MEW (Fast Mind)" in llm.calls[1]
     assert result["memory_write"]["raw_event"]["event_type"] == "planning_turn"
     assert runtime.memory.raw_event_count == 1
-    assert runtime.memory.short_term_count >= 4
+    # STM intentionally keeps cross-tick facts only; body/place/sensory are
+    # rendered from the current snapshot instead of being duplicated here.
+    assert runtime.memory.short_term_count >= 1
     assert any(
         line.startswith("action:")
         for line in result["memory_context"]["short_term_lines"]

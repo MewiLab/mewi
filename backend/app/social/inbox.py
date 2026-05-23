@@ -53,6 +53,3 @@ class InboxStore:
         items = list(bucket)
         bucket.clear()
         return items
-
-    def peek(self, creature_id: str) -> list[PendingUtterance]:
-        return list(self._inboxes.get(creature_id, ()))

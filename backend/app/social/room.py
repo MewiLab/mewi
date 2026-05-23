@@ -51,9 +51,8 @@ class SocialRoom:
 class RoomRegistry:
     """Process-global lookup of live rooms by room_key.
 
-    Rooms are created lazily on first co-location and kept until no
-    member is in the room's zone any more. Past transcripts stay under
-    their old key so memory writers can still read them.
+    Rooms are created lazily on first co-location. The stable key is the
+    member set, so the same cats reuse their transcript if they meet again.
     """
 
     def __init__(self) -> None:
@@ -77,10 +76,7 @@ class RoomRegistry:
                 last_turn_at=now,
             )
             self._rooms[room_key] = room
+        else:
+            room.zone_id = zone_id
+            room.members = members
         return room
-
-    def get(self, room_key: str) -> SocialRoom | None:
-        return self._rooms.get(room_key)
-
-    def all_rooms(self) -> list[SocialRoom]:
-        return list(self._rooms.values())

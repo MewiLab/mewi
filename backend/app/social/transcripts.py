@@ -43,9 +43,6 @@ class RelationshipStore:
         self._pairs[key] = state
         return state
 
-    def get(self, a: str, b: str) -> RelationshipState | None:
-        return self._pairs.get(_normalize_pair((a, b)))
-
     def for_creature(self, creature_id: str) -> list[RelationshipState]:
         return [state for key, state in self._pairs.items() if creature_id in key]
 

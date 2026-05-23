@@ -9,10 +9,8 @@ public class CreatureController : MonoBehaviour
     CreaturePerception     _perception;
     PeriodicMind           _mind;
     CreatureWorker         _worker;
-    CreatureAgent          _agent;
     SnapshotManager        _snapshot;
     ZoneScanner            _zoneScanner;
-
 
     /// <summary>
     /// DI, Initialization order is clear and testable without Unity magic.
@@ -23,7 +21,6 @@ public class CreatureController : MonoBehaviour
         _perception  = GetComponent<CreaturePerception>();
         _mind        = GetComponent<PeriodicMind>();
         _worker      = GetComponent<CreatureWorker>();
-        _agent       = GetComponent<CreatureAgent>();
         _snapshot    = GetComponent<SnapshotManager>();
         _zoneScanner = GetComponent<ZoneScanner>();
 
@@ -50,7 +47,6 @@ public class CreatureController : MonoBehaviour
         if (_perception != null)  _perception.Init(_board, config);
         if (_mind != null)        _mind.Init(_board, config);
         if (_worker != null)      _worker.Init(_board);
-        if (_agent != null)       _agent.Init(_board);
         if (_snapshot != null)    _snapshot.Init(_board);
         if (_zoneScanner != null) _zoneScanner.Init(_board);
     }

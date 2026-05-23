@@ -14,7 +14,7 @@ using UnityEngine.Serialization;
 ///     the EdibleObject:
 ///       1. Decrements <see cref="portions"/>.
 ///       2. Calls <see cref="CreatureBlackboard.RecordBite"/> to update the
-///          cat's inventory.
+///          cat's body drive.
 ///       3. Fires <see cref="GoalEventBus.Confirm"/> so the worker's eat
 ///          step reports honestly on its next completion check.
 ///   - When portions reach 0, the trigger collider is disabled (per design:
@@ -146,7 +146,7 @@ public class EdibleObject : MonoBehaviour
         _lastBiteAt[catId] = now;
         portions = Mathf.Max(0, portions - 1);
 
-        blackboard.RecordBite(foodId, now, fullnessGainPerBite);
+        blackboard.RecordBite(fullnessGainPerBite);
         GoalEventBus.Confirm(catId, "eat", foodId, now, "consumed_bite");
 
         ApplyFeelingDecay();

@@ -133126,13 +133126,7 @@ PrefabInstance:
     - {fileID: 4612156087301363750, guid: b96e635735c78654192eeb49782c33d4, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4181316820409248116, guid: b96e635735c78654192eeb49782c33d4, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1870734388}
-    - targetCorrespondingSourceObject: {fileID: 4181316820409248116, guid: b96e635735c78654192eeb49782c33d4, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1870734387}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b96e635735c78654192eeb49782c33d4, type: 3}
 --- !u!4 &1870734358 stripped
 Transform:
@@ -133155,47 +133149,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a22ec0d8f27346d397e3bb45c5b2b98, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CreatureWorker
---- !u!114 &1870734387
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 773169440}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 932fae4e794084bc6b0af76158a61e42, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AttachmentSessionSender
-  config: {fileID: 11400000, guid: 703c0e6361d5c4171a89fa3471f43a4f, type: 2}
-  logger: {fileID: 1870734388}
-  minimumEventsToSend: 1
-  resetLoggerAfterSuccessfulSend: 0
-  logTraffic: 1
---- !u!114 &1870734388
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 773169440}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 255b1e19651334bf993af6b515388b2d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AttachmentBehaviorLogger
-  blackboard: {fileID: 1870734389}
-  catAssignedType: avoidant
-  playerOverride: {fileID: 0}
-  sampleIntervalSeconds: 0.25
-  nearDistanceMeters: 2
-  farDistanceMeters: 5
-  approachDeltaMeters: 0.6
-  retreatDeltaMeters: 0.8
-  duplicateEventCooldownSeconds: 1
-  logDistanceEvents: 1
-  logMindIntentEvents: 1
-  debugLogEvents: 0
 --- !u!114 &1870734389 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5622668930905461673, guid: b96e635735c78654192eeb49782c33d4, type: 3}

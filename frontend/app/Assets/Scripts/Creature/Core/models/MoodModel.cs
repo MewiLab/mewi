@@ -15,7 +15,7 @@ public class MoodModel
     [Range(0f, 1f)] public float curiosity = 0.5f;
     [Range(0f, 1f)] public float fear      = 0.2f;
     [Range(0f, 1f)] public float energy    = 0.7f;
-    [Range(0f, 1f)] public float social    = 0.4f;  // desire for interaction
+    [Range(0f, 1f)] public float social    = 0.4f;  // desire for company
 
     /// <summary>Clamp all values to 0–1 after modification.</summary>
     public void Clamp()
