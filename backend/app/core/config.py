@@ -210,8 +210,8 @@ class Settings(BaseSettings):
     microlog_worker_interval: float = 30.0    # seconds between embedding batches
 
     # Agent prompts
-    agent_persona: str = "cat"
-    agent_personas: str = "default:cat,mewi:cat,sora:sora,miso:miso"
+    agent_persona: str = "mewi"
+    agent_personas: str = "default:mewi,mewi:mewi,sora:sora,miso:miso,haru:haru,kuro:kuro,mochi:mochi,suzu:suzu,tora:tora,yuzu:yuzu"
 
     @field_validator("debug", mode="before")
     @classmethod

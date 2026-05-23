@@ -5,7 +5,7 @@ from pathlib import Path
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 PERSONA_DIR = PROMPTS_DIR / "persona"
-DEFAULT_PERSONA = "cat"
+DEFAULT_PERSONA = "mewi"
 DEFAULT_PERSONA_KEY = "default"
 
 
@@ -24,7 +24,7 @@ def load_persona_map(spec: str = "", default_persona: str = DEFAULT_PERSONA) -> 
     Load a creature_id -> persona text mapping.
 
     Spec format:
-        default:cat,mewi:cat,sora:sora,miso:miso
+        default:mewi,mewi:mewi,sora:sora,miso:miso
 
     Unknown creature IDs should use the returned "default" entry.
     """
