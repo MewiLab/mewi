@@ -92,7 +92,7 @@ async def test_graph_reflects_place_then_fast_mind_builds_explore_plan() -> None
         "agent_id": "cat",
         "self": {"location": {"x": 0, "y": 0, "z": 0}, "current_action": "idle"},
         "mood": {"curiosity": 0.8, "energy": 0.8, "fear": 0.1},
-        "health": {"hunger": 0.1},
+        "health": {"fullness": 0.9},
         "spatial_context": {
             "zones": [
                 {"id": "Harbor", "type": "district"},

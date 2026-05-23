@@ -11,7 +11,7 @@ def test_turn_memory_write_captures_unity_result_and_python_plan() -> None:
             "agent_id": "cat",
             "self": {"location": "Bamboo_Boardwalk", "current_action": "idle"},
             "mood": {"fear": 0.1, "energy": 0.8, "curiosity": 0.7},
-            "health": {"hunger": 0.9},
+            "health": {"fullness": 0.1},
             "place_context": {
                 "current_zone_id": "Bamboo_Boardwalk",
                 "active_zone_ids": ["Harbor", "Bamboo_Boardwalk"],

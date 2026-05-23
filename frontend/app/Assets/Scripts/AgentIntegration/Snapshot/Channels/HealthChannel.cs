@@ -1,4 +1,4 @@
-// HealthChannel.cs — writes drives like hunger.
+// HealthChannel.cs — writes body drives.
 
 using UnityEngine;
 
@@ -8,6 +8,6 @@ public sealed class HealthChannel : ISnapshotChannel
 
     public void Write(SnapshotPayload payload, CreatureBlackboard board, Transform self)
     {
-        payload.health = new HealthData { hunger = board.health.hunger };
+        payload.health = new HealthData { fullness = board.health.fullness };
     }
 }

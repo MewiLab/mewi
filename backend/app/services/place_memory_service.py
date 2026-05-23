@@ -284,7 +284,7 @@ def _build_prompt_lines(
         lines.append("No reachable place list is reported yet; explore using visible targets or gentle wandering.")
 
     lines.append(
-        "When hunger and fear are not urgent, curiosity should prefer places that feel new or stale."
+        "When fullness is not low and fear is not urgent, curiosity should prefer places that feel new or stale."
     )
     return lines
 

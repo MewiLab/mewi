@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Sits on a food prop next to its <see cref="SmartObject"/> and acts as the
@@ -32,8 +33,9 @@ public class EdibleObject : MonoBehaviour
     [SerializeField, Min(0)] int portions = 1;
 
     [Header("Nutrition")]
-    [Tooltip("How much hunger this food relieves per bite (0..1). Higher = more filling.")]
-    [SerializeField, Range(0f, 1f)] float hungerReliefPerBite = 0.35f;
+    [Tooltip("How much of the cat's fullness one bite restores (0..1). 1.0 = one bite fully satiates her. Lower for snack items like an apple.")]
+    [FormerlySerializedAs("hungerReliefPerBite")]
+    [SerializeField, Range(0f, 1f)] float fullnessGainPerBite = 1.0f;
 
     [Header("Sensory Decay")]
     [Tooltip("Scale FeelingEmitter aspect strengths by portionsLeft/maxPortions after each bite, so smell/taste fade as the food is consumed.")]
@@ -63,8 +65,13 @@ public class EdibleObject : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] bool logBites = true;
+    [Tooltip("Log when OnTriggerStay rejects a bite attempt, with the gate that failed. Helps diagnose 'eat plays but portions don't drop' issues.")]
+    [SerializeField] bool logBiteRejections = true;
+    [Tooltip("Throttle for rejection logs — same (cat, reason) is logged at most once every N seconds.")]
+    [SerializeField, Min(0.1f)] float rejectionLogIntervalSeconds = 1.5f;
 
     readonly Dictionary<string, float> _lastBiteAt = new Dictionary<string, float>();
+    readonly Dictionary<string, float> _lastRejectionLogAt = new Dictionary<string, float>();
     Collider _trigger;
     int _maxPortions;
     float[] _baselineAspectStrengths;
@@ -86,38 +93,83 @@ public class EdibleObject : MonoBehaviour
 
     void OnTriggerStay(Collider other)
     {
-        if (portions <= 0) return;
+        string foodId = FoodId;
+
+        if (portions <= 0)
+        {
+            LogRejection(other, foodId, "portions_depleted",
+                () => $"food '{foodId}' has no portions left (collider may be re-enabled in scene).");
+            return;
+        }
 
         var blackboard = ResolveCat(other);
-        if (blackboard == null) return;
+        if (blackboard == null)
+        {
+            // Don't log — most trigger contacts aren't cats and would spam.
+            return;
+        }
 
         string catId = blackboard.CreatureId;
-        if (string.IsNullOrWhiteSpace(catId)) return;
-
-        string foodId = FoodId;
-        if (requireDeclaredEatIntent && !GoalEventBus.HasDeclaration(catId, "eat", foodId))
+        if (string.IsNullOrWhiteSpace(catId))
+        {
+            LogRejection(other, foodId, "empty_cat_id",
+                () => "CreatureBlackboard found but CreatureId is empty.");
             return;
+        }
+
+        if (requireDeclaredEatIntent && !GoalEventBus.HasDeclaration(catId, "eat", foodId))
+        {
+            LogRejection(other, foodId, $"no_declaration:{catId}",
+                () => $"{catId} is inside trigger but no GoalEventBus declaration for (eat, '{foodId}'). " +
+                      "Check: did Slow/Fast Mind emit eat with target_id='" + foodId + "'? " +
+                      "If the LLM uses a different id, set foodIdOverride on this EdibleObject or " +
+                      "rename SmartObject.Label to match the id the LLM sees.");
+            return;
+        }
 
         if (!IsWithinBiteRadius(blackboard))
+        {
+            float dist = Vector3.Distance(blackboard.transform.position, BiteCenterPosition());
+            LogRejection(other, foodId, $"out_of_bite_radius:{catId}",
+                () => $"{catId} is inside trigger but {dist:F2}m from biteCenter (max={biteRadiusMeters:F2}m). " +
+                      "Either widen biteRadiusMeters or shrink the trigger collider.");
             return;
+        }
 
         float now = Time.time;
         if (_lastBiteAt.TryGetValue(catId, out float last) && now - last < biteIntervalSeconds)
+        {
+            // Cooldown is expected between consecutive bites — no log needed.
             return;
+        }
 
         _lastBiteAt[catId] = now;
         portions = Mathf.Max(0, portions - 1);
 
-        blackboard.RecordBite(foodId, now, hungerReliefPerBite);
+        blackboard.RecordBite(foodId, now, fullnessGainPerBite);
         GoalEventBus.Confirm(catId, "eat", foodId, now, "consumed_bite");
 
         ApplyFeelingDecay();
 
         if (logBites)
-            Debug.Log($"[EdibleObject] {catId} ate '{foodId}'. portions left = {portions}.");
+            Debug.Log($"[EdibleObject] {catId} ate '{foodId}'. portions left = {portions}. fullness now = {blackboard.health.fullness:F2}.");
 
         if (portions == 0 && disableColliderWhenDepleted && _trigger != null)
             _trigger.enabled = false;
+    }
+
+    void LogRejection(Collider other, string foodId, string reasonKey, System.Func<string> messageBuilder)
+    {
+        if (!logBiteRejections) return;
+
+        string key = $"{foodId}|{reasonKey}";
+        float now = Time.time;
+        if (_lastRejectionLogAt.TryGetValue(key, out float last) && now - last < rejectionLogIntervalSeconds)
+            return;
+        _lastRejectionLogAt[key] = now;
+
+        string ownerInfo = other != null ? other.gameObject.name : "(unknown collider)";
+        Debug.LogWarning($"[EdibleObject:{foodId}] bite skipped ({reasonKey}) — collider='{ownerInfo}'. {messageBuilder()}");
     }
 
     void CacheBaselineFeelingStrengths()
@@ -166,9 +218,20 @@ public class EdibleObject : MonoBehaviour
         if (_trigger == null)
         {
             _trigger = GetComponent<Collider>();
-            if (_trigger != null && !_trigger.isTrigger)
+            if (_trigger == null)
             {
-                Debug.LogWarning($"[EdibleObject] Collider on '{gameObject.name}' is not a trigger. EdibleObject relies on OnTriggerStay; set isTrigger = true.");
+                Debug.LogError(
+                    $"[EdibleObject] '{gameObject.name}' has no Collider on the same GameObject. " +
+                    "OnTriggerStay will never fire and the cat can never bite this food. " +
+                    "Add a Collider (e.g. SphereCollider sized to the bite zone) and set isTrigger = true."
+                );
+            }
+            else if (!_trigger.isTrigger)
+            {
+                Debug.LogWarning(
+                    $"[EdibleObject] Collider on '{gameObject.name}' is not a trigger. " +
+                    "EdibleObject relies on OnTriggerStay; set isTrigger = true."
+                );
             }
         }
     }

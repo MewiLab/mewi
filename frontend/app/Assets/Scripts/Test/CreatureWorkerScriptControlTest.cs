@@ -171,7 +171,7 @@ public class CreatureWorkerScriptControlTest : MonoBehaviour
         string requestId = $"script-control-test-nav:{Time.frameCount}";
         string goCommandId = $"{board.CreatureId}:script-test-go:{Time.frameCount}";
 
-        board.ClearMindIntent();
+        board.ClearMindPlan();
         board.SetMindIntent("go_to", destination, goCommandId, requestId);
 
         Debug.Log($"[CreatureWorkerScriptControlTest] STEP go_to destination={destination} commandId={goCommandId}");
@@ -296,7 +296,7 @@ public class CreatureWorkerScriptControlTest : MonoBehaviour
         string requestId = $"script-control-test-action:{Time.frameCount}";
         string commandId = $"{board.CreatureId}:script-test-{action.Intent}:{Time.frameCount}";
 
-        board.ClearMindIntent();
+        board.ClearMindPlan();
         board.SetMindIntent(action.Intent, Vector3.zero, commandId, requestId, action.Intent);
 
         Debug.Log($"[CreatureWorkerScriptControlTest] STEP action intent={action.Intent} ability={action.AbilityIndex} commandId={commandId}");
@@ -710,7 +710,7 @@ public class CreatureWorkerScriptControlTest : MonoBehaviour
 
     IEnumerator ForceActionCleanup()
     {
-        board.ClearMindIntent();
+        board.ClearMindPlan();
         board.SetMindIntent("idle");
 
         if (body.animal.IsPlayingMode)

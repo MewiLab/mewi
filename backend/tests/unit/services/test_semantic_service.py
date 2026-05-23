@@ -24,7 +24,7 @@ def _snap(
     curiosity: float = 0.5,
     social: float = 0.0,
     energy: float = 1.0,
-    hunger: float = 0.0,
+    fullness: float = 1.0,
     entities: list | None = None,
     request_id: str = "req-001",
 ) -> dict:
@@ -42,7 +42,7 @@ def _snap(
             "social":    social,
             "energy":    energy,
         },
-        "health": {"hunger": hunger},
+        "health": {"fullness": fullness},
         "entities": entities or [],
     }
 
@@ -93,7 +93,7 @@ class TestTrend:
         assert svc._trend("Energy", 0.3, 0.7) is None
 
     def test_rising_low_to_high(self, svc):
-        assert svc._trend("Hunger", 0.1, 0.9) == "Hunger went from low to high"
+        assert svc._trend("Fullness", 0.1, 0.9) == "Fullness went from low to high"
 
     def test_rising_low_to_moderate(self, svc):
         assert svc._trend("Fear", 0.1, 0.5) == "Fear went from low to moderate"
@@ -118,7 +118,7 @@ class TestGenerateSummary:
         assert isinstance(svc.generate_summary([_snap()]), str)
 
     def test_single_snapshot_does_not_raise(self, svc):
-        svc.generate_summary([_snap(action="stretching", fear=0.9, hunger=0.8)])
+        svc.generate_summary([_snap(action="stretching", fear=0.9, fullness=0.2)])
 
     # ── Action ────────────────────────────────────────────────────────────────
 
@@ -158,9 +158,9 @@ class TestGenerateSummary:
 
     # ── Trends ────────────────────────────────────────────────────────────────
 
-    def test_hunger_trend_when_rises(self, svc):
-        result = svc.generate_summary([_snap(hunger=0.1), _snap(hunger=0.9)])
-        assert "Hunger" in result
+    def test_fullness_trend_when_rises(self, svc):
+        result = svc.generate_summary([_snap(fullness=0.1), _snap(fullness=0.9)])
+        assert "Fullness" in result
         assert "low to high" in result
 
     def test_energy_trend_when_falls(self, svc):
@@ -173,7 +173,7 @@ class TestGenerateSummary:
         assert "went from" not in result
 
     def test_no_trend_sentence_when_stable(self, svc):
-        snaps = [_snap(hunger=0.1), _snap(hunger=0.2)]  # both "low"
+        snaps = [_snap(fullness=0.1), _snap(fullness=0.2)]  # both "low"
         assert "went from" not in svc.generate_summary(snaps)
 
     # ── Entities ──────────────────────────────────────────────────────────────
@@ -295,7 +295,7 @@ class TestPromptContext:
             curiosity=0.5,
             social=0.4,
             energy=0.54,
-            hunger=1.0,
+            fullness=0.0,
             entities=[
                 {"id": "Cat", "tags": [], "distance": 1.2, "direction": "front"},
                 {"id": "SM_Boat_1_01", "tags": ["prop.boat"], "distance": 3.8, "direction": "front_left"},
@@ -315,10 +315,13 @@ class TestPromptContext:
 
         assert "Bamboo Boardwalk" in context["situation"]
         # Legacy body_state still produced for the strategic-commander prompt.
+        # "food is urgent" remains as the qualifier on low-fullness so callers
+        # that grep for it still match.
         assert "food is urgent" in context["body_state"]
+        assert "fullness is low" in context["body_state"]
         # New typed body_lines: one bullet per drive, easier for the model to weigh.
-        assert any("food: food is urgent" in line for line in context["body_lines"])
-        assert any("energy:" in line for line in context["body_lines"])
+        assert any(line.startswith("fullness:") and "food is urgent" in line for line in context["body_lines"])
+        assert any(line.startswith("energy:") for line in context["body_lines"])
         # Legacy mixed relevant_targets stays available.
         assert any("boat" in target and "SM_Boat_1_01" in target for target in context["relevant_targets"])
         assert any("lantern" in target for target in context["relevant_targets"])

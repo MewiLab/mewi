@@ -9,19 +9,32 @@ using UnityEngine;
 public class HealthModel
 {
     [Range(0f, 1f)] public float water = 0.3f; 
-    [Range(0f, 1f)] public float hunger  = 0.1f;
+    [Range(0f, 1f)] public float fullness = 0.9f;
     [Range(0f, 1f)] public float blood = 0.2f;
+
+    public float FoodNeed => 1f - fullness;
 
     public void Clamp()
     {
         water  = Mathf.Clamp01(water);
-        hunger = Mathf.Clamp01(hunger);
+        fullness = Mathf.Clamp01(fullness);
         blood  = Mathf.Clamp01(blood);
+    }
+
+    public void AddFullness(float amount)
+    {
+        fullness = Mathf.Clamp01(fullness + Mathf.Max(0f, amount));
+    }
+
+    public void DecayFullness(float perSecond, float deltaTime)
+    {
+        if (perSecond <= 0f || deltaTime <= 0f) return;
+        fullness = Mathf.Clamp01(fullness - deltaTime * perSecond);
     }
 
     /// <summary>For LLM prompt or debug display.</summary>
     public override string ToString()
     {
-        return $"water:{water:F2} food:{hunger:F2} blood:{blood:F2}";
+        return $"water:{water:F2} fullness:{fullness:F2} blood:{blood:F2}";
     }
 }

@@ -44,7 +44,7 @@ public class MoodData
 [Serializable]
 public class HealthData
 {
-    public float hunger;
+    public float fullness;
 }
 
 [Serializable]

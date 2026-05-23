@@ -69,7 +69,7 @@ MOOD_METRICS: tuple[MetricSpec, ...] = (
 )
 
 HEALTH_METRICS: tuple[MetricSpec, ...] = (
-    MetricSpec("health", "hunger", "Hunger", 0.0),
+    MetricSpec("health", "fullness", "Fullness", 1.0),
 )
 
 FEELING_CHANNELS: tuple[FeelingChannelSpec, ...] = (
@@ -207,6 +207,12 @@ class SemanticService:
 
     def _metric_value(self, snapshot: Snapshot, spec: MetricSpec) -> float:
         section = self._section(snapshot, spec.channel)
+        if spec.channel == "health" and spec.key == "fullness":
+            if "fullness" in section:
+                return self._safe_float(section.get("fullness"), spec.default)
+            if "hunger" in section:
+                hunger = self._safe_float(section.get("hunger"), 0.0)
+                return 1.0 - max(0.0, min(1.0, hunger))
         return self._safe_float(section.get(spec.key, spec.default), spec.default)
 
     # -- Channel formatters --------------------------------------------------
@@ -226,9 +232,9 @@ class SemanticService:
 
     def _format_mood_and_health(self, last: Snapshot) -> str:
         mood_str = self._describe_mood(self._section(last, "mood"))
-        hunger_spec = HEALTH_METRICS[0]
-        hunger = self._metric_value(last, hunger_spec)
-        return f"It felt {mood_str}; hunger was {self._label(hunger)}."
+        fullness_spec = HEALTH_METRICS[0]
+        fullness = self._metric_value(last, fullness_spec)
+        return f"It felt {mood_str}; fullness was {self._label(fullness)}."
 
     def _format_feelings(self, snapshots: list[Snapshot]) -> list[str]:
         summary = self._latest_feeling_summary(snapshots)
@@ -503,7 +509,7 @@ class SemanticService:
         return " ".join(parts) if parts else "a known place"
 
     def _semantic_body_state(self, snapshot: Snapshot) -> str:
-        hunger = self._metric_value(snapshot, HEALTH_METRICS[0])
+        fullness = self._metric_value(snapshot, HEALTH_METRICS[0])
         fear = self._metric_value(snapshot, MOOD_METRICS[0])
         trust = self._metric_value(snapshot, MOOD_METRICS[1])
         curiosity = self._metric_value(snapshot, MOOD_METRICS[2])
@@ -513,7 +519,7 @@ class SemanticService:
         action_text = _format_previous_action_result(snapshot.get("action_result"))
 
         parts = [
-            self._hunger_meaning(hunger, action_text),
+            self._fullness_meaning(fullness, action_text),
             self._fear_meaning(fear),
             self._curiosity_meaning(curiosity),
             self._social_meaning(trust, social),
@@ -521,19 +527,21 @@ class SemanticService:
         ]
         return self._ensure_sentence(self._natural_join([part for part in parts if part]))
 
-    def _hunger_meaning(self, value: float, action_text: str = "") -> str:
+    def _fullness_meaning(self, value: float, action_text: str = "") -> str:
+        """Render the food drive as what the cat experiences: fullness."""
         if recently_ate(action_text):
-            return "food is satisfied — she just took a bite"
-        if value >= 0.7:
-            return "food is urgent"
-        if value >= 0.3:
-            return "food matters but is not desperate"
-        return "food is not pressing"
+            return "fullness is at the top — she just took a bite, food is not pressing"
+        fullness = max(0.0, min(1.0, value))
+        if fullness >= 0.7:
+            return "fullness is high — food is not pressing"
+        if fullness >= 0.3:
+            return "fullness is moderate — food matters but is not desperate"
+        return "fullness is low — food is urgent"
 
     def _semantic_body_lines(self, snapshot: Snapshot) -> list[str]:
         """One short line per drive — easier for the model to weigh than a
         comma-spaghetti sentence. Order matches the original phrasing."""
-        hunger = self._metric_value(snapshot, HEALTH_METRICS[0])
+        fullness = self._metric_value(snapshot, HEALTH_METRICS[0])
         fear = self._metric_value(snapshot, MOOD_METRICS[0])
         trust = self._metric_value(snapshot, MOOD_METRICS[1])
         curiosity = self._metric_value(snapshot, MOOD_METRICS[2])
@@ -542,7 +550,7 @@ class SemanticService:
 
         action_text = _format_previous_action_result(snapshot.get("action_result"))
         return [
-            f"food: {self._hunger_meaning(hunger, action_text)}",
+            f"fullness: {self._fullness_meaning(fullness, action_text)}",
             f"fear: {self._fear_meaning(fear)}",
             f"curiosity: {self._curiosity_meaning(curiosity)}",
             f"social: {self._social_meaning(trust, social)}",
@@ -625,7 +633,7 @@ class SemanticService:
         action_text = _format_previous_action_result(snapshot.get("action_result"))
         lines: list[str] = []
         if recently_ate(action_text):
-            lines.append("she just took a bite — hunger has eased")
+            lines.append("she just took a bite — fullness rose")
         from app.services.text_signals import recently_drank, recently_fled, recently_failed_to_reach
         if recently_drank(action_text):
             lines.append("she just drank")
@@ -802,7 +810,7 @@ class SemanticService:
         sensory_lines: list[str],
     ) -> list[str]:
         mood = self._section(snapshot, "mood")
-        hunger = self._metric_value(snapshot, HEALTH_METRICS[0])
+        fullness = self._metric_value(snapshot, HEALTH_METRICS[0])
         fear = self._safe_float(mood.get("fear", 0.0), 0.0)
         energy = self._safe_float(mood.get("energy", 1.0), 1.0)
         sensory_text = " ".join(sensory_lines).lower()
@@ -817,11 +825,11 @@ class SemanticService:
         food_cue = self._contains_any(sensory_text, FOOD_TERMS) or self._contains_any(target_text, FOOD_TERMS)
         ate_recently = recently_ate(_format_previous_action_result(snapshot.get("action_result")))
         if ate_recently:
-            focus.append("She just took a bite, so hunger is no longer pressing; consider exploring, resting, or socializing.")
-        elif hunger >= 0.7 and food_cue:
-            focus.append("Hunger is urgent and there is an edible cue, so smelling or eating is well motivated.")
-        elif hunger >= 0.7:
-            focus.append("Hunger is urgent, but no definite food cue is visible; use smell or a small search before eating.")
+            focus.append("She just took a bite — fullness is at the top; consider exploring, resting, or socializing.")
+        elif fullness <= 0.3 and food_cue:
+            focus.append("Fullness is low and there is an edible cue, so smelling or eating is well motivated.")
+        elif fullness <= 0.3:
+            focus.append("Fullness is low, but no definite food cue is visible; use smell or a small search before eating.")
 
         if energy <= 0.3:
             focus.append("Keep the next plan low effort.")

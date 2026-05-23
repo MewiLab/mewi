@@ -209,7 +209,7 @@ def _nested_payload(i: int = 0) -> dict:
             "current_action": "walking",
         },
         "mood":   {"fear": 0.1, "trust": 0.8, "curiosity": 0.6, "social": 0.3, "energy": 0.9},
-        "health": {"hunger": 0.2},
+        "health": {"fullness": 0.8},
         "entities": [
             {"id": "lamp-1", "tags": ["lantern"], "distance": 3.0, "direction": "north"}
         ],

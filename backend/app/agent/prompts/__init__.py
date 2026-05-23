@@ -49,7 +49,7 @@ Temperament: {temperament}. Trust Level: {trust}.
 - Do not invent coordinates, distances, hidden objects, or raw sensor values.
 - Treat the semantic context as already interpreted; reason from meaning, not numbers.
 - If recent feedback says an action was rejected or unmapped, avoid that action for now.
-- When curiosity and energy are available, and hunger/fear are not urgent, prefer new or stale places over overvisited places.
+- When curiosity and energy are available, fullness is not low, and fear is not urgent, prefer new or stale places over overvisited places.
 - Prefer the smallest physical action that advances the current motivation.
 
 # DECISION FOCUS
@@ -79,7 +79,7 @@ Temperament: {temperament}. Trust Level: {trust}.
 
 # INTENT CATALOG
 - EXPLORE: curiosity should carry the cat toward a new or stale place.
-- SEEK_FOOD: hunger and a food cue should guide the cat toward food.
+- SEEK_FOOD: low fullness and a food cue should guide the cat toward food.
 - SEEK_PLAYER: the cat wants to locate or stay near a trusted human.
 - SOCIALIZE: the cat wants gentle contact with a nearby trusted being.
 - INVESTIGATE: the cat wants to inspect a nearby cue, object, smell, or sound.
@@ -91,14 +91,14 @@ Temperament: {temperament}. Trust Level: {trust}.
 - Choose one durable intent, not a concrete action sequence.
 - Fast Mind will translate the intent and style into Unity actions.
 - Use exact target ids only from Place Memory or Relevant Targets.
-- Prefer EXPLORE when curiosity and energy are available and hunger/fear are not urgent.
-- Prefer SEEK_FOOD when hunger is urgent and food is visible or scented.
+- Prefer EXPLORE when curiosity and energy are available, fullness is not low, and fear is not urgent.
+- Prefer SEEK_FOOD when fullness is low and food is visible or scented.
 - Prefer REST when energy is low.
 - Prefer SAFETY when fear or recent failed/rejected movement matters.
 - Express how this cat would physically approach the intent. The style should come from persona, mood, and recent feedback.
 
 # ONE-SHOT EXAMPLE
-If the current prompt says hunger is urgent and Relevant Targets contains "fish nearby; target: SM_Fish_1", a good Slow Mind output is:
+If the current prompt says fullness is low and Relevant Targets contains "fish nearby; target: SM_Fish_1", a good Slow Mind output is:
 {{
   "intent": "SEEK_FOOD",
   "target_id": "SM_Fish_1",
@@ -241,7 +241,7 @@ def _legacy_semantic_context(
     feelings: dict | None,
 ) -> dict:
     """Fallback for tests and older call sites; still hides raw values."""
-    hunger = _number(health.get("hunger") if isinstance(health, dict) else None)
+    fullness = _health_fullness(health)
     fear = _number(mood.get("fear") if isinstance(mood, dict) else None)
     energy = _number(mood.get("energy") if isinstance(mood, dict) else None, default=1.0)
 
@@ -262,7 +262,7 @@ def _legacy_semantic_context(
     place = _semantic_place_text(position)
     return {
         "situation": f"The cat is {current_action or 'idle'} at {place}.",
-        "body_state": _body_sentence(hunger, fear, energy),
+        "body_state": _body_sentence(fullness, fear, energy),
         "sensory_world": sensory,
         "relevant_targets": targets or ["No meaningful nearby target is currently visible."],
         "decision_focus": ["Choose a small action that fits the interpreted situation."],
@@ -278,12 +278,31 @@ def _semantic_place_text(position: str) -> str:
     return text
 
 
-def _body_sentence(hunger: float, fear: float, energy: float) -> str:
+def _body_sentence(fullness: float, fear: float, energy: float) -> str:
+    """
+    Legacy one-line body summary used by the strategic-commander prompt.
+    Mirrors the fullness wording used by SemanticService.
+    """
+    fullness = max(0.0, min(1.0, fullness))
     parts: list[str] = []
-    parts.append("food is urgent" if hunger >= 0.7 else "food is not urgent")
+    if fullness >= 0.7:
+        parts.append("fullness is high")
+    elif fullness >= 0.3:
+        parts.append("fullness is moderate")
+    else:
+        parts.append("fullness is low — food is urgent")
     parts.append("safety should come first" if fear >= 0.7 else "there is no strong fear signal")
     parts.append("energy is low" if energy <= 0.3 else "energy supports light movement")
     return ", ".join(parts) + "."
+
+
+def _health_fullness(health: dict) -> float:
+    if not isinstance(health, dict):
+        return 1.0
+    if "fullness" in health:
+        return _number(health.get("fullness"), default=1.0)
+    hunger = _number(health.get("hunger"), default=0.0)
+    return 1.0 - max(0.0, min(1.0, hunger))
 
 
 def _format_feeling_meanings(feelings: dict | None) -> list[str]:

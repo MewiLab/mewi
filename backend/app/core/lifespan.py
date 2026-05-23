@@ -18,7 +18,9 @@ from app.services.agent_tick_service import AgentTickService
 from app.services.memory_service import MemoryService
 from app.services.place_memory_store import PlaceMemoryStoreChain
 from app.services.place_memory_service import PlaceMemoryService
+from app.social.service import SocialService
 from app.workers.agent_tick_worker import AgentTickWorker
+from app.world.state import WorldState
 
 logger = get_logger(__name__)
 
@@ -76,10 +78,14 @@ async def lifespan(app: FastAPI):
     app.state.place_memory_service = PlaceMemoryService(app.state.place_memory_store)
     app.state.memory_repository = MemoryRepository(app.state.supabase)
     app.state.memory_service = MemoryService(app.state.memory_repository)
+    app.state.world_state = WorldState()
+    app.state.social_service = SocialService(world=app.state.world_state)
     app.state.behavior_graph = build_behavior_graph(
         llm,
         place_memory=app.state.place_memory_service,
         memory_service=app.state.memory_service,
+        world=app.state.world_state,
+        social=app.state.social_service,
     ).compile()
     app.state.persona_manager = PersonaManager.from_spec(
         settings.agent_personas,

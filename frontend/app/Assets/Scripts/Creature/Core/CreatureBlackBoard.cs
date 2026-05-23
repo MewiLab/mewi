@@ -12,11 +12,10 @@ public class CreatureBlackboard : MonoBehaviour
     [Header("Identity")]
     [SerializeField] string creatureId = "";
 
-    [Header("Intent slots (read-only in Inspector)")]
+    [Header("Intent queue (read-only in Inspector)")]
     [SerializeField] string _debugMindSlot  = "—";
     [SerializeField] string _debugMindQueue = "—";
 
-    IntentMessage? _mindIntent;
     readonly Queue<IntentMessage> _mindQueue = new Queue<IntentMessage>();
     readonly Queue<PlanExecutionReport> _completedPlanReports = new Queue<PlanExecutionReport>();
 
@@ -30,9 +29,16 @@ public class CreatureBlackboard : MonoBehaviour
         }
     }
 
-    public IntentMessage? MindIntent  => _mindIntent?.IsActive == true ? _mindIntent : null;
-    public int  QueuedMindIntentCount => _mindQueue.Count;
-    public bool HasMindPlan           => MindIntent.HasValue || _mindQueue.Count > 0;
+    public IntentMessage? MindIntent
+    {
+        get
+        {
+            return TryPeekMindIntent(out var head) ? head : (IntentMessage?)null;
+        }
+    }
+
+    public int  QueuedMindIntentCount => PendingMindIntentCount();
+    public bool HasMindPlan           => TryPeekMindIntent(out _);
 
     public void SetMindIntent(
         string intent,
@@ -42,13 +48,12 @@ public class CreatureBlackboard : MonoBehaviour
         string targetKey = "")
     {
         _mindQueue.Clear();
-        _mindIntent = IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint, commandId, requestId, targetKey);
+        _mindQueue.Enqueue(IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint, commandId, requestId, targetKey));
         LogEvent($"mind suggests: {intent}");
     }
 
     public void ReplaceMindPlan(IEnumerable<IntentMessage> intents)
     {
-        _mindIntent = null;
         _mindQueue.Clear();
 
         if (intents != null)
@@ -61,42 +66,35 @@ public class CreatureBlackboard : MonoBehaviour
             }
         }
 
-        PromoteNextMindIntent();
-        int stepCount = (MindIntent.HasValue ? 1 : 0) + _mindQueue.Count;
+        int stepCount = ActiveMindIntentCount();
         LogEvent($"mind plan queued: {stepCount} step(s)");
     }
 
     public void ClearMindPlan()
     {
-        _mindIntent = null;
         _mindQueue.Clear();
         followTarget = null;
     }
 
-    public void ClearMindIntent()
-    {
-        _mindIntent = null;
-        PromoteNextMindIntent();
-    }
-
     /// <summary>
-    /// Pop the current head intent and advance the queue. Returns the popped
-    /// intent. False when there was nothing active to pop.
+    /// Pop the current queue head. Returns the popped intent. False when there
+    /// was nothing active to pop.
     /// </summary>
     public bool TryPopMindIntent(out IntentMessage popped)
     {
-        if (_mindIntent.HasValue && _mindIntent.Value.IsActive)
+        TrimInactiveMindIntents();
+
+        if (_mindQueue.Count == 0)
         {
-            popped = _mindIntent.Value;
-            _mindIntent = null;
-            PromoteNextMindIntent();
-            return true;
+            popped = default;
+            followTarget = null;
+            return false;
         }
 
-        popped = default;
-        _mindIntent = null;
-        PromoteNextMindIntent();
-        return false;
+        popped = _mindQueue.Dequeue();
+        if (_mindQueue.Count == 0)
+            followTarget = null;
+        return true;
     }
 
     public void EnqueuePlanExecutionReport(PlanExecutionReport report)
@@ -123,49 +121,45 @@ public class CreatureBlackboard : MonoBehaviour
     /// </summary>
     public bool TryPeekMindIntent(out IntentMessage head)
     {
-        if (_mindIntent.HasValue && !_mindIntent.Value.IsActive)
-            _mindIntent = null;
-
-        if (!_mindIntent.HasValue && !PromoteNextMindIntent())
+        TrimInactiveMindIntents();
+        if (_mindQueue.Count == 0)
         {
             head = default;
             return false;
         }
 
-        head = _mindIntent.Value;
-        return head.IsActive;
+        head = _mindQueue.Peek();
+        return true;
     }
 
     /// <summary>Peek the current head intent, or "idle" when nothing is queued.</summary>
     public IntentMessage ResolveActiveIntent()
     {
-        if (_mindIntent.HasValue && _mindIntent.Value.IsActive)
-            return _mindIntent.Value;
-
-        if (_mindIntent.HasValue && !_mindIntent.Value.IsActive)
-            _mindIntent = null;
-
-        if (PromoteNextMindIntent())
-            return _mindIntent.Value;
-
-        return IntentMessage.Create("idle", LayerSource.Mind);
+        return TryPeekMindIntent(out var head)
+            ? head
+            : IntentMessage.Create("idle", LayerSource.Mind);
     }
 
-    bool PromoteNextMindIntent()
+    void TrimInactiveMindIntents()
     {
-        while (_mindQueue.Count > 0)
-        {
-            _mindIntent = _mindQueue.Dequeue();
-            if (_mindIntent.Value.IsActive)
-                return true;
-        }
+        while (_mindQueue.Count > 0 && !_mindQueue.Peek().IsActive)
+            _mindQueue.Dequeue();
 
-        _mindIntent = null;
-        followTarget = null;
-        return false;
+        if (_mindQueue.Count == 0)
+            followTarget = null;
     }
 
-    public float GetCurrentHunger() => health.hunger;
+    int PendingMindIntentCount()
+    {
+        TrimInactiveMindIntents();
+        return Mathf.Max(0, _mindQueue.Count - 1);
+    }
+
+    int ActiveMindIntentCount()
+    {
+        TrimInactiveMindIntents();
+        return _mindQueue.Count;
+    }
 
     // ─────────────────────────────────────────────
     // EATING INVENTORY (see ADR-008)
@@ -183,15 +177,15 @@ public class CreatureBlackboard : MonoBehaviour
     /// <summary>
     /// Called by <see cref="EdibleObject"/> when this cat takes a bite. Updates
     /// inventory counters used by perception and by future episodic memory, and
-    /// drops hunger by the food's nutrition value so the next planning tick sees
-    /// the cat as satisfied.
+    /// raises fullness by the food's nutrition value so the next planning tick
+    /// sees the cat as satisfied.
     /// </summary>
-    public void RecordBite(string foodId, float t, float hungerRelief = 0.35f)
+    public void RecordBite(string foodId, float t, float fullnessGain = 0.35f)
     {
         totalBitesEaten++;
         lastAteAt = t;
         lastEatenFoodId = string.IsNullOrWhiteSpace(foodId) ? "" : foodId.Trim();
-        health.hunger = Mathf.Clamp01(health.hunger - Mathf.Max(0f, hungerRelief));
+        health.AddFullness(fullnessGain);
     }
 
     // ─────────────────────────────────────────────
@@ -313,18 +307,9 @@ public class CreatureBlackboard : MonoBehaviour
     /// <summary>Update Inspector debug strings. Call at end of frame.</summary>
     public void UpdateDebugDisplay()
     {
-        _debugMindSlot  = MindIntent.HasValue  ? MindIntent.Value.ToString()  : "—";
-        _debugMindQueue = _mindQueue.Count > 0 ? $"{_mindQueue.Count} queued" : "empty";
+        int queued = QueuedMindIntentCount;
+        _debugMindSlot  = TryPeekMindIntent(out var head) ? head.ToString() : "—";
+        _debugMindQueue = queued > 0 ? $"{queued} queued" : "empty";
     }
 
-    /// <summary>
-    /// Cheap simulation of hunger climb between perception ticks. Pass the
-    /// per-second growth rate from <see cref="CreatureConfig.hungerGrowthRate"/>
-    /// so the design value isn't shadowed by a hardcoded constant.
-    /// </summary>
-    public void ScoreDrives(float hungerGrowthPerSecond)
-    {
-        if (hungerGrowthPerSecond <= 0f) return;
-        health.hunger = Mathf.Clamp01(health.hunger + Time.deltaTime * hungerGrowthPerSecond);
-    }
 }

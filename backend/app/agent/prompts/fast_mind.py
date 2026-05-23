@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.agent.mind.context import clean_text
-from app.agent.prompts.sections import action_lines, build_dynamic_section
+from app.agent.prompts.sections import action_lines, build_dynamic_section, clean_text
 from app.agent.schemas.place_memory_schema import PlaceMemoryContextDict
 
 
@@ -35,7 +34,7 @@ If Slow Mind chose SEEK_FOOD with target_id SM_Fish_1 and style "cautious sniff-
     {{"action": "sit", "target": null, "reason": "settle after eating"}},
     {{"action": "groom", "target": null, "reason": "small satisfied cleanup"}}
   ],
-  "reasoning": "The sequence turns hunger into a cautious cat-like approach, bite, and settling beat."
+  "reasoning": "The sequence turns low fullness into a cautious cat-like approach, bite, and settling beat."
 }}
 Use this only as an example of level and shape; use the current prompt's real affordances and target ids.
 

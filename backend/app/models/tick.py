@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Location(BaseModel):
@@ -27,7 +27,20 @@ class MoodState(BaseModel):
 
 
 class HealthState(BaseModel):
-    hunger: float = Field(0.0, ge=0.0, le=1.0)
+    fullness: float = Field(1.0, ge=0.0, le=1.0)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_legacy_hunger(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+        if "fullness" in value or "hunger" not in value:
+            return value
+        try:
+            hunger = float(value.get("hunger") or 0.0)
+        except (TypeError, ValueError):
+            hunger = 0.0
+        return {**value, "fullness": max(0.0, min(1.0, 1.0 - hunger))}
 
 
 class EntitySnapshot(BaseModel):

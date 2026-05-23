@@ -54,7 +54,7 @@ public class CreatureAgent : MonoBehaviour
 
     [Serializable] class HealthData
     {
-        public float hunger;
+        public float fullness;
     }
 
     [Serializable] class EntityData
@@ -103,7 +103,7 @@ public class CreatureAgent : MonoBehaviour
                 social    = _board.mood.social,
                 energy    = _board.mood.energy,
             },
-            health   = new HealthData { hunger = _board.health.hunger },
+            health   = new HealthData { fullness = _board.health.fullness },
             entities = entities.ToArray(),
         };
     }

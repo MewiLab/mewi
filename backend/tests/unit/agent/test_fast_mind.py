@@ -39,6 +39,7 @@ def test_fast_mind_prompt_receives_intent_style_and_affordances() -> None:
             "relevant_targets": ["fish nearby; target: SM_Fish_1."],
         },
         place_memory_context={"lines": ["Current place: Dock feels familiar."]},
+        memory_context={"short_term_lines": ["body: fullness is low."]},
         previous_action_result="  - no previous plan result",
         max_plan_steps=8,
     )

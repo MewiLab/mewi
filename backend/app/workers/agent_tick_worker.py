@@ -70,6 +70,8 @@ class AgentTickWorker:
                 "tick": result.get("tick"),
                 "intent": result.get("intent_decision"),
                 "place_memory": result.get("place_memory_context"),
+                "social_context": result.get("social_context"),
+                "dialogue": result.get("dialogue", []),
                 "action_result": result.get("action_result"),
                 "plan_steps": result.get("plan_steps", []),
                 "reasoning": result.get("reasoning", ""),

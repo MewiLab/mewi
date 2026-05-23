@@ -34,6 +34,10 @@ public class PeriodicMind : MonoBehaviour
     [Header("Mind Mode")]
     public MindMode mode = MindMode.Simulated;
 
+    [Header("Settle Window")]
+    [Tooltip("After a plan finishes, wait this many seconds before sending the next snapshot. Lets bite confirmations, fullness updates, and feeling decay settle before the LLM sees the new body state. Set 0 to disable.")]
+    [SerializeField, Min(0f)] float postPlanSettleSeconds = 1.0f;
+
     [Header("Debug")]
     [SerializeField] bool logLLMTicks = true;
 
@@ -43,6 +47,7 @@ public class PeriodicMind : MonoBehaviour
     int  _lastObservedBridgeFailureCount;
     string _lastRequestId = "";
     PlanExecutionReport _pendingPlanReport;
+    float _lastPlanCompletedAt = -1f;
 
     public void Init(CreatureBlackboard board, CreatureConfig config)
     {
@@ -141,7 +146,7 @@ public class PeriodicMind : MonoBehaviour
         }
 
         mood.energy -= 0.02f;
-        if (_board.GetCurrentHunger() > 0.7f) mood.energy -= 0.03f;
+        if (_board.health.fullness < 0.3f) mood.energy -= 0.03f;
         mood.Clamp();
     }
 
@@ -193,7 +198,12 @@ public class PeriodicMind : MonoBehaviour
             ApplyLLMPlan(plan);
 
         if (_board.TryPopPlanExecutionReport(out var completedReport))
+        {
             _pendingPlanReport = completedReport;
+            _lastPlanCompletedAt = Time.time;
+            if (logLLMTicks)
+                Debug.Log($"[PeriodicMind] plan completed at t={_lastPlanCompletedAt:F2}; settle window = {postPlanSettleSeconds:F2}s");
+        }
 
         if (_bridge.RequestInFlight)
         {
@@ -215,6 +225,20 @@ public class PeriodicMind : MonoBehaviour
             }
             LogBridgeFailures();
             return;
+        }
+
+        // Hold the snapshot for a moment after plan completion so bite confirmations,
+        // fullness rises, and feeling decay are all reflected in what the LLM sees next.
+        if (_lastPlanCompletedAt >= 0f && postPlanSettleSeconds > 0f)
+        {
+            float settleEnd = _lastPlanCompletedAt + postPlanSettleSeconds;
+            if (Time.time < settleEnd)
+            {
+                if (logLLMTicks)
+                    Debug.Log($"[PeriodicMind] settling — waiting {settleEnd - Time.time:F2}s for body state to update before next snapshot");
+                LogBridgeFailures();
+                return;
+            }
         }
 
         string requestId = $"t{_tickCounter++:X8}";
@@ -335,7 +359,7 @@ public class PeriodicMind : MonoBehaviour
     {
         if (mood.fear > 0.7f)                                                return "flee";
         if (mood.curiosity > 0.6f && _board.playerInSight)                   return "investigate";
-        if (_board.GetCurrentHunger() > 0.5f)                                return "wander";
+        if (_board.health.fullness < 0.5f)                                    return "wander";
         if (mood.social > 0.6f && mood.trust > 0.5f && _board.playerInSight) return "investigate";
         if (mood.energy < 0.3f)                                              return "idle";
         return "wander";

@@ -6807,6 +6807,7 @@ GameObject:
   m_Component:
   - component: {fileID: 163379000}
   - component: {fileID: 163379001}
+  - component: {fileID: 163379002}
   m_Layer: 0
   m_Name: ZV_Houses_4
   m_TagString: Untagged
@@ -6850,6 +6851,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &163379002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 163378999}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
+  zoneId: House_4
+  zoneType: 4
+  confinement: 2
+  surface: 
 --- !u!1 &165209364
 GameObject:
   m_ObjectHideFlags: 0
@@ -15798,6 +15815,7 @@ GameObject:
   m_Component:
   - component: {fileID: 353356128}
   - component: {fileID: 353356129}
+  - component: {fileID: 353356130}
   m_Layer: 12
   m_Name: ZV_Boat_4
   m_TagString: Untagged
@@ -15841,6 +15859,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 0.9773485}
   m_Center: {x: 0, y: 0, z: -0.011325772}
+--- !u!114 &353356130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 353356127}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
+  zoneId: Boat_4
+  zoneType: 3
+  confinement: 0
+  surface: Wood
 --- !u!1 &353498674
 GameObject:
   m_ObjectHideFlags: 0
@@ -16701,6 +16735,7 @@ GameObject:
   m_Component:
   - component: {fileID: 380286658}
   - component: {fileID: 380286659}
+  - component: {fileID: 380286660}
   m_Layer: 0
   m_Name: ZV_Houses_2
   m_TagString: Untagged
@@ -16744,6 +16779,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &380286660
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 380286657}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
+  zoneId: House_2
+  zoneType: 4
+  confinement: 2
+  surface: 
 --- !u!1 &380340818
 GameObject:
   m_ObjectHideFlags: 0
@@ -21304,6 +21355,54 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!1 &500622496
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 500622498}
+  - component: {fileID: 500622497}
+  m_Layer: 0
+  m_Name: NamedTargetRegistry
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &500622497
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 500622496}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 952e46f67a45f40378df205e53312c79, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NamedTargetRegistry
+  entries: []
+  autoRegisterSmartObjects: 1
+  autoRegisterZoneVolumes: 1
+  fallbackToGameObjectName: 1
+--- !u!4 &500622498
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 500622496}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 10.75347, y: -0.07029, z: 12.33018}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &501990607
 GameObject:
   m_ObjectHideFlags: 0
@@ -94134,7 +94233,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1045503581}
-  - component: {fileID: 1045503583}
   - component: {fileID: 1045503582}
   m_Layer: 0
   m_Name: ZV_Houses_Row
@@ -94178,27 +94276,6 @@ MonoBehaviour:
   zoneType: 5
   confinement: 0
   surface: 
---- !u!65 &1045503583
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1045503580}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &1045606121
 GameObject:
   m_ObjectHideFlags: 0
@@ -98056,7 +98133,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1141136318}
-  - component: {fileID: 1141136319}
   m_Layer: 0
   m_Name: ZV_Sea
   m_TagString: Untagged
@@ -98084,22 +98160,6 @@ Transform:
   - {fileID: 2126044557}
   m_Father: {fileID: 1165308000}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1141136319
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1141136317}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
-  zoneId: Sea
-  zoneType: 1
-  confinement: 0
-  surface: 
 --- !u!4 &1144209879 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1030982368, guid: abc00000000008895407495616184905, type: 3}
@@ -102511,9 +102571,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 052f768513fc340339bf46d6ea070374, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EdibleObject
-  smartObject: {fileID: 0}
+  smartObject: {fileID: 1230749808}
   foodIdOverride: 
-  portions: 5
+  portions: 3
+  hungerReliefPerBite: 0.35
+  decayFeelingsWithPortions: 1
+  feelingEmitter: {fileID: 0}
   requireDeclaredEatIntent: 1
   biteRadiusMeters: 1.2
   biteCenter: {fileID: 0}
@@ -102521,6 +102584,21 @@ MonoBehaviour:
   biteIntervalSeconds: 2.5
   disableColliderWhenDepleted: 1
   logBites: 1
+--- !u!114 &1230749808
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1230749800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d1d23a0bcaec4933b7e16c99c9b01fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SmartObject
+  tags: []
+  label: fish
+  perceptionCenter: {fileID: 2044324959}
 --- !u!1 &1231755077
 GameObject:
   m_ObjectHideFlags: 0
@@ -105870,6 +105948,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1303973716}
   - component: {fileID: 1303973717}
+  - component: {fileID: 1303973718}
   m_Layer: 12
   m_Name: ZV_Boat_1
   m_TagString: Untagged
@@ -105913,6 +105992,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 0.9773485}
   m_Center: {x: 0, y: 0, z: -0.011325772}
+--- !u!114 &1303973718
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1303973715}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
+  zoneId: Boat_1
+  zoneType: 3
+  confinement: 0
+  surface: Wood
 --- !u!1 &1304643701
 GameObject:
   m_ObjectHideFlags: 0
@@ -113542,6 +113637,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1471370388}
   - component: {fileID: 1471370389}
+  - component: {fileID: 1471370390}
   m_Layer: 0
   m_Name: ZV_Houses_3
   m_TagString: Untagged
@@ -113585,6 +113681,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1471370390
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1471370387}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
+  zoneId: House_3
+  zoneType: 4
+  confinement: 2
+  surface: 
 --- !u!1 &1476287658
 GameObject:
   m_ObjectHideFlags: 0
@@ -114323,7 +114435,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1495561136}
-  - component: {fileID: 1495561137}
   m_Layer: 0
   m_Name: ZV_Bamboo_Boardwalk
   m_TagString: Untagged
@@ -114353,22 +114464,6 @@ Transform:
   - {fileID: 151849454}
   m_Father: {fileID: 1165308000}
   m_LocalEulerAnglesHint: {x: 1.016, y: 1.196, z: 1.916}
---- !u!114 &1495561137
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1495561135}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
-  zoneId: Bamboo_Boardwalk
-  zoneType: 2
-  confinement: 1
-  surface: Wood
 --- !u!114 &1497467759
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -121614,6 +121709,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1651545741}
   - component: {fileID: 1651545742}
+  - component: {fileID: 1651545743}
   m_Layer: 0
   m_Name: Boardwalk_1
   m_TagString: Untagged
@@ -121657,6 +121753,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1651545743
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1651545740}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
+  zoneId: Bamboo_Boardwalk_1
+  zoneType: 2
+  confinement: 1
+  surface: Wood
 --- !u!1 &1651788785
 GameObject:
   m_ObjectHideFlags: 0
@@ -125030,6 +125142,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1734762362}
   - component: {fileID: 1734762363}
+  - component: {fileID: 1734762364}
   m_Layer: 0
   m_Name: ZV_Houses_1
   m_TagString: Untagged
@@ -125071,8 +125184,24 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 1, y: 2.0331693, z: 1}
+  m_Center: {x: 0, y: 0.51658446, z: 0}
+--- !u!114 &1734762364
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1734762361}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
+  zoneId: House_1
+  zoneType: 4
+  confinement: 2
+  surface: 
 --- !u!1 &1737005617
 GameObject:
   m_ObjectHideFlags: 0
@@ -132314,6 +132443,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1864747941}
   - component: {fileID: 1864747942}
+  - component: {fileID: 1864747943}
   m_Layer: 12
   m_Name: ZV_Boat_3
   m_TagString: Untagged
@@ -132357,6 +132487,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 0.9773485}
   m_Center: {x: 0, y: 0, z: -0.011325772}
+--- !u!114 &1864747943
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1864747940}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
+  zoneId: Boat_3
+  zoneType: 3
+  confinement: 0
+  surface: Wood
 --- !u!1 &1865471662
 GameObject:
   m_ObjectHideFlags: 0
@@ -132530,6 +132676,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1865862571}
   - component: {fileID: 1865862572}
+  - component: {fileID: 1865862573}
   m_Layer: 12
   m_Name: ZV_Boat_2
   m_TagString: Untagged
@@ -132573,6 +132720,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 0.9773485}
   m_Center: {x: 0, y: 0, z: -0.011325772}
+--- !u!114 &1865862573
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865862570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
+  zoneId: Boat_2
+  zoneType: 3
+  confinement: 0
+  surface: Wood
 --- !u!1 &1866375700
 GameObject:
   m_ObjectHideFlags: 0
@@ -135247,6 +135410,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1923590200}
   - component: {fileID: 1923590202}
+  - component: {fileID: 1923590203}
   m_Layer: 0
   m_Name: ZV_Sea_1
   m_TagString: Untagged
@@ -135290,6 +135454,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1923590203
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1923590199}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef726155124314fc79b7acdd14d15ce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZoneVolume
+  zoneId: Sea_1
+  zoneType: 1
+  confinement: 0
+  surface: 
 --- !u!1 &1927636617
 GameObject:
   m_ObjectHideFlags: 0
@@ -144310,9 +144490,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 052f768513fc340339bf46d6ea070374, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EdibleObject
-  smartObject: {fileID: 0}
+  smartObject: {fileID: 2131910144}
   foodIdOverride: 
-  portions: 5
+  portions: 3
+  hungerReliefPerBite: 0.35
+  decayFeelingsWithPortions: 1
+  feelingEmitter: {fileID: 0}
   requireDeclaredEatIntent: 1
   biteRadiusMeters: 1.2
   biteCenter: {fileID: 0}
@@ -144320,6 +144503,21 @@ MonoBehaviour:
   biteIntervalSeconds: 2.5
   disableColliderWhenDepleted: 1
   logBites: 1
+--- !u!114 &2131910144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2131910135}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d1d23a0bcaec4933b7e16c99c9b01fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SmartObject
+  tags: []
+  label: Apple
+  perceptionCenter: {fileID: 385140176}
 --- !u!1 &2136913237
 GameObject:
   m_ObjectHideFlags: 0
@@ -147625,6 +147823,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3528122242587647674, guid: abc00000000008330365969954119453, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1230749804}
+    - targetCorrespondingSourceObject: {fileID: 3528122242587647674, guid: abc00000000008330365969954119453, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1230749808}
   m_SourcePrefab: {fileID: 100100000, guid: abc00000000008330365969954119453, type: 3}
 --- !u!1001 &4846872803943855541
 PrefabInstance:
@@ -149431,6 +149632,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4303240083915448420, guid: abc00000000015807959539938163945, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2131910142}
+    - targetCorrespondingSourceObject: {fileID: 4303240083915448420, guid: abc00000000015807959539938163945, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2131910144}
   m_SourcePrefab: {fileID: 100100000, guid: abc00000000015807959539938163945, type: 3}
 --- !u!1001 &8103552533253697633
 PrefabInstance:
@@ -149974,3 +150178,4 @@ SceneRoots:
   - {fileID: 28732203}
   - {fileID: 1328091980}
   - {fileID: 547559044}
+  - {fileID: 500622498}

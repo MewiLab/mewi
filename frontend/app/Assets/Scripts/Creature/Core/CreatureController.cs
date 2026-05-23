@@ -66,7 +66,7 @@ public class CreatureController : MonoBehaviour
 
     void Update()
     {
-        _board.ScoreDrives(config != null ? config.hungerGrowthRate : 0.005f);
+        _board.health.DecayFullness(config != null ? config.fullnessDecayRate : 0.0000389f, Time.deltaTime);
 
         if (_perception != null)  _perception.Tick();
         if (_zoneScanner != null) _zoneScanner.Tick();

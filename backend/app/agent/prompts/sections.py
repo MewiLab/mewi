@@ -2,8 +2,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.agent.mind.context import clean_text
 from app.agent.schemas.place_memory_schema import PlaceMemoryContextDict
+
+
+def clean_text(value: Any) -> str:
+    """Tiny string normaliser. Inlined here (rather than imported from
+    app.agent.mind.context) so this module has no dependency on the mind
+    package, which would create a prompts → mind → prompt_builder → prompts
+    import cycle."""
+    if value is None:
+        return ""
+    return " ".join(str(value).strip().split())
 
 
 def action_lines(actions: list[str]) -> str:

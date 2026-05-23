@@ -65,6 +65,9 @@ class CreatureRuntime:
             "perception_error": None,
             "memory_context": None,
             "place_memory_context": None,
+            "world_view": None,
+            "social_context": None,
+            "dialogue": [],
             "intent_decision": None,
             "chosen_action": None,
             "plan_steps": [],
@@ -88,6 +91,9 @@ class CreatureRuntimeState(TypedDict):
     perception_error: str | None
     memory_context: dict[str, Any] | None
     place_memory_context: PlaceMemoryContextDict | None
+    world_view: dict[str, Any] | None
+    social_context: dict[str, Any] | None
+    dialogue: list[dict[str, Any]]
     intent_decision: dict[str, Any] | None
     chosen_action: dict[str, Any] | None
     plan_steps: list[dict[str, Any]]

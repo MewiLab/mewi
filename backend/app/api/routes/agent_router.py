@@ -192,6 +192,7 @@ def _to_log_json(value: Any) -> str:
 
 def _websocket_plan_response(job: dict[str, Any]) -> dict[str, Any]:
     plan_steps = job.get("plan_steps") or []
+    dialogue = job.get("dialogue") or []
 
     return {
         "type": "plan",
@@ -202,7 +203,9 @@ def _websocket_plan_response(job: dict[str, Any]) -> dict[str, Any]:
         "tick": job.get("tick"),
         "intent": job.get("intent"),
         "place_memory": job.get("place_memory"),
+        "social_context": job.get("social_context"),
         "actions": plan_steps,
+        "dialogue": dialogue,
         "reasoning": job.get("reasoning"),
         "error": job.get("error"),
     }
