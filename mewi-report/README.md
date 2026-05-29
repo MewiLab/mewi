@@ -32,6 +32,8 @@ relational tendencies without self-report bias. Each report is a mirror held up 
 mewi-report/
 ├── pipeline/
 │   ├── raw_data/          ← raw JSON session logs from Unity backend
+│   │   └── sessions/{userId}/{sessionId}.json
+│   ├── report_overrides/  ← optional curated demo values, not Unity raw data
 │   ├── user_info.json     ← display names / handles for report users
 │   ├── processed_data/    ← pipeline output (report_{userId}.json)
 │   ├── charts/output/     ← matplotlib PNGs, per user
@@ -68,8 +70,28 @@ uv sync          # creates .venv and installs matplotlib + numpy
 
 ### 2. Add raw session data
 
-Drop a JSON file into `pipeline/raw_data/`. See `pipeline/raw_data/example_session.json`
-for the expected schema. One file per user, named anything (user ID is read from `user_id` field).
+Drop one session JSON file into `pipeline/raw_data/sessions/{userId}/`.
+FastAPI's `POST /api/v1/report/session` route writes this layout for Unity.
+Each file is immutable raw data for one completed session:
+
+```json
+{
+  "schema_version": "mewi.report.raw.v1",
+  "user_id": "vanillasky_01",
+  "source": { "app": "mewi-unity" },
+  "session": {
+    "session_id": "s1",
+    "session_index": 1,
+    "timestamp_start": "2026-05-23T14:00:00Z",
+    "duration_seconds": 520,
+    "events": []
+  }
+}
+```
+
+The processor groups session files by `user_id`. Legacy aggregate files in
+`pipeline/raw_data/*.json` still work during migration, but new data should use
+the per-session layout.
 
 User-facing names live in `pipeline/user_info.json`. Keep `user_id` stable for internal files,
 and set `display_name` / `handle` for what appears in the report UI.
@@ -133,7 +155,7 @@ User preference is persisted to `localStorage` under key `mewi-theme`.
 
 ## Adding a new user
 
-1. Drop `pipeline/raw_data/{anything}.json` with `"user_id": "new_user"` inside.
+1. Drop one or more `pipeline/raw_data/sessions/new_user/{session_id}.json` files.
 2. Add `"new_user"` to `pipeline/user_info.json` with a `display_name` and optional `handle`.
 3. Run `uv run pipeline/scripts/process.py`.
 4. Rebuild the site — Astro picks up the new `src/data/report_new_user.json` automatically.
@@ -152,4 +174,4 @@ Each cat has a MBTI-inspired persona that shapes how trust signals are derived:
 | Yuzu | ENTP      | Provocation-driven, tests reactions    |
 | Haru | INFJ      | Reads mood, presence over contact      |
 
-Persona files live at `pipeline/raw_data/` (reference only) and are encoded in `process.py`.
+Persona metadata is encoded in `process.py`.

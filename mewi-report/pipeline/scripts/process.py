@@ -4,7 +4,8 @@ pipeline/scripts/process.py
 ============================
 Converts raw game session logs -> processed_data/report_{user_id}.json
 
-Raw format:  pipeline/raw_data/*.json
+Raw format:  pipeline/raw_data/sessions/{user_id}/{session_id}.json
+             (legacy aggregate files under pipeline/raw_data/*.json are also accepted)
 Output:      pipeline/processed_data/report_{user_id}.json
              (also copied to src/data/ for Astro to consume at build time)
 
@@ -18,12 +19,15 @@ import argparse
 import json
 import shutil
 from collections import defaultdict
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 # ── paths ────────────────────────────────────────────────────────────────────
 ROOT = Path(__file__).parent.parent.parent
 RAW_DIR = ROOT / "pipeline" / "raw_data"
+RAW_SESSION_DIR = RAW_DIR / "sessions"
+REPORT_OVERRIDES_DIR = ROOT / "pipeline" / "report_overrides"
 OUT_DIR = ROOT / "pipeline" / "processed_data"
 SITE_DATA_DIR = ROOT / "src" / "data"
 USER_INFO_PATH = ROOT / "pipeline" / "user_info.json"
@@ -131,6 +135,14 @@ CAT_ACTION_COPY = {
     "bat": "batted once",
     "nod_head": "softened her posture",
 }
+
+
+@dataclass
+class RawReport:
+    user_id: str
+    sessions: list[dict[str, Any]] = field(default_factory=list)
+    report_overrides: dict[str, Any] = field(default_factory=dict)
+    source_paths: list[Path] = field(default_factory=list)
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -583,38 +595,151 @@ def _user_profile(user_id: str, users: dict[str, dict[str, Any]]) -> dict[str, A
     }
 
 
-def _matches_user_filter(raw_path: Path, user_filter: str, users: dict[str, dict[str, Any]]) -> bool:
-    if user_filter in raw_path.stem:
-        return True
+def _safe_list(value: Any) -> list:
+    return value if isinstance(value, list) else []
 
+
+def _normalize_session(session: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(session)
+    normalized["events"] = _safe_list(normalized.get("events"))
+    normalized["multi_cat_encounters"] = _safe_list(normalized.get("multi_cat_encounters"))
+    return normalized
+
+
+def _session_sort_key(session: dict[str, Any]) -> tuple[int, str, str]:
     try:
-        with open(raw_path) as f:
+        idx = int(session.get("session_index") or 0)
+    except (TypeError, ValueError):
+        idx = 0
+    return (
+        idx,
+        str(session.get("timestamp_start") or ""),
+        str(session.get("session_id") or ""),
+    )
+
+
+def _read_json(path: Path) -> dict[str, Any] | None:
+    try:
+        with open(path) as f:
             raw = json.load(f)
     except (OSError, json.JSONDecodeError):
-        return False
+        return None
+    return raw if isinstance(raw, dict) else None
 
-    user_id = raw.get("user_id", "")
-    profile = _user_profile(user_id, users)
+
+def _unwrap_report_overrides(raw: dict[str, Any] | None) -> dict[str, Any]:
+    if not raw:
+        return {}
+    overrides = raw.get("report_overrides")
+    if isinstance(overrides, dict):
+        return overrides
+    return raw
+
+
+def _load_report_overrides(user_id: str) -> dict[str, Any]:
+    candidates = [
+        REPORT_OVERRIDES_DIR / f"{user_id}.json",
+        RAW_DIR / "report_overrides" / f"{user_id}.json",
+    ]
+    for path in candidates:
+        raw = _read_json(path)
+        if raw is not None:
+            return _unwrap_report_overrides(raw)
+    return {}
+
+
+def _merge_report_overrides(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    if not base:
+        return override or {}
+    if not override:
+        return base or {}
+    return _deep_merge(base, override)
+
+
+def _raw_report_from_legacy_file(path: Path) -> RawReport | None:
+    raw = _read_json(path)
+    if not raw or not isinstance(raw.get("sessions"), list):
+        return None
+
+    user_id = str(raw.get("user_id") or "").strip()
+    if not user_id:
+        return None
+
+    inline_overrides = raw.get("report_overrides") if isinstance(raw.get("report_overrides"), dict) else {}
+    return RawReport(
+        user_id=user_id,
+        sessions=[_normalize_session(s) for s in raw["sessions"] if isinstance(s, dict)],
+        report_overrides=_merge_report_overrides(
+            inline_overrides,
+            _load_report_overrides(user_id),
+        ),
+        source_paths=[path],
+    )
+
+
+def _load_session_reports() -> dict[str, RawReport]:
+    reports: dict[str, RawReport] = {}
+    for path in sorted(RAW_SESSION_DIR.glob("**/*.json")):
+        raw = _read_json(path)
+        if not raw or not isinstance(raw.get("session"), dict):
+            continue
+
+        user_id = str(raw.get("user_id") or "").strip()
+        if not user_id:
+            continue
+
+        report = reports.setdefault(user_id, RawReport(user_id=user_id))
+        report.sessions.append(_normalize_session(raw["session"]))
+        report.source_paths.append(path)
+
+    for user_id, report in reports.items():
+        report.sessions.sort(key=_session_sort_key)
+        report.report_overrides = _load_report_overrides(user_id)
+    return reports
+
+
+def _load_raw_reports() -> list[RawReport]:
+    reports_by_user = _load_session_reports()
+
+    # Legacy aggregate files are kept as a migration fallback. If the same user
+    # already has immutable session files, the session files win.
+    for path in sorted(RAW_DIR.glob("*.json")):
+        legacy = _raw_report_from_legacy_file(path)
+        if legacy is None or legacy.user_id in reports_by_user:
+            continue
+        reports_by_user[legacy.user_id] = legacy
+
+    return sorted(reports_by_user.values(), key=lambda report: report.user_id)
+
+
+def _matches_report_filter(report: RawReport, user_filter: str, users: dict[str, dict[str, Any]]) -> bool:
+    profile = _user_profile(report.user_id, users)
     candidates = {
-        raw_path.stem,
-        user_id,
+        report.user_id,
         profile["display_name"],
         profile["handle"],
         profile["report_slug"],
     }
+    candidates.update(path.stem for path in report.source_paths)
     needle = user_filter.lower()
     return any(needle in str(candidate).lower() for candidate in candidates)
 
 
 # ── main processor ────────────────────────────────────────────────────────────
 
-def process_user(raw_path: Path, users: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
-    with open(raw_path) as f:
-        raw: dict = json.load(f)
+def process_report(raw: RawReport | dict[str, Any], users: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
+    if isinstance(raw, RawReport):
+        user_id = raw.user_id
+        sessions = raw.sessions
+        report_overrides = raw.report_overrides
+    else:
+        user_id = str(raw["user_id"])
+        sessions = raw.get("sessions") or ([raw["session"]] if isinstance(raw.get("session"), dict) else [])
+        sessions = [_normalize_session(s) for s in sessions if isinstance(s, dict)]
+        report_overrides = raw.get("report_overrides") if isinstance(raw.get("report_overrides"), dict) else {}
 
-    user_id: str = raw["user_id"]
     user = _user_profile(user_id, users or {})
-    sessions: list[dict] = raw["sessions"]
+    sessions = sorted(sessions, key=_session_sort_key)
     n_sessions = len(sessions)
 
     # ── per-cat trust arc (one value per session) ─────────────────────────────
@@ -728,10 +853,31 @@ def process_user(raw_path: Path, users: dict[str, dict[str, Any]] | None = None)
 
     # Curated demo/report data can override derived values while keeping the same
     # raw-log pipeline. This is useful for presentation-grade sample reports.
-    if raw.get("report_overrides"):
-        result = _deep_merge(result, raw["report_overrides"])
+    if report_overrides:
+        result = _deep_merge(result, report_overrides)
 
     return result
+
+
+def process_user(raw_path: Path, users: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
+    raw = _read_json(raw_path)
+    if raw is None:
+        raise ValueError(f"Could not read raw report JSON: {raw_path}")
+
+    if isinstance(raw.get("session"), dict):
+        raw_report = RawReport(
+            user_id=str(raw.get("user_id") or "").strip(),
+            sessions=[_normalize_session(raw["session"])],
+            report_overrides={},
+            source_paths=[raw_path],
+        )
+        return process_report(raw_report, users)
+
+    legacy = _raw_report_from_legacy_file(raw_path)
+    if legacy is not None:
+        return process_report(legacy, users)
+
+    return process_report(raw, users)
 
 
 def main() -> None:
@@ -740,17 +886,18 @@ def main() -> None:
     args = parser.parse_args()
 
     users = _load_user_info()
-    raw_files = list(RAW_DIR.glob("*.json"))
+    raw_reports = _load_raw_reports()
     if args.user:
-        raw_files = [f for f in raw_files if _matches_user_filter(f, args.user, users)]
+        raw_reports = [report for report in raw_reports if _matches_report_filter(report, args.user, users)]
 
-    if not raw_files:
+    if not raw_reports:
         print("No raw data files found.")
         return
 
-    for raw_path in raw_files:
-        print(f"Processing {raw_path.name} …")
-        result = process_user(raw_path, users)
+    for raw_report in raw_reports:
+        source_count = len(raw_report.source_paths)
+        print(f"Processing {raw_report.user_id} ({source_count} raw session file{'s' if source_count != 1 else ''}) …")
+        result = process_report(raw_report, users)
         user_id = result["user_id"]
         display_name = result.get("user", {}).get("display_name", user_id)
 

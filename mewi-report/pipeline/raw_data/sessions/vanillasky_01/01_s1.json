@@ -1,0 +1,106 @@
+{
+  "schema_version": "mewi.report.raw.v1",
+  "user_id": "vanillasky_01",
+  "source": {
+    "app": "mewi-unity",
+    "build": "demo",
+    "platform": "demo",
+    "scene": "demo_fishing_village"
+  },
+  "session": {
+    "session_id": "s1",
+    "session_index": 1,
+    "timestamp_start": "2026-05-23T14:00:00Z",
+    "duration_seconds": 520,
+    "events": [
+      {
+        "t": 11,
+        "actor": "human",
+        "action": "approach",
+        "params": {
+          "speed": "slow",
+          "distance_final_m": 3
+        }
+      },
+      {
+        "t": 12,
+        "actor": "cat",
+        "cat_id": "mewi",
+        "action": "alert",
+        "trust_before": 0,
+        "trust_after": 0,
+        "trigger": "proximity_detected"
+      },
+      {
+        "t": 16,
+        "actor": "cat",
+        "cat_id": "mewi",
+        "action": "smell_air",
+        "trust_before": 0,
+        "trust_after": 1,
+        "trigger": "scent_check"
+      },
+      {
+        "t": 20,
+        "actor": "human",
+        "action": "crouch",
+        "params": {}
+      },
+      {
+        "t": 24,
+        "actor": "cat",
+        "cat_id": "mewi",
+        "action": "sit",
+        "trust_before": 1,
+        "trust_after": 4,
+        "trigger": "no_forward_motion"
+      },
+      {
+        "t": 29,
+        "actor": "human",
+        "action": "offer_item",
+        "params": {
+          "item": "fish"
+        }
+      },
+      {
+        "t": 41,
+        "actor": "cat",
+        "cat_id": "miso",
+        "action": "watch",
+        "trust_before": 0,
+        "trust_after": 6,
+        "trigger": "food_scent"
+      },
+      {
+        "t": 65,
+        "actor": "cat",
+        "cat_id": "yuzu",
+        "action": "circle",
+        "trust_before": 0,
+        "trust_after": 8,
+        "trigger": "novelty"
+      },
+      {
+        "t": 95,
+        "actor": "cat",
+        "cat_id": "haru",
+        "action": "observe",
+        "trust_before": 0,
+        "trust_after": 3,
+        "trigger": "distant_presence"
+      }
+    ],
+    "multi_cat_encounters": [
+      {
+        "t": 120,
+        "cats_present": [
+          "mewi",
+          "miso"
+        ],
+        "human_action": "stay_with_mewi",
+        "outcome": "miso_withdrew_quietly"
+      }
+    ]
+  }
+}

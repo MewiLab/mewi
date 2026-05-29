@@ -1,0 +1,79 @@
+{
+  "schema_version": "mewi.report.raw.v1",
+  "user_id": "vanillasky_01",
+  "source": {
+    "app": "mewi-unity",
+    "build": "demo",
+    "platform": "demo",
+    "scene": "demo_fishing_village"
+  },
+  "session": {
+    "session_id": "s2",
+    "session_index": 2,
+    "timestamp_start": "2026-05-24T15:00:00Z",
+    "duration_seconds": 610,
+    "events": [
+      {
+        "t": 8,
+        "actor": "human",
+        "action": "sit",
+        "params": {}
+      },
+      {
+        "t": 22,
+        "actor": "human",
+        "action": "offer_item",
+        "params": {
+          "item": "fish"
+        }
+      },
+      {
+        "t": 43,
+        "actor": "cat",
+        "cat_id": "mewi",
+        "action": "eat",
+        "trust_before": 4,
+        "trust_after": 18,
+        "trigger": "first_food_acceptance"
+      },
+      {
+        "t": 51,
+        "actor": "cat",
+        "cat_id": "miso",
+        "action": "eat_from_hand",
+        "trust_before": 6,
+        "trust_after": 19,
+        "trigger": "mealtime"
+      },
+      {
+        "t": 78,
+        "actor": "cat",
+        "cat_id": "haru",
+        "action": "sit",
+        "trust_before": 3,
+        "trust_after": 11,
+        "trigger": "presence_offer"
+      },
+      {
+        "t": 110,
+        "actor": "cat",
+        "cat_id": "yuzu",
+        "action": "ignore",
+        "trust_before": 8,
+        "trust_after": 3,
+        "trigger": "novelty_wore_off"
+      }
+    ],
+    "multi_cat_encounters": [
+      {
+        "t": 160,
+        "cats_present": [
+          "yuzu",
+          "haru"
+        ],
+        "human_action": "wait_still",
+        "outcome": "both_remained"
+      }
+    ]
+  }
+}
