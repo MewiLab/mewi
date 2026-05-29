@@ -1,0 +1,31 @@
+---
+// src/components/MetricCard.astro
+export interface Props {
+  value: string;
+  label: string;
+  sub?: string;
+}
+const { value, label, sub } = Astro.props;
+---
+<div class="metric-card">
+  <div class="mv serif">{value}</div>
+  <div class="ml label">{label}</div>
+  {sub && <div class="ms">{sub}</div>}
+</div>
+
+<style>
+.metric-card {
+  background: var(--bg2);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+.mv {
+  font-size: 1.8rem;
+  font-weight: 400;
+  line-height: 1;
+  margin-bottom: .25rem;
+  color: var(--ink);
+}
+.ml { margin-bottom: .25rem; }
+.ms { font-size: 11px; color: var(--ink3); line-height: 1.5; }
+</style>

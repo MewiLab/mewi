@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.astro/
+
+# pipeline outputs (generated — do not commit)
+pipeline/processed_data/
+pipeline/charts/output/
+src/data/
+
+# keep raw data and scripts
+!pipeline/raw_data/
+!pipeline/scripts/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.venv/          # uv creates this — do not commit
+
+# uv.lock IS committed (ensures reproducible installs across machines)
+
+# env
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/settings.json
+.idea/
+
+
+.claude/

@@ -1,0 +1,15 @@
+---
+// src/components/SectionLabel.astro
+export interface Props { text: string; }
+const { text } = Astro.props;
+---
+<div class="section-label label">{text}</div>
+
+<style>
+.section-label {
+  border-top: 0.5px solid var(--border);
+  padding-top: .7rem;
+  margin-bottom: .9rem;
+  margin-top: 2rem;
+}
+</style>

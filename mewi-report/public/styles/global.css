@@ -1,0 +1,101 @@
+/* public/styles/global.css  — symlinked / served directly */
+/* The actual source lives at src/styles/global.css.        */
+/* Astro copies public/ verbatim; this file is kept here    */
+/* so the <link href="/styles/global.css"> in Base.astro    */
+/* resolves correctly in static output.                     */
+
+/* Re-export: this file IS the canonical source.            */
+
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+  --font-serif:  'Shippori Mincho', Georgia, serif;
+  --font-mono:   'Space Mono', 'Courier New', monospace;
+  --font-sans:   system-ui, -apple-system, sans-serif;
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   10px;
+  --transition:  160ms ease;
+}
+
+:root, [data-theme="light"] {
+  --bg:          #f7f4ef;
+  --bg2:         #ede9e1;
+  --surface:     #ffffff;
+  --border:      rgba(0,0,0,.10);
+  --border-md:   rgba(0,0,0,.18);
+  --ink:         #1a1714;
+  --ink2:        #5c5751;
+  --ink3:        #9c9891;
+  --accent-mewi: #888780;
+  --accent-miso: #639922;
+  --accent-yuzu: #BA7517;
+  --accent-haru: #534AB7;
+
+  --color-background-primary: var(--surface);
+  --color-background-secondary: var(--bg2);
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--ink2);
+  --color-text-tertiary: var(--ink3);
+  --color-border-secondary: var(--border-md);
+  --color-border-tertiary: var(--border);
+  --border-radius-md: var(--radius-md);
+  --border-radius-lg: var(--radius-lg);
+}
+
+[data-theme="dark"] {
+  --bg:          #0f0e0c;
+  --bg2:         #181714;
+  --surface:     #1e1d1b;
+  --border:      rgba(255,255,255,.08);
+  --border-md:   rgba(255,255,255,.16);
+  --ink:         #e8e3da;
+  --ink2:        #9c9891;
+  --ink3:        #5c5a55;
+  --accent-mewi: #b4b2aa;
+  --accent-miso: #8ac43a;
+  --accent-yuzu: #e09930;
+  --accent-haru: #8078e0;
+
+  --color-background-primary: var(--surface);
+  --color-background-secondary: var(--bg2);
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--ink2);
+  --color-text-tertiary: var(--ink3);
+  --color-border-secondary: var(--border-md);
+  --color-border-tertiary: var(--border);
+  --border-radius-md: var(--radius-md);
+  --border-radius-lg: var(--radius-lg);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-family:  var(--font-mono);
+  font-size:    14px;
+  background:   var(--bg);
+  color:        var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+body { min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+button { font-family: var(--font-mono); cursor: pointer; }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 2px; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+.serif { font-family: var(--font-serif); }
+.label {
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink3);
+}

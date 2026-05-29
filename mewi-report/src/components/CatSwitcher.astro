@@ -1,0 +1,235 @@
+---
+// src/components/CatSwitcher.astro
+// Fully interactive; receives serialised cat data and renders client-side.
+export interface Props {
+  catsJson: string;   // JSON.stringify of the cats object from processed data
+  sessionCount: number;
+}
+const { catsJson, sessionCount } = Astro.props;
+---
+
+<div class="cs-root" data-cats={catsJson} data-session-count={sessionCount}>
+  <div class="cs-tabs" role="tablist" aria-label="Select a cat"></div>
+  <div class="cs-panel" role="tabpanel"></div>
+</div>
+
+<script>
+import Chart from 'chart.js/auto';
+
+document.querySelectorAll('.cs-root').forEach(root => {
+  const cats = JSON.parse(root.dataset.cats || '{}');
+  const sessionCount = Number(root.dataset.sessionCount || 0);
+  const order = ['mewi', 'miso', 'yuzu', 'haru'].filter(k => cats[k]);
+  const tabsEl = root.querySelector('.cs-tabs');
+  const panel = root.querySelector('.cs-panel');
+  let active = order[0];
+  let chartInstance = null;
+
+  if (!tabsEl || !panel || !active) return;
+
+  order.forEach(k => {
+    const c = cats[k];
+    const btn = document.createElement('button');
+    btn.className = 'cs-tab' + (k === active ? ' on' : '');
+    btn.dataset.cat = k;
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', k === active ? 'true' : 'false');
+    const last = c.trust_arc[c.trust_arc.length - 1];
+    const sign = last >= 0 ? '+' : '';
+    btn.innerHTML = `<span class="cn">${c.name}</span><span class="ct">${sign}${last}</span>`;
+    btn.style.setProperty('--cat-accent', c.accent);
+    btn.addEventListener('click', () => switchCat(k));
+    tabsEl.appendChild(btn);
+  });
+
+  function switchCat(k) {
+    active = k;
+    tabsEl.querySelectorAll('.cs-tab').forEach(btn => {
+      const isActive = btn.dataset.cat === k;
+      btn.classList.toggle('on', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    renderPanel();
+  }
+
+  function renderPanel() {
+    const c = cats[active];
+    const sessions = Array.from({ length: sessionCount }, (_, i) => `S${i + 1}`);
+    const last = c.trust_arc[c.trust_arc.length - 1];
+    const sign = last >= 0 ? '+' : '';
+    const styles = getComputedStyle(document.documentElement);
+    const axisColor = styles.getPropertyValue('--ink3').trim() || '#888780';
+    const gridColor = styles.getPropertyValue('--border').trim() || 'rgba(128,128,128,.1)';
+    const moments = c.moments || [];
+
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+    panel.innerHTML = `
+      <div class="cp-grid">
+        <div class="cp-card raised">
+          <div class="label" style="color:${c.accent};margin-bottom:.35rem">${c.name}</div>
+          <div class="cp-arch serif">${c.archetype}</div>
+          <div class="cp-trait">${c.trait}</div>
+          <div class="cp-status">${c.status}</div>
+        </div>
+        <div class="cp-card raised">
+          <div class="label" style="margin-bottom:.6rem">Trust arc · by session</div>
+          <div class="chart-wrap"><canvas class="cat-chart" role="img" aria-label="Trust arc for ${c.name} across sessions">Trust arc data.</canvas></div>
+          <div class="cp-delta">Net: <b>${c.delta ?? `${sign}${last}`}</b> · Session ${sessionCount}: <b>${c.trust_arc[sessionCount - 1] ?? last}</b></div>
+        </div>
+      </div>
+
+      <div class="raised cp-bars-card">
+        <div class="label" style="margin-bottom:.75rem">Trust signals</div>
+        ${c.bars.map(b => `
+          <div class="bar-row">
+            <span class="bar-lbl">${b.label}</span>
+            <div class="bar-track"><div class="bar-fill" data-value="${b.value}" style="background:${c.accent};width:0%"></div></div>
+            <span class="bar-val">${b.value}%</span>
+          </div>`).join('')}
+      </div>
+
+      <div class="cp-tl-wrap">
+        <div class="label" style="margin-bottom:.75rem">Key moments with ${c.name}</div>
+        <div class="tl">
+          ${moments.length ? moments.map(ev => `
+            <div class="tl-item">
+              <div class="tl-dot${ev.highlight ? ' hi' : ''}"></div>
+              <div class="tl-s label">${ev.session}</div>
+              <div class="tl-e">${ev.event}</div>
+              ${ev.milestone ? `<div class="tl-m">↳ ${ev.milestone}</div>` : ''}
+            </div>`).join('') : `<div class="tl-empty">No separate moments were recorded for ${c.name} yet.</div>`}
+        </div>
+      </div>
+    `;
+
+    setTimeout(() => {
+      panel.querySelectorAll('.bar-fill').forEach(el => {
+        el.style.width = el.dataset.value + '%';
+      });
+    }, 60);
+
+    const ctx = panel.querySelector('.cat-chart')?.getContext('2d');
+    if (!ctx) return;
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: sessions,
+        datasets: [{
+          data: c.trust_arc,
+          borderColor: c.accent,
+          backgroundColor: c.accent + '18',
+          borderWidth: 1.5,
+          pointRadius: 4,
+          pointBackgroundColor: c.accent,
+          pointBorderColor: 'transparent',
+          tension: .4,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { font: { size: 10 }, color: axisColor }, grid: { color: gridColor }, border: { display: false } },
+          y: { ticks: { font: { size: 10 }, color: axisColor }, grid: { color: gridColor }, suggestedMin: 0, suggestedMax: 45, border: { display: false } }
+        }
+      }
+    });
+  }
+
+  renderPanel();
+});
+</script>
+
+<style is:global>
+/* tab strip */
+.cs-root .cs-tabs {
+  display: flex;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  background: var(--surface);
+}
+.cs-root .cs-tab {
+  flex: 1;
+  padding: .6rem .4rem;
+  text-align: center;
+  background: none;
+  border: none;
+  border-right: 0.5px solid var(--border);
+  color: var(--ink2);
+  line-height: 1.3;
+  min-height: 52px;
+  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+  position: relative;
+}
+.cs-root .cs-tab:last-child { border-right: none; }
+.cs-root .cs-tab:hover { background: var(--bg2); color: var(--ink); }
+.cs-root .cs-tab.on {
+  background: var(--bg2);
+  color: var(--ink);
+  font-weight: 500;
+  box-shadow: inset 0 0 0 999px rgba(255,255,255,.18);
+}
+.cs-root .cs-tab.on::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: var(--cat-accent, var(--ink3));
+}
+.cs-root .cn { display: block; font-size: 13px; margin-bottom: 1px; }
+.cs-root .ct { display: block; font-size: 10px; }
+
+/* panel grid */
+.cs-root .cp-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin-bottom: 12px;
+}
+.cs-root .raised {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+.cs-root .cp-arch {
+  font-size: 1.1rem; font-weight: 400;
+  color: var(--ink); margin-bottom: .35rem;
+}
+.cs-root .cp-trait {
+  font-size: 12px; color: var(--ink2); line-height: 1.7; margin-bottom: .85rem;
+}
+.cs-root .cp-status {
+  font-size: 12px; color: var(--ink2); line-height: 1.7;
+  border-top: 0.5px solid var(--border); padding-top: .75rem;
+  font-style: italic;
+}
+.cs-root .chart-wrap { position: relative; height: 130px; }
+.cs-root .chart-wrap canvas { position: absolute; inset: 0; }
+.cs-root .cp-delta { font-size: 11px; color: var(--ink3); margin-top: .6rem; }
+.cs-root .cp-delta b { color: var(--ink2); font-weight: 400; }
+
+/* bars */
+.cs-root .cp-bars-card { margin-bottom: 1.25rem; }
+.cs-root .bar-row { display: flex; align-items: center; gap: 10px; margin: .5rem 0; }
+.cs-root .bar-lbl { font-size: 12px; color: var(--ink2); width: 180px; flex-shrink: 0; }
+.cs-root .bar-track { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.cs-root .bar-fill { height: 100%; border-radius: 2px; width: 0%; transition: width 1.1s cubic-bezier(.4,0,.2,1); }
+.cs-root .bar-val { font-size: 11px; color: var(--ink3); width: 30px; text-align: right; }
+
+/* timeline inside panel */
+.cs-root .tl { padding-left: 1.2rem; position: relative; }
+.cs-root .tl::before { content:''; position:absolute; left:.4rem; top:4px; bottom:4px; width:0.5px; background:var(--border); }
+.cs-root .tl-item { position: relative; margin-bottom: 1rem; }
+.cs-root .tl-dot { position:absolute; left:-.85rem; top:.3rem; width:7px; height:7px; border-radius:50%; border:0.5px solid var(--border-md); background:var(--bg); }
+.cs-root .tl-dot.hi { background: var(--ink); border-color: var(--ink); }
+.cs-root .tl-s { margin-bottom: .12rem; }
+.cs-root .tl-e { font-size: 12px; color: var(--ink2); line-height: 1.65; }
+.cs-root .tl-m { font-size: 11px; color: var(--ink2); margin-top: .18rem; font-style: italic; }
+.cs-root .tl-empty { font-size: 12px; color: var(--ink3); line-height: 1.65; }
+
+@media (max-width: 640px) {
+  .cs-root .cp-grid { grid-template-columns: 1fr; }
+  .cs-root .bar-lbl { width: 132px; }
+}
+</style>

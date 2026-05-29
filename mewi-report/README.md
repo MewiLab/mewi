@@ -1,0 +1,155 @@
+# Mewi — Behavioral Report Site
+
+A static website that generates per-user behavioral analysis reports from game session logs.
+Users interact with four AI cats (Mewi, Miso, Yuzu, Haru) in a Unity 3D fishing village;
+their behavioral patterns are logged, processed, and visualized here as psychological trace reports.
+
+---
+
+## Concept
+
+Inspired by attachment theory: cats respond unpredictably, revealing the user's
+relational tendencies without self-report bias. Each report is a mirror held up by cats.
+
+---
+
+## Stack
+
+| Layer        | Tool                              |
+|--------------|-----------------------------------|
+| Site         | [Astro](https://astro.build) (static output) |
+| Charts (UI)  | Chart.js 4 bundled by Astro/Vite  |
+| Charts (PNG) | matplotlib + numpy (Python)       |
+| Data pipeline| Python 3.10+                      |
+| Fonts        | Shippori Mincho + Space Mono      |
+| Deploy       | Any static host (Vercel, Netlify, itch.io, Cloudflare Pages) |
+
+---
+
+## Directory layout
+
+```
+mewi-report/
+├── pipeline/
+│   ├── raw_data/          ← raw JSON session logs from Unity backend
+│   ├── user_info.json     ← display names / handles for report users
+│   ├── processed_data/    ← pipeline output (report_{userId}.json)
+│   ├── charts/output/     ← matplotlib PNGs, per user
+│   └── scripts/
+│       ├── process.py     ← raw → processed_data
+│       └── visualize.py   ← processed_data → chart PNGs
+│
+├── src/
+│   ├── data/              ← processed JSONs copied here for Astro to read
+│   ├── components/        ← Astro UI components
+│   ├── layouts/Base.astro ← nav + theme toggle shell
+│   ├── pages/
+│   │   ├── index.astro
+│   │   ├── 404.astro
+│   │   └── user/report/[userId].astro
+│   └── styles/global.css
+│
+├── public/
+│   └── styles/global.css  ← CSS served as static file
+│
+└── .claude/CLAUDE.md      ← maintenance guide for future AI sessions
+```
+
+---
+
+## Quick start
+
+### 1. Install dependencies
+
+```bash
+npm install
+uv sync          # creates .venv and installs matplotlib + numpy
+```
+
+### 2. Add raw session data
+
+Drop a JSON file into `pipeline/raw_data/`. See `pipeline/raw_data/example_session.json`
+for the expected schema. One file per user, named anything (user ID is read from `user_id` field).
+
+User-facing names live in `pipeline/user_info.json`. Keep `user_id` stable for internal files,
+and set `display_name` / `handle` for what appears in the report UI.
+
+### 3. Run the pipeline
+
+```bash
+# Process raw data → processed_data/ and src/data/
+uv run pipeline/scripts/process.py
+
+# Generate chart PNGs → pipeline/charts/output/{userId}/
+uv run pipeline/scripts/visualize.py
+
+# Or run both at once:
+npm run pipeline
+```
+
+### 4. Develop locally
+
+```bash
+npm run dev
+# → http://localhost:4321/user/report/{handle}
+```
+
+### 5. Build and deploy
+
+```bash
+npm run build       # outputs to dist/
+npm run preview     # preview the built site locally
+```
+
+Deploy `dist/` to any static host.
+
+---
+
+## Re-rendering a single chart
+
+```bash
+# Re-render only the radar chart for one user.
+# --user can match either the internal user_id or the display name/handle.
+uv run pipeline/scripts/visualize.py --user vanillaSky00 --chart radar
+
+# Available chart keys:
+#   trust_all       — all-cats trust overlay
+#   radar           — hexagonal human action distribution
+#   attention       — attention % per cat
+#   attachment      — attachment profile bars
+#   trust_mewi      — Mewi's trust arc
+#   trust_bars_mewi — Mewi's trust signal bars
+#   (replace 'mewi' with miso / yuzu / haru)
+```
+
+---
+
+## Theme
+
+The site ships with light and dark themes. The toggle is in the top-right nav.
+User preference is persisted to `localStorage` under key `mewi-theme`.
+
+---
+
+## Adding a new user
+
+1. Drop `pipeline/raw_data/{anything}.json` with `"user_id": "new_user"` inside.
+2. Add `"new_user"` to `pipeline/user_info.json` with a `display_name` and optional `handle`.
+3. Run `uv run pipeline/scripts/process.py`.
+4. Rebuild the site — Astro picks up the new `src/data/report_new_user.json` automatically.
+5. The new report is available at `/user/report/{handle}` and `/user/report/new_user`.
+
+---
+
+## Cat personas
+
+Each cat has a MBTI-inspired persona that shapes how trust signals are derived:
+
+| Cat  | Archetype | Key trait                              |
+|------|-----------|----------------------------------------|
+| Mewi | ISFJ      | Smell-led, reads place before moving   |
+| Miso | ISFP      | Food-motivated, conservative effort    |
+| Yuzu | ENTP      | Provocation-driven, tests reactions    |
+| Haru | INFJ      | Reads mood, presence over contact      |
+
+Persona files live at `pipeline/raw_data/` (reference only) and are encoded in `process.py`.

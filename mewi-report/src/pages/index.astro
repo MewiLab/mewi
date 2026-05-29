@@ -1,0 +1,112 @@
+---
+// src/pages/index.astro
+import Base from '../layouts/Base.astro';
+import { readdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
+
+type ReportLink = {
+  id: string;
+  routeId: string;
+  displayName: string;
+};
+
+let reports: ReportLink[] = [];
+try {
+  const dataDir = path.join(process.cwd(), 'src', 'data');
+  const files = await readdir(dataDir);
+  const reportFiles = files
+    .filter(f => f.startsWith('report_') && f.endsWith('.json'))
+    .sort();
+
+  reports = await Promise.all(reportFiles.map(async f => {
+    const id = f.replace('report_', '').replace('.json', '');
+    const raw = await readFile(path.join(dataDir, f), 'utf-8');
+    const report = JSON.parse(raw);
+    return {
+      id,
+      routeId: report.user?.handle ?? report.user?.report_slug ?? id,
+      displayName: report.user?.display_name ?? report.user?.handle ?? id,
+    };
+  }));
+} catch { /* no data yet */ }
+---
+
+<Base title="Mewi · Reports">
+  <header class="home-header">
+    <div class="label" style="margin-bottom:.5rem">Mewi · behavioral reports</div>
+    <h1 class="home-title serif">
+      What the cats<br/>remember
+    </h1>
+    <p class="home-sub">
+      Each report is a record of a human–cat relationship built across sessions
+      in the fishing village. Select a user to read their trace.
+    </p>
+  </header>
+
+  {reports.length === 0 ? (
+    <div class="empty">
+      <div class="label" style="margin-bottom:.5rem">No reports yet</div>
+      <p class="empty-sub">
+        Run <code>python3 pipeline/scripts/process.py</code> to process raw session data,
+        then rebuild the site.
+      </p>
+    </div>
+  ) : (
+    <ul class="user-list">
+      {reports.map(report => (
+        <li>
+          <a class="user-card raised" href={`/user/report/${encodeURIComponent(report.routeId)}`}>
+            <span class="uc-id">{report.displayName}</span>
+            <span class="uc-arrow">→</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
+</Base>
+
+<style>
+.home-header {
+  padding: 2.5rem 0 2rem;
+  border-bottom: 0.5px solid var(--border);
+  margin-bottom: 2rem;
+}
+.home-title {
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-weight: 400; line-height: 1.15;
+  color: var(--ink); margin-bottom: .5rem;
+}
+.home-sub {
+  font-size: 13px; color: var(--ink2);
+  line-height: 1.7; max-width: 420px;
+}
+
+.user-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.user-card {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem;
+  transition: border-color var(--transition), background var(--transition);
+  text-decoration: none;
+}
+.user-card:hover { background: var(--bg2); border-color: var(--border-md); }
+.uc-id { font-size: 13px; color: var(--ink); }
+.uc-arrow { color: var(--ink3); font-size: 14px; }
+
+.raised {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.empty {
+  padding: 2rem 0;
+  border-top: 0.5px solid var(--border);
+}
+.empty-sub { font-size: 12px; color: var(--ink3); line-height: 1.7; }
+code {
+  font-family: var(--font-mono);
+  font-size: 11px; color: var(--ink2);
+  background: var(--bg2);
+  padding: .1rem .35rem; border-radius: 3px;
+}
+</style>
