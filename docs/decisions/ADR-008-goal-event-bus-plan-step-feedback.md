@@ -2,12 +2,12 @@
 
 - **Status:** Accepted
 - **Date:** 2026-05-22
-- **Scope:** `frontend/app/Assets/Scripts/Creature/Motor/CreatureWorker.cs`, `frontend/app/Assets/Scripts/Creature/Core/CreatureBlackBoard.cs`, `frontend/app/Assets/Scripts/Creature/Core/GoalEventBus.cs` (new), `frontend/app/Assets/Scripts/Semantics/Markup/EdibleObject.cs` (new)
+- **Scope:** `mewi-unity/app/Assets/Scripts/Creature/Motor/CreatureWorker.cs`, `mewi-unity/app/Assets/Scripts/Creature/Core/CreatureBlackBoard.cs`, `mewi-unity/app/Assets/Scripts/Creature/Core/GoalEventBus.cs` (new), `mewi-unity/app/Assets/Scripts/Semantics/Markup/EdibleObject.cs` (new)
 
 ## Context
 
 The backend slow-mind builds its next plan from the previous plan's feedback
-([_format_previous_action_result](backend/app/agent/behavior_graph.py#L282-L301)).
+([_format_previous_action_result](mewi-backend/app/agent/behavior_graph.py#L282-L301)).
 That feedback claims things like:
 
 ```
@@ -19,14 +19,14 @@ eat on SM_Fish_1 worked.
 In practice the cat is observed never reaching SM_Fish_1, yet the report says
 both steps "worked". Reading the code, two failure modes are masked as success:
 
-1. **`go_to` warp-as-arrival.** [CreatureWorker.CompleteActiveIntentIfReady](frontend/app/Assets/Scripts/Creature/Motor/CreatureWorker.cs#L282-L294)
+1. **`go_to` warp-as-arrival.** [CreatureWorker.CompleteActiveIntentIfReady](mewi-unity/app/Assets/Scripts/Creature/Motor/CreatureWorker.cs#L282-L294)
    records every step as `"completed"` once the adapter stops being busy, no
-   matter why. If [NavigationWatchdog](frontend/app/Assets/Scripts/Creature/Motor/NavigationWatchdog.cs#L106-L118)
+   matter why. If [NavigationWatchdog](mewi-unity/app/Assets/Scripts/Creature/Motor/NavigationWatchdog.cs#L106-L118)
    hits `hardTimeoutSeconds` or burns all repath attempts, it teleports the cat.
    The completion reason becomes `WarpedToNavMesh`/`WarpedRaw`, but the
    step status stays `"completed"`. The slow-mind has no idea the cat didn't
    walk there.
-2. **`eat` with no proximity check.** [MalbersAnimalAdapter.cs:91](frontend/app/Assets/Scripts/Creature/Motor/MalbersAnimalAdapter.cs#L91)
+2. **`eat` with no proximity check.** [MalbersAnimalAdapter.cs:91](mewi-unity/app/Assets/Scripts/Creature/Motor/MalbersAnimalAdapter.cs#L91)
    just plays the eat ability by index — no distance check, no consumption,
    no real-world side effect. The animation completes, status becomes
    `"completed"`, even if the cat ate air in the middle of the room.
@@ -203,7 +203,7 @@ Future additions are one new confirmer each, no bus changes:
 
 ## Backend Side (unchanged this ADR, but worth noting)
 
-[_format_previous_action_result](backend/app/agent/behavior_graph.py#L282-L301)
+[_format_previous_action_result](mewi-backend/app/agent/behavior_graph.py#L282-L301)
 already formats `rejected`, `failed`, and `completed_with_rejections` cleanly.
 This change makes those branches actually fire. No backend code change needed.
 

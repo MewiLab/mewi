@@ -1,11 +1,17 @@
 # ADR-010: Backend-Owned World And Social-Chat Multi-Cat Loop
 
-- **Status:** Proposed
+- **Status:** Accepted — largely implemented. This ADR is the *design
+  rationale*; [ADR-011](ADR-011-tick-graph-and-social-service.md) documents the
+  as-built runtime. The `world/` package landed as `state.py` + `presence.py`
+  (not the proposed `state/events/proximity/objects` four-file split); `social/`
+  landed as `room.py`, `moderator.py`, `transcripts.py`, `inbox.py`,
+  `service.py`. Object inventory (`EdibleStore`/`DrinkableStore`) is still
+  Unity-side and remains a follow-up.
 - **Date:** 2026-05-23
-- **Scope:** `backend/app/world/` (new), `backend/app/social/` (new),
-  `backend/app/agent/behavior_graph.py`, `backend/app/agent/creature_runtime.py`,
-  `backend/app/services/agent_tick_service.py`, `backend/app/api/routes/agent_router.py`,
-  `frontend/app/Assets/Scripts/AgentIntegration/**`, `frontend/app/Assets/Scripts/Creature/Motor/**`
+- **Scope:** `mewi-backend/app/world/` (new), `mewi-backend/app/social/` (new),
+  `mewi-backend/app/agent/behavior_graph.py`, `mewi-backend/app/agent/creature_runtime.py`,
+  `mewi-backend/app/services/agent_tick/tick_service.py`, `mewi-backend/app/api/routes/agent_router.py`,
+  `mewi-unity/app/Assets/Scripts/AgentIntegration/**`, `mewi-unity/app/Assets/Scripts/Creature/Motor/**`
 
 ## Context
 
@@ -64,7 +70,7 @@ Move the world model into Python. Keep Unity as the renderer plus a thin
 world-fact channel where physics still matters.
 
 ```text
-backend/app/
+mewi-backend/app/
 ├── world/                      # NEW — single source of truth for the world
 │   ├── state.py                # WorldState: cats, objects, zones, time
 │   ├── events.py               # WorldEvent log: ate, arrived, met, fled, ...
@@ -368,7 +374,7 @@ the easy part. The loop bridge is where weeks go.
 ### Recommendation
 
 For v1, write `SocialRoom`, `moderator`, and `transcripts` as ~150 lines
-each in `backend/app/social/`. Borrow two patterns from outside:
+each in `mewi-backend/app/social/`. Borrow two patterns from outside:
 
 - **Memory importance score** from Generative Agents — apply it inside
   `summarize_memory` to gate social events into STM.

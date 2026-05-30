@@ -2,7 +2,7 @@
 
 - **Status:** Superseded by ADR-004 for the Unity runtime
 - **Date:** 2026-05-18
-- **Scope:** `backend/app/api/routes/agent_router.py`, `backend/app/services/agent_tick_service.py`, `backend/app/workers/agent_tick_worker.py`
+- **Scope:** `mewi-backend/app/api/routes/agent_router.py`, `mewi-backend/app/services/agent_tick/tick_service.py`, `mewi-backend/app/workers/agent_tick_worker.py`
 
 ## Context
 

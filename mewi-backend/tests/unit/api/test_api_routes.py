@@ -95,7 +95,7 @@ class TestMicrologRoutes:
         resp = client.get("/api/v1/micrologs/not-a-uuid")
         assert resp.status_code == 422
 
-    @patch("app.services.embedding_service.EmbeddingService.embed_text", return_value=[0.1] * 1536)
+    @patch("app.services.perception.embedding_service.EmbeddingService.embed_text", return_value=[0.1] * 1536)
     def test_create_log_returns_201(self, mock_embed, client):
         payload = {
             "user_id": FAKE_USER_ID,
@@ -165,7 +165,7 @@ class TestAgentRoutes:
 
     # ── Single-tick: new nested schema ────────────────────────────────────────
 
-    @patch("app.services.embedding_service.EmbeddingService.embed_text", return_value=[0.1] * 5)
+    @patch("app.services.perception.embedding_service.EmbeddingService.embed_text", return_value=[0.1] * 5)
     def test_agent_tick_returns_200_with_action(
         self, mock_embed, client, mock_redis_dep, mock_db
     ):

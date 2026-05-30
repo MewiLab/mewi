@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-05-22
-- **Scope:** `backend/app/agent/behavior_graph.py`, `backend/app/agent/fast_mind.py`, `backend/app/services/place_memory_service.py`, `backend/app/repositories/place_memory_cache.py`, `backend/app/agent/prompts/__init__.py`, `frontend/app/Assets/Scripts/AgentIntegration/Snapshot/Channels/SpatialChannel.cs`, `frontend/app/Assets/Scripts/Semantics/Markup/NamedTargetRegistry.cs`
+- **Scope:** `mewi-backend/app/agent/behavior_graph.py`, `mewi-backend/app/agent/fast_mind.py`, `mewi-backend/app/services/memory/place_memory_service.py`, `mewi-backend/app/repositories/place_memory_cache.py`, `mewi-backend/app/agent/prompts/__init__.py`, `mewi-unity/app/Assets/Scripts/AgentIntegration/Snapshot/Channels/SpatialChannel.cs`, `mewi-unity/app/Assets/Scripts/Semantics/Markup/NamedTargetRegistry.cs`
 
 ## Context
 

@@ -1,8 +1,12 @@
 # ADR-009: Python-Owned Cat Memory
 
-## Status
-
-Accepted.
+- **Status:** Accepted
+- **Date:** 2026-05-22
+- **Scope:** `mewi-backend/app/agent/memory/**` (`manager.py`, `summarizer.py`,
+  `models.py`), `mewi-backend/app/repositories/memory_repo.py`,
+  Supabase tables `agent_memory_raw_events`, `agent_short_term_memories`
+- **Builds on:** [ADR-008](ADR-008-goal-event-bus-plan-step-feedback.md)
+  (Unity stops asserting cognitive truth)
 
 ## Context
 
@@ -16,7 +20,7 @@ those are observed player events. Cat memory remains backend-owned.
 
 ## Decision
 
-Cat memory lives under `backend/app/agent/memory/`.
+Cat memory lives under `mewi-backend/app/agent/memory/`.
 
 ```mermaid
 flowchart TD

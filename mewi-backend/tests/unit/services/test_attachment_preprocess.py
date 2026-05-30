@@ -5,7 +5,7 @@ from app.models.attachment import (
     CatAssignedType,
     RawAttachmentEvent,
 )
-from app.services.attachment_preprocess import preprocess_attachment_session
+from app.services.attachment.preprocess import preprocess_attachment_session
 
 
 def _event(session_id, event, t, distance=None):

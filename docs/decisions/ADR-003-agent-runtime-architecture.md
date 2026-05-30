@@ -1,8 +1,14 @@
-# ADR-003: Agent Runtime Architecture (`backend/app/agent/`)
+# ADR-003: Agent Runtime Architecture (`mewi-backend/app/agent/`)
 
-- **Status:** Accepted
+- **Status:** Accepted — foundational. The decomposition below still holds; the
+  graph *shape* has since grown (the single `reason` node was split into
+  `slow_mind` + `fast_mind`, and `ingest_world` / `reflect` / `social_turn` /
+  `summarize_memory` were added). See [ADR-006](ADR-006-place-memory-reflect-loop.md)
+  (slow/fast split), [ADR-009](ADR-009-python-owned-cat-memory.md) (Python memory),
+  and [ADR-011](ADR-011-tick-graph-and-social-service.md) for the authoritative
+  as-built graph.
 - **Date:** 2026-05-18
-- **Scope:** `backend/app/agent/**`
+- **Scope:** `mewi-backend/app/agent/**`
 
 ## Context
 
@@ -17,27 +23,48 @@ evolvable.
 Split the agent into four cooperating pieces, composed by a **single shared
 LangGraph** and parameterised per cat by a `CreatureRuntime`:
 
+Original four-piece split (still the spine; later ADRs grew the tree around it):
+
 ```
-backend/app/agent/
+mewi-backend/app/agent/
 ├── perception.py        # SnapshotManager — raw Unity JSON → PerceptionSummary
-├── memory.py            # MemoryManager   — ring buffer + spatial log
 ├── action_registry.py   # ActionRegistry  — allowed actions + prompt blurbs
 ├── llm_provider.py      # LLMProvider     — provider-agnostic factory
-├── prompts.py           # Strategic prompt template
 ├── creature_runtime.py  # CreatureRuntime — per-cat perception+memory+actions bundle
-├── behavior_graph.py    # build_behavior_graph(llm) → StateGraph
+├── behavior_graph.py    # build_behavior_graph(...) → StateGraph
 └── schemas/             # Pydantic IO schemas
 ```
 
-**Graph shape** (`perceive → remember → reason → END`):
+As built today, the same spine carries extra packages added by later ADRs:
+
+```
+mewi-backend/app/agent/
+├── perception.py        # ADR-003 — unchanged role
+├── action_registry.py   # ADR-003 — unchanged role
+├── llm_provider.py      # ADR-003 — unchanged role
+├── creature_runtime.py  # ADR-003 — now bundles memory + place memory + world view
+├── behavior_graph.py    # ADR-011 — wires the 8-node graph
+├── mind/                # ADR-006 — slow.py (LLM intent), fast.py (LLM plan), prompt_builder.py
+├── memory/              # ADR-009 — manager.py, summarizer.py, models.py (Python-owned cat memory)
+├── prompts/             # ADR-015 — static/dynamic prompt split for Anthropic cache_control
+├── optimize/            # ADR-016 — opt-in behavioral-variety helpers (not yet wired)
+└── schemas/             # Pydantic IO schemas
+```
+
+**Original graph shape** (`perceive → remember → reason → END`). The current
+graph keeps this head and extends the tail — see
+[ADR-011](ADR-011-tick-graph-and-social-service.md) for the full eight-node
+pipeline.
 
 ```mermaid
 flowchart LR
     A[raw_payload<br/>from Unity] --> P[perceive<br/>SnapshotManager.process]
     P -->|PerceptionSummary| M[remember<br/>MemoryManager.recall]
     P -.->|PerceptionError| M
-    M --> R[reason<br/>LLM.ainvoke<br/>format_strategic_prompt]
-    R --> O[chosen_action<br/>+ action_result<br/>+ reasoning]
+    M --> R[reason<br/>LLM.ainvoke]
+    R --> O[chosen_action<br/>+ reasoning]
+
+    R -.->|since split into| SF["slow_mind + fast_mind<br/>(ADR-006)"]
 ```
 
 ### Roles

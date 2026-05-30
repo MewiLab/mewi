@@ -66,6 +66,44 @@ public class CreatureBlackboard : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Insert follow-up intents immediately behind the current queue head.
+    /// Used for scene-authored expansions such as "go_to climb entry" →
+    /// "climb" → "go_to climb exit".
+    /// </summary>
+    public void InsertMindIntentsAfterCurrent(IEnumerable<IntentMessage> intents)
+    {
+        if (intents == null)
+            return;
+
+        var pending = new List<IntentMessage>();
+        foreach (var intent in intents)
+        {
+            if (string.IsNullOrWhiteSpace(intent.Intent))
+                continue;
+            pending.Add(intent);
+        }
+
+        if (pending.Count == 0)
+            return;
+
+        IntentMessage[] existing = _mindQueue.ToArray();
+        _mindQueue.Clear();
+
+        if (existing.Length == 0)
+        {
+            for (int i = 0; i < pending.Count; i++)
+                _mindQueue.Enqueue(pending[i]);
+            return;
+        }
+
+        _mindQueue.Enqueue(existing[0]);
+        for (int i = 0; i < pending.Count; i++)
+            _mindQueue.Enqueue(pending[i]);
+        for (int i = 1; i < existing.Length; i++)
+            _mindQueue.Enqueue(existing[i]);
+    }
+
     public void ClearMindPlan()
     {
         _mindQueue.Clear();

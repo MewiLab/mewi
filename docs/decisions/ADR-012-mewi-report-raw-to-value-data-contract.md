@@ -25,6 +25,33 @@ Unity should therefore export factual session traces only. Python owns the
 interpretation layer so the same raw logs can be reprocessed when scoring rules
 or report copy change.
 
+```mermaid
+flowchart LR
+    subgraph Unity["Unity — facts only"]
+        F[raw session events<br/>actor, action, t, trust, params]
+    end
+    subgraph Python["Python — interpretation"]
+        P[process.py<br/>scoring + report copy]
+        V[value data<br/>trust arcs, radar, attachment,<br/>attention, timeline]
+        P --> V
+    end
+    subgraph Site["Astro site"]
+        W[report pages]
+    end
+    F -->|POST /report/session| P
+    V --> W
+
+    note["Unity must NOT write:<br/>summary, radar, attention_pct,<br/>attachment_*, timeline, cats.*.bars"]
+    note -.forbidden in raw export.-> F
+
+    classDef unit fill:#FAC775,stroke:#854F0B,color:#412402
+    classDef py fill:#9FE1CB,stroke:#0F6E56,color:#04342C
+    classDef warn fill:#F5C4B3,stroke:#993C1D,color:#4A1B0C
+    class F unit
+    class P,V py
+    class note warn
+```
+
 ## Decision
 
 Unity sends one raw JSON file per completed session to FastAPI:

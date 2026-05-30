@@ -1,8 +1,13 @@
-# ADR-007: Place Memory And Slow-Mind Prompt Cleanup
+# ADR-015: Place Memory And Slow-Mind Prompt Cleanup
 
 - **Status:** Accepted
 - **Date:** 2026-05-22
-- **Scope:** `backend/app/agent/behavior_graph.py`, `backend/app/agent/fast_mind.py`, `backend/app/agent/creature_runtime.py`, `backend/app/agent/prompts/__init__.py`, `backend/app/agent/prompts/persona/cat.md`, `backend/app/agent/schemas/place_memory_schema.py`, `backend/app/repositories/place_memory_cache.py`, `backend/app/services/semantic_service.py`, `backend/tests/unit/repositories/test_place_memory_cache.py`, `backend/pyproject.toml`
+- **Renumbered:** 2026-05-29 — originally filed as a second `ADR-007`,
+  colliding with [ADR-007 (attachment pipeline)](ADR-007-attachment-signature-pipeline.md).
+  Renumbered to 015 to keep ADR ids unique. Content and date are unchanged; the
+  decision still chronologically follows [ADR-006](ADR-006-place-memory-reflect-loop.md).
+- **Builds on:** [ADR-006](ADR-006-place-memory-reflect-loop.md) (place-memory reflect loop, slow/fast-mind split)
+- **Scope:** `mewi-backend/app/agent/behavior_graph.py`, `mewi-backend/app/agent/mind/fast.py`, `mewi-backend/app/agent/creature_runtime.py`, `mewi-backend/app/agent/prompts/__init__.py`, `mewi-backend/app/agent/prompts/persona/cat.md`, `mewi-backend/app/agent/schemas/place_memory_schema.py`, `mewi-backend/app/repositories/place_memory_cache.py`, `mewi-backend/app/services/perception/semantic_service.py`, `mewi-backend/tests/unit/repositories/test_place_memory_cache.py`, `mewi-backend/pyproject.toml`
 
 ## Context
 
@@ -138,6 +143,34 @@ small and the behavior stable:
   tick.** Fine for the current scene size; revisit if zone counts grow past
   ~30.
 
+## The cache split, visually
+
+```mermaid
+flowchart LR
+    subgraph Before["Before — ~900 tokens, every tick"]
+        B1[persona + intents + rules<br/>+ affordances + format<br/>~500 stable tokens] --- B2[perception + body + place<br/>~400 dynamic tokens]
+        B1 -.re-sent every tick.-> PAY1[paid in full each tick]
+    end
+
+    subgraph After["After — split message"]
+        S["STATIC block ~340 tokens<br/>cache_control: ephemeral"] --> C[(Anthropic<br/>prompt cache)]
+        D["DYNAMIC suffix ~60 tokens<br/>perception, body, place, feedback"]
+        C -. tick 2+ : cache_read .-> MODEL[Slow Mind LLM]
+        D -. every tick : fresh .-> MODEL
+    end
+
+    classDef stat fill:#9FE1CB,stroke:#0F6E56,color:#04342C
+    classDef dyn fill:#B5D4F4,stroke:#185FA5,color:#042C53
+    classDef store fill:#FAC775,stroke:#854F0B,color:#412402
+    class S,B1 stat
+    class D,B2 dyn
+    class C store
+```
+
+Only `ChatAnthropic` gets the two-block message with `cache_control`; every
+other provider falls back to a single concatenated string (detected by a lazy
+`isinstance(llm, ChatAnthropic)` in `make_slow_mind`).
+
 ## Token Budget After
 
 Measured on a representative prompt (rendered via
@@ -153,7 +186,7 @@ drops by roughly an order of magnitude when the Anthropic cache is warm.
 
 - 17 affected unit tests pass:
   `pytest tests/unit/test_prompts.py tests/unit/services/test_place_memory_service.py tests/unit/agent/ tests/unit/repositories/test_place_memory_cache.py --confcutdir=tests/unit`
-- `rg -n "_parse_decision|_format_position|_format_location" backend/app/ backend/tests/` returns nothing.
+- `rg -n "_parse_decision|_format_position|_format_location" mewi-backend/app/ mewi-backend/tests/` returns nothing.
 - For Anthropic deployments, inspect the API response usage on the second
   consecutive tick for the same creature: `cache_read_input_tokens` should be
   approximately the size of the static block, and `input_tokens` should only

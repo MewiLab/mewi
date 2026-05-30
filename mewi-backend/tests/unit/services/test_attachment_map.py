@@ -6,7 +6,7 @@ from app.models.attachment import (
     CatAssignedType,
     PlayerAttachmentEstimate,
 )
-from app.services.attachment_map import atf
+from app.services.attachment.map import atf
 
 
 def _features(**overrides):

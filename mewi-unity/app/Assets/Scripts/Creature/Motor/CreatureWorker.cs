@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 /// <summary>
 /// The mind-plan worker. Each tick:
@@ -30,6 +31,7 @@ public class CreatureWorker : MonoBehaviour
         new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     readonly List<PlanStepExecutionReport> _currentPlanSteps = new List<PlanStepExecutionReport>();
+    readonly List<IntentMessage> _pendingPostCurrentIntents = new List<IntentMessage>();
 
     IntentMessage _activeIntent;
     float _activeStartedAt;
@@ -89,9 +91,11 @@ public class CreatureWorker : MonoBehaviour
         }
 
         BeginPlanIfNeeded(intent);
+        _pendingPostCurrentIntents.Clear();
 
         if (!TryBuildCommand(intent, out MotorCommand cmd, out string rejectedReason))
         {
+            _pendingPostCurrentIntents.Clear();
             if (logWorkerDispatch)
                 Debug.LogWarning($"[CreatureWorker] rejected {DescribeIntent(intent)}: {rejectedReason}");
             RecordStep(intent, "rejected", rejectedReason, Time.time, Time.time);
@@ -102,6 +106,7 @@ public class CreatureWorker : MonoBehaviour
 
         if (!_adapter.Apply(cmd))
         {
+            _pendingPostCurrentIntents.Clear();
             if (logWorkerDispatch)
                 Debug.LogWarning($"[CreatureWorker] adapter refused {DescribeIntent(intent)} as {cmd.Kind}");
             RecordStep(intent, "rejected", "adapter_refused", Time.time, Time.time);
@@ -116,6 +121,13 @@ public class CreatureWorker : MonoBehaviour
         _activeIntent = intent;
         _activeStartedAt = Time.time;
         _hasActiveIntent = true;
+
+        if (_pendingPostCurrentIntents.Count > 0)
+        {
+            _board.InsertMindIntentsAfterCurrent(_pendingPostCurrentIntents);
+            _pendingPostCurrentIntents.Clear();
+        }
+
         _board.TryPopMindIntent(out _);
 
         if (IsValidatableIntent(intent.Intent))
@@ -147,9 +159,10 @@ public class CreatureWorker : MonoBehaviour
 
             case "go_to":
                 Vector3 destination = intent.DirectionHint;
+                CatNavigationPoint navigationPoint = null;
                 if (!string.IsNullOrWhiteSpace(intent.TargetKey))
                 {
-                    if (!TryResolveTargetPosition(intent.TargetKey, out destination, out _, out rejectedReason))
+                    if (!TryResolveTargetPosition(intent.TargetKey, out destination, out _, out navigationPoint, out rejectedReason))
                         return false;
                 }
                 else if (destination == Vector3.zero)
@@ -163,6 +176,7 @@ public class CreatureWorker : MonoBehaviour
                     cmd = MotorCommand.Wander();
                     return true;
                 }
+                QueueAutoClimbFollowups(intent, navigationPoint);
                 cmd = MotorCommand.GoTo(destination);
                 return true;
 
@@ -206,6 +220,19 @@ public class CreatureWorker : MonoBehaviour
                 cmd = MotorCommand.Action(intent.Intent, abilityIndex);
                 return true;
 
+            case "climb_ladder":
+            case "use_ladder":
+            case "climb":
+                if (string.IsNullOrWhiteSpace(intent.TargetKey))
+                {
+                    rejectedReason = "missing_climb_target";
+                    return false;
+                }
+                if (!TryResolveTarget(intent.TargetKey, out Transform climbTarget, out rejectedReason))
+                    return false;
+                cmd = BuildClimbCommand(climbTarget);
+                return true;
+
             default:
                 rejectedReason = $"unknown_intent:{intent.Intent}";
                 return false;
@@ -244,36 +271,162 @@ public class CreatureWorker : MonoBehaviour
     }
 
     bool TryResolveTargetPosition(string key, out Vector3 position, out Transform target, out string rejectedReason)
+        => TryResolveTargetPosition(key, out position, out target, out _, out rejectedReason);
+
+    bool TryResolveTargetPosition(
+        string key,
+        out Vector3 position,
+        out Transform target,
+        out CatNavigationPoint navigationPoint,
+        out string rejectedReason)
     {
         position = Vector3.zero;
         target = null;
+        navigationPoint = null;
         rejectedReason = "";
 
         if (_board != null && _board.TryResolveRecentTargetPosition(key, out position, out target))
+        {
+            position = ResolveTargetPosition(target, position, true, out navigationPoint);
             return true;
+        }
 
         if (_targetRegistry == null)
             _targetRegistry = FindFirstObjectByType<NamedTargetRegistry>();
 
-        if (_targetRegistry != null && _targetRegistry.TryResolvePosition(key, out position, out target))
+        if (_targetRegistry != null && _targetRegistry.TryResolve(key, out target))
+        {
+            position = ResolveTargetPosition(target, Vector3.zero, false, out navigationPoint);
             return true;
+        }
 
         if (!TryResolveTarget(key, out target, out rejectedReason))
             return false;
 
-        position = ResolveTargetPosition(target);
+        position = ResolveTargetPosition(target, Vector3.zero, false, out navigationPoint);
         return true;
     }
 
-    static Vector3 ResolveTargetPosition(Transform target)
+    Vector3 ResolveTargetPosition(Transform target, Vector3 fallbackPosition, bool hasFallbackPosition)
+        => ResolveTargetPosition(target, fallbackPosition, hasFallbackPosition, out _);
+
+    Vector3 ResolveTargetPosition(
+        Transform target,
+        Vector3 fallbackPosition,
+        bool hasFallbackPosition,
+        out CatNavigationPoint navigationPoint)
     {
-        if (target == null) return Vector3.zero;
+        navigationPoint = null;
+        if (target == null) return hasFallbackPosition ? fallbackPosition : Vector3.zero;
+
+        CatNavigationPoint directPoint = target.GetComponent<CatNavigationPoint>();
+        if (directPoint != null && !directPoint.avoidForNormalGoTo)
+        {
+            navigationPoint = directPoint;
+            return hasFallbackPosition ? fallbackPosition : target.position;
+        }
+
+        CatNavigationAnchors anchors = target.GetComponent<CatNavigationAnchors>()
+            ?? target.GetComponentInParent<CatNavigationAnchors>()
+            ?? target.GetComponentInChildren<CatNavigationAnchors>();
+
+        if (anchors != null)
+        {
+            int areaMask = _adapter != null ? _adapter.NavigationAreaMask : NavMesh.AllAreas;
+            if (anchors.TryResolveGoToPosition(
+                transform.position,
+                areaMask,
+                out Vector3 anchorPosition,
+                out CatNavigationPoint anchorPoint,
+                out string anchorReason))
+            {
+                if (logWorkerDispatch && anchorPoint != null)
+                    Debug.Log($"[CreatureWorker] resolved {target.name} via cat anchor {anchorPoint.DisplayName} reason={anchorReason}");
+                navigationPoint = anchorPoint;
+                return anchorPosition;
+            }
+
+            if (logWorkerDispatch)
+                Debug.LogWarning($"[CreatureWorker] no usable cat anchor for {target.name}: {anchorReason}; falling back to object position.");
+        }
 
         SmartObject smartObject = target.GetComponent<SmartObject>()
             ?? target.GetComponentInParent<SmartObject>()
             ?? target.GetComponentInChildren<SmartObject>();
 
-        return smartObject != null ? smartObject.Position : target.position;
+        if (smartObject != null)
+            return smartObject.Position;
+
+        ZoneVolume zone = target.GetComponent<ZoneVolume>()
+            ?? target.GetComponentInParent<ZoneVolume>()
+            ?? target.GetComponentInChildren<ZoneVolume>();
+
+        if (zone != null)
+            return ZoneVolumeUtility.CenterOrTransform(zone);
+
+        return hasFallbackPosition ? fallbackPosition : target.position;
+    }
+
+    MotorCommand BuildClimbCommand(Transform climbTarget)
+    {
+        CatAutoClimbPoint autoClimb = climbTarget != null
+            ? climbTarget.GetComponent<CatAutoClimbPoint>()
+            : null;
+
+        float duration = autoClimb != null ? autoClimb.ClimbSeconds : 3f;
+        Vector3 inputAxis = autoClimb != null ? autoClimb.ClimbInputAxis : Vector3.forward;
+        return MotorCommand.Climb(climbTarget, duration, inputAxis);
+    }
+
+    void QueueAutoClimbFollowups(IntentMessage sourceIntent, CatNavigationPoint navigationPoint)
+    {
+        if (navigationPoint == null || _board == null)
+            return;
+
+        CatAutoClimbPoint autoClimb = navigationPoint.GetComponent<CatAutoClimbPoint>();
+        if (autoClimb == null)
+            return;
+
+        if (!autoClimb.TryGetClimbTarget(out Transform climbTarget, out string climbKey))
+        {
+            if (logWorkerDispatch)
+                Debug.LogWarning($"[CreatureWorker] auto climb point {navigationPoint.DisplayName} has no climb target.");
+            return;
+        }
+
+        _board.RememberPerceivedTarget(climbKey, climbTarget);
+        _pendingPostCurrentIntents.Add(IntentMessage.Create(
+            "climb",
+            sourceIntent.Source,
+            -1f,
+            climbTarget.position,
+            BuildAutoCommandId(sourceIntent, "climb"),
+            sourceIntent.RequestId ?? "",
+            climbKey));
+
+        if (autoClimb.TryGetExitTarget(out Transform exitTarget, out string exitKey))
+        {
+            _board.RememberPerceivedTarget(exitKey, exitTarget);
+            _pendingPostCurrentIntents.Add(IntentMessage.Create(
+                "go_to",
+                sourceIntent.Source,
+                -1f,
+                exitTarget.position,
+                BuildAutoCommandId(sourceIntent, "climb-exit"),
+                sourceIntent.RequestId ?? "",
+                exitKey));
+        }
+
+        if (logWorkerDispatch)
+            Debug.Log($"[CreatureWorker] queued auto climb followups from {navigationPoint.DisplayName}.");
+    }
+
+    static string BuildAutoCommandId(IntentMessage sourceIntent, string suffix)
+    {
+        string baseId = string.IsNullOrWhiteSpace(sourceIntent.CommandId)
+            ? "auto"
+            : sourceIntent.CommandId.Trim();
+        return $"{baseId}:{suffix}";
     }
 
     void BeginPlanIfNeeded(IntentMessage intent)

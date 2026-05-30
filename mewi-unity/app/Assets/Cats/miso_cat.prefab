@@ -33836,7 +33836,8 @@ MonoBehaviour:
   manualNavArrivalDistance: 0.65
   manualNavCornerDistance: 0.35
   manualNavRepathInterval: 0.5
-  teleportGoToImmediately: 1
+  teleportGoToImmediately: 0
+  teleportUnreachableGoToBackup: 1
   recoveryConfig:
     progressCheckInterval: 0.25
     minProgressMeters: 0.05

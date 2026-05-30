@@ -9,7 +9,7 @@ from app.models.attachment import (
     AttachmentEventType,
 )
 from app.repositories.attachment_repo import AttachmentRepository
-from app.services.attachment_map import atf
+from app.services.attachment.map import atf
 
 
 def _mock_supabase():

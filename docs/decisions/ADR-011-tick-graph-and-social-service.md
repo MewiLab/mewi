@@ -2,9 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-05-23
-- **Scope:** `backend/app/agent/behavior_graph.py`, `backend/app/agent/creature_runtime.py`,
-  `backend/app/services/agent_tick_service.py`, `backend/app/workers/agent_tick_worker.py`,
-  `backend/app/api/routes/agent_router.py`, `backend/app/world/**`, `backend/app/social/**`
+- **Scope:** `mewi-backend/app/agent/behavior_graph.py`, `mewi-backend/app/agent/creature_runtime.py`,
+  `mewi-backend/app/services/agent_tick/tick_service.py`, `mewi-backend/app/workers/agent_tick_worker.py`,
+  `mewi-backend/app/api/routes/agent_router.py`, `mewi-backend/app/world/**`, `mewi-backend/app/social/**`
 
 ## Context
 
@@ -88,7 +88,7 @@ Python.
 | `perceive` | `agent/perception.py` | code | Validate Unity payload → `PerceptionSummary` / `PerceptionError`; bound entities by relevance radius. |
 | `remember` | `agent/memory/manager.py` | code | Return last-N raw events + short-term memory lines. |
 | `ingest_world` | `agent/behavior_graph.py` + `world/state.py` | code | Mirror cat presence (zone, approx XY, last action, mood) into `WorldState`; compute peers-in-zone. |
-| `reflect` | `services/place_memory_service.py` | code | Atomic Redis update of `agent:place_overlay:{creature_id}`; build place-memory prompt lines. |
+| `reflect` | `services/memory/place_memory_service.py` | code | Atomic Redis update of `agent:place_overlay:{creature_id}`; build place-memory prompt lines. |
 | `social_turn` | `social/service.py` | code today, LLM-pluggable | Flush peer inbox, open/reuse `SocialRoom`, ask the **Moderator** what happens. v1 moderator is rule-based; the `Moderator` Protocol is the swap point for an LLM moderator. |
 | `slow_mind` | `agent/mind/slow.py` | **LLM** | One LLM call. Inputs: persona + perception + memory + place-memory + social context. Output: `{intent, target_id, mood, style, reasoning}`. |
 | `fast_mind` | `agent/mind/fast.py` | **LLM** | One LLM call. Translates intent into `plan_steps` Unity can execute. |

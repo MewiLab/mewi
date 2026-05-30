@@ -15,7 +15,7 @@ import pytest
 
 from app.core.config import Settings
 from app.services.agent_service import AgentService
-from app.services.semantic_service import SemanticService
+from app.services.perception.semantic_service import SemanticService
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ def _no_real_embedding(monkeypatch):
     EmbeddingService.embed_text is patched to return a tiny fake vector
     so _flush_buffer completes without network I/O.
     """
-    from app.services.embedding_service import EmbeddingService
+    from app.services.perception.embedding_service import EmbeddingService
     monkeypatch.setattr(EmbeddingService, "embed_text", lambda self, text: [0.1] * 5)
 
 

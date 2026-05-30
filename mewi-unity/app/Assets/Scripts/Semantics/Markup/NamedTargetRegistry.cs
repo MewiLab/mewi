@@ -134,6 +134,15 @@ public class NamedTargetRegistry : MonoBehaviour
     {
         if (target == null) return Vector3.zero;
 
+        CatNavigationAnchors anchors = target.GetComponent<CatNavigationAnchors>()
+            ?? target.GetComponentInParent<CatNavigationAnchors>()
+            ?? target.GetComponentInChildren<CatNavigationAnchors>();
+        if (anchors != null &&
+            anchors.TryResolveDefaultPosition(out Vector3 anchorPosition, out _))
+        {
+            return anchorPosition;
+        }
+
         SmartObject smartObject = target.GetComponent<SmartObject>()
             ?? target.GetComponentInParent<SmartObject>()
             ?? target.GetComponentInChildren<SmartObject>();

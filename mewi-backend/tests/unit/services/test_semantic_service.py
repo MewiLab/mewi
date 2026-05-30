@@ -7,7 +7,7 @@ No mocks needed — SemanticService is stateless and pure.
 
 import pytest
 
-from app.services.semantic_service import SemanticService
+from app.services.perception.semantic_service import SemanticService
 
 
 @pytest.fixture

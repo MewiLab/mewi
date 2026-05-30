@@ -2,7 +2,12 @@
 
 - **Status:** Accepted
 - **Date:** 2026-05-22
-- **Scope:** `backend/app/models/attachment.py`, `backend/app/services/attachment_preprocess.py`, `backend/app/services/attachment_map.py`, `backend/app/repositories/attachment_repo.py`, `backend/app/api/routes/attachment_router.py`, `frontend/app/Assets/Scripts/AgentIntegration/Attachment/*`, `frontend/app/Assets/Scripts/AgentIntegration/Bridge/ApiRoutes.cs`
+- **Scope:** `mewi-backend/app/models/attachment.py`, `mewi-backend/app/services/attachment/preprocess.py`, `mewi-backend/app/services/attachment/map.py`, `mewi-backend/app/repositories/attachment_repo.py`, `mewi-backend/app/workers/attachment_worker.py`, `mewi-backend/app/api/routes/attachment_router.py`, `mewi-unity/app/Assets/Scripts/AgentIntegration/Attachment/*`, `mewi-unity/app/Assets/Scripts/AgentIntegration/Bridge/ApiRoutes.cs`
+- **Note (2026-05-29):** The preprocess/ATF code now lives in the
+  `app/services/attachment/` package (`preprocess.py`, `map.py`). The
+  "synchronous for the prototype, move to a worker later" tradeoff below has
+  partly landed — `app/workers/attachment_worker.py` now exists for the
+  async path.
 
 ## Context
 

@@ -14,6 +14,7 @@ public enum MotorCommandKind
     GoTo,
     Follow,
     Action,
+    Climb,
     Death,
 }
 
@@ -26,7 +27,9 @@ public struct MotorCommand
     public MotorCommandKind Kind;
 
     public Vector3   Destination;   // GoTo, Flee (threat position)
-    public Transform Target;        // Follow
+    public Transform Target;        // Follow, Climb
+    public float     Duration;      // Climb
+    public Vector3   InputAxis;     // Climb
 
     public int AbilityIndex;        // Action
     public string ActionIntent;      // Action
@@ -38,5 +41,6 @@ public struct MotorCommand
     public static MotorCommand GoTo(Vector3 destination)    => new MotorCommand { Kind = MotorCommandKind.GoTo, Destination = destination };
     public static MotorCommand Follow(Transform target)     => new MotorCommand { Kind = MotorCommandKind.Follow, Target = target };
     public static MotorCommand Action(string intent, int abilityIndex) => new MotorCommand { Kind = MotorCommandKind.Action, ActionIntent = intent, AbilityIndex = abilityIndex };
+    public static MotorCommand Climb(Transform target, float duration, Vector3 inputAxis) => new MotorCommand { Kind = MotorCommandKind.Climb, Target = target, Duration = duration, InputAxis = inputAxis };
     public static MotorCommand Death()                      => new MotorCommand { Kind = MotorCommandKind.Death };
 }

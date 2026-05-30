@@ -46,6 +46,14 @@ public class MalbersAnimalAdapter : MonoBehaviour
     [Header("Action Execution")]
     public ActionExecutionConfig actionExecutionConfig = new ActionExecutionConfig();
 
+    [Header("Simple Climb")]
+    [Tooltip("Fallback climb time when a climb point does not provide one.")]
+    public float defaultClimbSeconds = 3f;
+    [Tooltip("Fallback input axis fed into Malbers Climb. Vector3.forward means climb up.")]
+    public Vector3 defaultClimbInputAxis = Vector3.forward;
+    [Tooltip("Rotate the cat to the climb point transform before activating Climb.")]
+    public bool snapToClimbPointRotation = true;
+
     [Header("Stances")]
     public StanceID defaultStance;
     public StanceID sneakStance;
@@ -72,7 +80,10 @@ public class MalbersAnimalAdapter : MonoBehaviour
     public float manualNavRepathInterval        = 0.5f;
 
     [Tooltip("Temporary reliability mode: skip pathfinding for go_to and warp directly to the requested target.")]
-    public bool teleportGoToImmediately = true;
+    public bool teleportGoToImmediately = false;
+
+    [Tooltip("Backup plan: if realistic go_to cannot find a complete walk path, use the old direct teleport instead of waiting for watchdog timeout.")]
+    public bool teleportUnreachableGoToBackup = true;
 
     [Header("Recovery")]
     public NavigationRecoveryConfig recoveryConfig = new NavigationRecoveryConfig();
@@ -81,7 +92,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
     public bool logIntentProof = true;
 
     public int  ActionModeId => actionMode != null ? actionMode.ID : actionModeId;
-    public bool IsBusy => _actionInFlight || _actionWatchdog.IsBusy || (_hasActiveNavigationDestination && !_hasArrived);
+    public bool IsBusy => _climbInFlight || _actionInFlight || _actionWatchdog.IsBusy || (_hasActiveNavigationDestination && !_hasArrived);
 
     public bool TryGetAbilityIndex(string intent, out int abilityIndex)
     {
@@ -112,11 +123,19 @@ public class MalbersAnimalAdapter : MonoBehaviour
     Vector3 _manualNavigationCorner;
     Vector3 _manualNavigationDirection;
     NavMeshPath _manualPath;
+    NavMeshPath _navigationValidationPath;
     int _manualCornerIndex;
     float _manualRepathTimer;
 
     bool _hasArrived;
     bool _actionInFlight;
+    bool _climbInFlight;
+    bool _climbStateStarted;
+    float _climbStartedAt;
+    float _climbDuration;
+    float _nextClimbActivateRetryAt;
+    Vector3 _climbInputAxis;
+    State _activeClimbState;
     Transform _activeFollowTarget;
 
     readonly NavigationWatchdog _navWatchdog = new NavigationWatchdog();
@@ -218,6 +237,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
 
     void OnPreInput(MAnimal _)
     {
+        UpdateSimpleClimb();
         UpdateManualNavigation();
         TickNavigationWatchdog();
     }
@@ -275,6 +295,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
             case MotorCommandKind.GoTo:    return ExecuteGoTo(cmd.Destination);
             case MotorCommandKind.Follow:  return ExecuteFollow(cmd.Target);
             case MotorCommandKind.Action:  return ExecuteAction(cmd.ActionIntent, cmd.AbilityIndex);
+            case MotorCommandKind.Climb: return ExecuteClimb(cmd.Target, cmd.Duration, cmd.InputAxis);
             case MotorCommandKind.Death:   return ExecuteDeath();
         }
         return false;
@@ -393,6 +414,41 @@ public class MalbersAnimalAdapter : MonoBehaviour
         return activated;
     }
 
+    bool ExecuteClimb(Transform climbPoint, float duration, Vector3 inputAxis)
+    {
+        State climbState = animal.State_Get(StateEnum.Climb);
+        if (climbState == null)
+        {
+            Debug.LogWarning("[MalbersAdapter] Climb command rejected: MAnimal does not have a Climb state.");
+            return false;
+        }
+
+        StopNavigation(true);
+        CancelActionExecution();
+        ClearLingeringActionMode("before climb");
+
+        if (snapToClimbPointRotation && climbPoint != null)
+            animal.transform.rotation = climbPoint.rotation;
+
+        _activeClimbState = climbState;
+        _climbInFlight = true;
+        _climbStateStarted = false;
+        _climbStartedAt = Time.time;
+        _climbDuration = duration > 0f ? duration : defaultClimbSeconds;
+        _climbInputAxis = inputAxis == Vector3.zero ? defaultClimbInputAxis : inputAxis;
+        if (_climbInputAxis == Vector3.zero)
+            _climbInputAxis = Vector3.forward;
+        _nextClimbActivateRetryAt = Time.time + 0.25f;
+
+        animal.State_Activate(StateEnum.Climb);
+        _climbStateStarted = animal.ActiveState == climbState;
+
+        LastCommandCompletionReason = "ClimbStarted";
+        if (logIntentProof)
+            Debug.Log($"[MalbersAdapter] Climb command started point={(climbPoint != null ? climbPoint.name : "none")} duration={_climbDuration:F1}s stateStarted={_climbStateStarted}");
+        return true;
+    }
+
     bool ExecuteDeath()
     {
         aiControl.SetActive(false);
@@ -408,6 +464,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
 
     public void Stop()
     {
+        CancelSimpleClimb("stopped");
         CancelActionExecution();
         StopNavigation(true);
     }
@@ -427,11 +484,72 @@ public class MalbersAnimalAdapter : MonoBehaviour
         _actionWatchdog.Cancel();
     }
 
+    void UpdateSimpleClimb()
+    {
+        if (!_climbInFlight)
+            return;
+
+        if (_activeClimbState == null)
+        {
+            CompleteSimpleClimb("ClimbStateMissing");
+            return;
+        }
+
+        float elapsed = Time.time - _climbStartedAt;
+        if (_climbDuration > 0f && elapsed >= _climbDuration)
+        {
+            if (animal.ActiveState == _activeClimbState)
+                animal.State_AllowExit();
+
+            CompleteSimpleClimb("ClimbDurationComplete");
+            return;
+        }
+
+        bool isActiveClimbState = animal.ActiveState == _activeClimbState;
+        if (isActiveClimbState)
+        {
+            _climbStateStarted = true;
+            animal.SetInputAxis(_climbInputAxis);
+            animal.UsingMoveWithDirection = false;
+            return;
+        }
+
+        if (_climbStateStarted)
+        {
+            CompleteSimpleClimb("ClimbExited");
+            return;
+        }
+
+        if (Time.time < _nextClimbActivateRetryAt)
+            return;
+
+        _nextClimbActivateRetryAt = Time.time + 0.25f;
+        animal.State_Activate(StateEnum.Climb);
+    }
+
+    void CompleteSimpleClimb(string reason)
+    {
+        _climbInFlight = false;
+        _climbStateStarted = false;
+        _activeClimbState = null;
+        LastCommandCompletionReason = reason;
+    }
+
+    void CancelSimpleClimb(string reason)
+    {
+        if (!_climbInFlight)
+            return;
+
+        if (_activeClimbState != null && animal != null && animal.ActiveState == _activeClimbState)
+            animal.State_AllowExit();
+
+        CompleteSimpleClimb(reason);
+    }
+
     // ═══════════════════════════════════════════════
     //  NAVIGATION CORE
     // ═══════════════════════════════════════════════
-
-    bool NavigateTo(Vector3 requestedDestination)
+    bool NavigateTo_realistic(Vector3 requestedDestination)
     {
         _hasArrived = false;
         _hasActiveNavigationDestination = false;
@@ -439,6 +557,8 @@ public class MalbersAnimalAdapter : MonoBehaviour
         StopManualNavigation(false);
         PrepareForMovementCommand();
 
+        // First requirement for believable movement: the target must land on
+        // the NavMesh before Malbers is asked to walk there.
         if (!TryProjectDestination(requestedDestination, out Vector3 destination, out string reason))
         {
             if (requestedDestination == Vector3.zero)
@@ -447,12 +567,24 @@ public class MalbersAnimalAdapter : MonoBehaviour
                 return false;
             }
 
+            if (TryUseTeleportBackup(requestedDestination, $"no_navmesh_destination:{reason}"))
+                return true;
+
             Debug.LogWarning(
-                $"[MalbersAdapter] No NavMesh destination near {requestedDestination}: {reason}. Waiting for watchdog recovery instead of immediate success.");
-            _activeNavigationDestination = requestedDestination;
-            _hasActiveNavigationDestination = true;
-            _navWatchdog.Begin(requestedDestination, AnimalPosition, Time.time);
-            return true;
+                $"[MalbersAdapter] No NavMesh destination near {requestedDestination}: {reason}. Waiting for watchdog recovery.");
+            return BeginNavigationRecovery(requestedDestination);
+        }
+
+        // A complete path means normal walking, including authored
+        // OffMeshLink/NavMeshLink traversal for jumps, climbs, stairs, or drops.
+        if (!TryValidateCompletePath(destination, out string pathReason))
+        {
+            if (TryUseTeleportBackup(destination, $"no_complete_path:{pathReason}"))
+                return true;
+
+            Debug.LogWarning(
+                $"[MalbersAdapter] No complete walk path. requested={requestedDestination} projected={destination}. reason={pathReason}. Waiting for watchdog recovery.");
+            return BeginNavigationRecovery(destination);
         }
 
         _activeNavigationDestination = destination;
@@ -465,11 +597,42 @@ public class MalbersAnimalAdapter : MonoBehaviour
         if (useManualNavMeshFallback && TryStartManualNavigation(destination))
             return true;
 
-        Debug.LogWarning($"[MalbersAdapter] Navigation failed. requested={requestedDestination} projected={destination}. {BuildNavigationDebug()}");
+        if (TryUseTeleportBackup(destination, "navigation_start_failed"))
+            return true;
+
+        Debug.LogWarning($"[MalbersAdapter] Realistic navigation failed. requested={requestedDestination} projected={destination}. {BuildNavigationDebug()}");
         _hasActiveNavigationDestination = false;
         _navWatchdog.NotifyFailed();
         LastNavigationCompletionReason = _navWatchdog.CompletionReason;
         LastCommandCompletionReason = LastNavigationCompletionReason.ToString();
+        return false;
+    }
+
+    bool NavigateTo(Vector3 requestedDestination)
+    {
+        return NavigateTo_realistic(requestedDestination);
+    }
+
+    bool BeginNavigationRecovery(Vector3 destination)
+    {
+        _activeNavigationDestination = destination;
+        _hasActiveNavigationDestination = true;
+        _navWatchdog.Begin(destination, AnimalPosition, Time.time);
+        return true;
+    }
+
+    bool TryUseTeleportBackup(Vector3 destination, string reason)
+    {
+        if (!teleportUnreachableGoToBackup) return false;
+
+        if (TryWarpTo(destination, out string warpReason))
+        {
+            if (logIntentProof)
+                Debug.LogWarning($"[MalbersAdapter] go_to teleport backup used. reason={reason} warpReason={warpReason} destination={destination}");
+            return true;
+        }
+
+        Debug.LogWarning($"[MalbersAdapter] go_to teleport backup failed. reason={reason} destination={destination}");
         return false;
     }
 
@@ -510,6 +673,35 @@ public class MalbersAnimalAdapter : MonoBehaviour
 
         reason = $"no NavMesh within {navMeshDestinationSampleRadius:F1}m";
         return false;
+    }
+
+    bool TryValidateCompletePath(Vector3 destination, out string reason)
+    {
+        reason = "";
+
+        if (!NavMesh.SamplePosition(AnimalPosition, out NavMeshHit startHit, navMeshStartSampleRadius, AgentAreaMask()))
+        {
+            reason = $"no NavMesh near animal position {AnimalPosition}";
+            return false;
+        }
+
+        if (_navigationValidationPath == null)
+            _navigationValidationPath = new NavMeshPath();
+
+        bool calculated = NavMesh.CalculatePath(startHit.position, destination, AgentAreaMask(), _navigationValidationPath);
+        if (!calculated)
+        {
+            reason = $"CalculatePath returned false start={startHit.position} destination={destination}";
+            return false;
+        }
+
+        if (_navigationValidationPath.status != NavMeshPathStatus.PathComplete)
+        {
+            reason = $"path status={_navigationValidationPath.status} start={startHit.position} destination={destination}";
+            return false;
+        }
+
+        return true;
     }
 
     bool TryEnsureMalbersAgentReady(out string reason)
@@ -679,6 +871,7 @@ public class MalbersAnimalAdapter : MonoBehaviour
     public bool IsUsingManualNavigation => _usingManualNavigation;
     public Vector3 ManualNavigationDirection => _manualNavigationDirection;
     public Vector3 ManualNavigationCorner => _manualNavigationCorner;
+    public int NavigationAreaMask => AgentAreaMask();
 
     public string BuildNavigationDebug()
     {
