@@ -13,15 +13,31 @@ class Utterance:
     tone: str = "neutral"
     target_id: str = ""
     at: float = 0.0
+    bid_id: str = ""
+    act_kind: str = "message"
+    expects_reply: bool = False
+    render_hint: str = "speech_bubble"
+    ttl_seconds: float = 2.5
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "from": self.speaker_id,
             "text": self.text,
             "tone": self.tone,
             "target": self.target_id,
             "at": self.at,
         }
+        if self.bid_id:
+            payload["bid_id"] = self.bid_id
+        if self.act_kind:
+            payload["kind"] = self.act_kind
+        if self.expects_reply:
+            payload["expects_reply"] = True
+        if self.render_hint:
+            payload["render_hint"] = self.render_hint
+        if self.ttl_seconds > 0:
+            payload["ttl_seconds"] = self.ttl_seconds
+        return payload
 
 
 @dataclass

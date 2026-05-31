@@ -8,16 +8,11 @@ from app.agent.schemas.place_memory_schema import PlaceMemoryContextDict
 def clean_text(value: Any) -> str:
     """Tiny string normaliser. Inlined here (rather than imported from
     app.agent.mind.context) so this module has no dependency on the mind
-    package, which would create a prompts → mind → prompt_builder → prompts
+    package, which would create a prompts -> mind -> prompt_builder -> prompts
     import cycle."""
     if value is None:
         return ""
     return " ".join(str(value).strip().split())
-
-
-def action_lines(actions: list[str]) -> str:
-    lines = [f"  - {clean_text(action)}" for action in actions if clean_text(action)]
-    return "\n".join(lines) if lines else "  - idle\n  - wander\n  - go_to"
 
 
 def bullet_lines(value: Any, *, empty: str = "  - (none)") -> str:
@@ -119,6 +114,13 @@ def social_context_lines(social_context: dict[str, Any] | None) -> list[str]:
         line = _utterance_line(utterance, prefix="You expressed")
         if line:
             lines.append(line)
+
+    feedback = social_context.get("social_feedback")
+    if isinstance(feedback, list):
+        for item in feedback[-4:]:
+            line = _social_feedback_line(item)
+            if line:
+                lines.append(line)
 
     relationships = social_context.get("relationships")
     if isinstance(relationships, list):
@@ -226,21 +228,20 @@ def build_dynamic_section(
     Empty blocks are omitted so the model only sees signal it can act on.
 
     Block order is deliberate:
-      WHERE → BODY → typed affordances/social → SENSORY → diff → LAST TICK → STM → focus.
+      WHERE -> BODY -> typed affordances/social -> SENSORY -> diff -> LAST TICK -> STM -> focus.
 
-    extra_prefix lets Fast Mind paste its "SLOW MIND DECISION" block above
-    the shared context without duplicating the rest of the layout.
-
-    Lives in sections.py (not prompts/__init__.py) so that prompts/fast_mind.py
-    can import it without triggering the prompts → mind → prompts cycle.
+    extra_prefix lets callers paste a selector-specific block above the shared
+    context without duplicating the rest of the layout.
     """
     situation = section_text(context.get("situation"))
     body_lines = context.get("body_lines") or []
+    if not body_lines and context.get("body_state"):
+        body_lines = [context.get("body_state")]
     food_nearby = context.get("food_nearby") or []
     social_cues = context.get("social_cues") or []
     other_cats = world_view_lines(world_view)
     social_exchange = social_context_lines(social_context)
-    objects_nearby = context.get("objects_nearby") or []
+    objects_nearby = context.get("objects_nearby") or _meaningful_targets(context.get("relevant_targets"))
     explore_frontiers = explore_frontier_lines(place_memory_context)
     sensory_world = context.get("sensory_world") or []
     whats_changed = context.get("whats_changed") or []
@@ -251,7 +252,7 @@ def build_dynamic_section(
     if current_place:
         where_block = f"{situation}\n{current_place}"
 
-    last_tick_block = (previous_action_result or "").rstrip() or "  - no previous plan result"
+    last_tick_block = (previous_action_result or "").rstrip() or "  - no previous action report"
     short_term_lines = short_term_memory_lines(memory_context)
 
     return (
@@ -291,6 +292,30 @@ def _utterance_line(value: Any, *, prefix: str) -> str:
     if tone:
         line += f" [{tone}]"
     return line + "."
+
+
+def _social_feedback_line(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    source = clean_text(value.get("from"))
+    outcome = clean_text(value.get("outcome"))
+    note = clean_text(value.get("note"))
+    if not outcome:
+        return ""
+    if note:
+        return f"Social feedback from {source or 'someone'}: {note}"
+    return f"Social feedback from {source or 'someone'}: {outcome}."
+
+
+def _meaningful_targets(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [
+        str(item).strip()
+        for item in value
+        if str(item).strip()
+        and "no meaningful nearby target" not in str(item).lower()
+    ]
 
 
 def _metric_text(value: Any) -> str:

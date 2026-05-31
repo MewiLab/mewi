@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol
 
-from app.agent.memory.manager import MemoryManager
-from app.agent.memory.models import TurnMemoryWrite
+from app.agent.memory.memory_manager import MemoryManager
+from app.agent.memory.memory_models import TurnMemoryWrite
 
 logger = logging.getLogger(__name__)
 

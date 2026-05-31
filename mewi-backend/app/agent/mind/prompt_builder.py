@@ -1,25 +1,42 @@
 from __future__ import annotations
 
+from app.agent.arbitration import (
+    assess_needs,
+    exploration_proposal_lines,
+    social_proposal_lines,
+)
 from app.agent.creature_runtime import CreatureRuntime, CreatureRuntimeState
+from app.agent.mind.affordances import IntentAffordances, build_intent_affordances
 from app.agent.mind.context import format_previous_action_result
-from app.agent.prompts import format_slow_mind_prompt_parts
-from app.agent.prompts.fast_mind import format_fast_mind_prompt
+from app.agent.prompts import format_intent_selection_prompt_parts
 from app.services.perception.semantic_service import SemanticService
 
 
-__all__ = ["build_fast_mind_prompt", "build_slow_mind_prompt_parts"]
+__all__ = ["build_intent_selection_prompt_parts"]
 
 
-def build_slow_mind_prompt_parts(
+def build_intent_selection_prompt_parts(
     state: CreatureRuntimeState,
     runtime: CreatureRuntime,
-) -> tuple[str, str]:
+) -> tuple[str, str, IntentAffordances]:
     raw = state.get("raw_payload", {})
     semantic_context = SemanticService().build_prompt_context(raw)
-    return format_slow_mind_prompt_parts(
+    _inject_arbitration_focus(
+        semantic_context,
+        memory_context=state.get("memory_context"),
+        place_memory_context=state.get("place_memory_context"),
+        world_view=state.get("world_view"),
+        social_context=state.get("social_context"),
+    )
+    affordances = build_intent_affordances(
+        raw,
+        semantic_context=semantic_context,
+        place_memory_context=state.get("place_memory_context"),
+        world_view=state.get("world_view"),
+    )
+    static_text, dynamic_text = format_intent_selection_prompt_parts(
         temperament="curious",
         trust="unknown",
-        actions=state.get("actions_for_prompt") or runtime.action_prompt_descriptions,
         semantic_context=semantic_context,
         place_memory_context=state.get("place_memory_context"),
         memory_context=state.get("memory_context"),
@@ -27,25 +44,35 @@ def build_slow_mind_prompt_parts(
         social_context=state.get("social_context"),
         persona=state.get("persona") or runtime.persona,
         previous_action_result=format_previous_action_result(raw.get("action_result")),
+        intent_affordances=affordances,
     )
+    return static_text, dynamic_text, affordances
 
 
-def build_fast_mind_prompt(
-    state: CreatureRuntimeState,
-    runtime: CreatureRuntime,
+def _inject_arbitration_focus(
+    semantic_context: dict,
     *,
-    max_plan_steps: int,
-) -> str:
-    raw = state.get("raw_payload", {})
-    semantic_context = SemanticService().build_prompt_context(raw)
-    return format_fast_mind_prompt(
-        intent_decision=state.get("intent_decision"),
-        actions=state.get("actions_for_prompt") or runtime.action_prompt_descriptions,
-        semantic_context=semantic_context,
-        place_memory_context=state.get("place_memory_context"),
-        memory_context=state.get("memory_context"),
-        world_view=state.get("world_view"),
-        social_context=state.get("social_context"),
-        previous_action_result=format_previous_action_result(raw.get("action_result")),
-        max_plan_steps=max_plan_steps,
-    )
+    memory_context: dict | None,
+    place_memory_context: dict | None,
+    world_view: dict | None,
+    social_context: dict | None,
+) -> None:
+    if not isinstance(semantic_context, dict):
+        return
+
+    focus = list(semantic_context.get("decision_focus") or [])
+    focus.extend(assess_needs(semantic_context, memory_context).focus_lines)
+    focus.extend(exploration_proposal_lines(place_memory_context))
+    focus.extend(social_proposal_lines(world_view, social_context))
+    semantic_context["decision_focus"] = _dedupe(focus)
+
+
+def _dedupe(lines: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for line in lines:
+        if line in seen:
+            continue
+        seen.add(line)
+        out.append(line)
+    return out

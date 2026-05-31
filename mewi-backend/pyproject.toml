@@ -20,6 +20,19 @@ dependencies = [
     "uvicorn>=0.42.0",
 ]
 
+[project.optional-dependencies]
+# Agent-driven report analysis (app/services/report/attachment_client.py).
+# Included by Docker and the Makefile so report ingestion can try Claude first.
+report-agent = [
+    "claude-agent-sdk>=0.1.0",
+]
+# Graph + vector memory (app/repositories/mem0_memory_store.py). Optional:
+# the app runs without it until MEMORY_GRAPH_ENABLED=true.
+graph-memory = [
+    "mem0ai>=0.1.0",
+    "neo4j>=5.0.0",
+]
+
 [dependency-groups]
 dev = [
     "pytest-env>=1.6.0",

@@ -1,7 +1,7 @@
 from typing import Any
 
-from app.agent.memory.manager import MemoryManager
-from app.agent.memory.models import AspectMemory, RawMemoryEvent, TurnMemoryWrite
+from app.agent.memory.memory_manager import MemoryManager
+from app.agent.memory.memory_models import AspectMemory, RawMemoryEvent, TurnMemoryWrite
 from app.services.memory.memory_service import MemoryService
 
 

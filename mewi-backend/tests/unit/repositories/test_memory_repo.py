@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from app.agent.memory.models import AspectMemory, RawMemoryEvent, TurnMemoryWrite
+from app.agent.memory.memory_models import AspectMemory, RawMemoryEvent, TurnMemoryWrite
 from app.repositories.memory_repo import MemoryRepository
 
 

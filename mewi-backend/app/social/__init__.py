@@ -6,9 +6,10 @@ The room is the container for one ordered transcript and the
 relationship deltas produced by speaking. Rooms tick only when one of
 their members ticks (Unity remains the cadence authority per cat).
 
-See: docs/decisions/ADR-010-backend-owned-world-and-social-chat.md
+See: docs/decisions/ADR-011-delayed-social-intent-effects.md
 """
 
+from app.social.bids import SocialBid, SocialBidStore, SocialFeedback
 from app.social.inbox import InboxStore, PendingUtterance
 from app.social.moderator import (
     DeterministicModerator,
@@ -27,6 +28,9 @@ __all__ = [
     "ModeratorDecision",
     "PendingUtterance",
     "RelationshipStore",
+    "SocialBid",
+    "SocialBidStore",
+    "SocialFeedback",
     "SocialRoom",
     "SocialService",
     "SocialTurnResult",

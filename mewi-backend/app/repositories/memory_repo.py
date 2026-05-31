@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 from postgrest.exceptions import APIError
 from supabase import Client
 
-from app.agent.memory.models import AspectMemory, RawMemoryEvent, TurnMemoryWrite
+from app.agent.memory.memory_models import AspectMemory, RawMemoryEvent, TurnMemoryWrite
 from app.core.exceptions import DatabaseError
 
 logger = logging.getLogger(__name__)

@@ -1,0 +1,48 @@
+using UnityEngine;
+
+/// <summary>
+/// The verbs the worker can issue to <see cref="MalbersAnimalAdapter.Apply"/>.
+/// Kept Malbers-free so the worker never imports MalbersAnimations.
+/// </summary>
+public enum MotorCommandKind
+{
+    None,
+    Idle,
+    Stop,
+    Wander,
+    Flee,
+    GoTo,
+    Follow,
+    FaceTarget,
+    Action,
+    Climb,
+    Death,
+}
+
+/// <summary>
+/// One generic command for the body adapter. Only relevant fields are read for
+/// each <see cref="MotorCommandKind"/>; the rest are ignored.
+/// </summary>
+public struct MotorCommand
+{
+    public MotorCommandKind Kind;
+
+    public Vector3   Destination;   // GoTo, Flee (threat position), FaceTarget
+    public Transform Target;        // Follow, Climb
+    public float     Duration;      // Climb
+    public Vector3   InputAxis;     // Climb
+
+    public int AbilityIndex;        // Action
+    public string ActionIntent;      // Action
+
+    public static MotorCommand Idle()                       => new MotorCommand { Kind = MotorCommandKind.Idle };
+    public static MotorCommand Stop()                       => new MotorCommand { Kind = MotorCommandKind.Stop };
+    public static MotorCommand Wander()                     => new MotorCommand { Kind = MotorCommandKind.Wander };
+    public static MotorCommand Flee(Vector3 threat)         => new MotorCommand { Kind = MotorCommandKind.Flee, Destination = threat };
+    public static MotorCommand GoTo(Vector3 destination)    => new MotorCommand { Kind = MotorCommandKind.GoTo, Destination = destination };
+    public static MotorCommand Follow(Transform target)     => new MotorCommand { Kind = MotorCommandKind.Follow, Target = target };
+    public static MotorCommand FaceTarget(Vector3 target)   => new MotorCommand { Kind = MotorCommandKind.FaceTarget, Destination = target };
+    public static MotorCommand Action(string intent, int abilityIndex) => new MotorCommand { Kind = MotorCommandKind.Action, ActionIntent = intent, AbilityIndex = abilityIndex };
+    public static MotorCommand Climb(Transform target, float duration, Vector3 inputAxis) => new MotorCommand { Kind = MotorCommandKind.Climb, Target = target, Duration = duration, InputAxis = inputAxis };
+    public static MotorCommand Death()                      => new MotorCommand { Kind = MotorCommandKind.Death };
+}

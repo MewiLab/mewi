@@ -185,6 +185,7 @@ class Settings(BaseSettings):
     log_file_path: str | None = None  # Opt in locally via LOG_FILE_PATH=app.log in .env
     log_max_bytes: int = 5_000_000         # 5 MB
     log_backup_count: int = 3
+    cat_journal_dir: str = "app/cat_journal/journal"
     
     # Legacy compatibility; prefer LLM_OLLAMA_BASE_URL now.
     ollama_base_url: str = ""
@@ -211,7 +212,7 @@ class Settings(BaseSettings):
 
     # Agent prompts
     agent_persona: str = "mewi"
-    agent_personas: str = "default:mewi,mewi:mewi,sora:sora,miso:miso,haru:haru,kuro:kuro,mochi:mochi,suzu:suzu,tora:tora,yuzu:yuzu"
+    agent_personas: str = "default:mewi,mewi:mewi,miso:miso,pixie:pixie,haru:haru,ratz:ratz,mao:mao,lioner:lioner,feifei:feifei,yuzu:yuzu,sasha:sasha,slime:slime,kosto:kosto,shoma:shoma,yeti:yeti,yuna:yuna,gugu:gugu"
 
     @field_validator("debug", mode="before")
     @classmethod

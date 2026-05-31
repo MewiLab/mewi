@@ -63,14 +63,22 @@ class CreatureRuntime:
             "raw_payload": payload,
             "perception": None,
             "perception_error": None,
+            "structured_context": None,
             "memory_context": None,
+            "memory_state": None,
             "place_memory_context": None,
             "world_view": None,
             "social_context": None,
             "dialogue": [],
             "intent_decision": None,
+            "intent_affordances": None,
+            "domain_intents": [],
+            "intent_proposals": [],
             "chosen_action": None,
             "plan_steps": [],
+            "tool_results": [],
+            "social_effects": [],
+            "wake_targets": [],
             "reasoning": None,
             "action_result": None,
             "memory_write": None,
@@ -89,14 +97,22 @@ class CreatureRuntimeState(TypedDict):
     raw_payload: dict[str, Any]
     perception: dict[str, Any] | None
     perception_error: str | None
+    structured_context: dict[str, Any] | None
     memory_context: dict[str, Any] | None
+    memory_state: dict[str, Any] | None
     place_memory_context: PlaceMemoryContextDict | None
     world_view: dict[str, Any] | None
     social_context: dict[str, Any] | None
     dialogue: list[dict[str, Any]]
     intent_decision: dict[str, Any] | None
+    intent_affordances: dict[str, Any] | None
+    domain_intents: list[dict[str, Any]]
+    intent_proposals: list[dict[str, Any]]
     chosen_action: dict[str, Any] | None
     plan_steps: list[dict[str, Any]]
+    tool_results: list[dict[str, Any]]
+    social_effects: list[dict[str, Any]]
+    wake_targets: list[str]
     reasoning: str | None
     action_result: dict[str, Any] | None
     memory_write: dict[str, Any] | None

@@ -78,6 +78,80 @@ async def test_repeat_turn_by_same_speaker_stays_silent() -> None:
     assert third.decision.spoke is False
 
 
+async def test_agent_authored_line_is_routed_to_addressed_peer_only() -> None:
+    world = WorldState()
+    social = SocialService(world=world)
+    for cid in ("cat_a", "cat_b", "cat_c"):
+        await world.ingest_tick(cid, _payload("Yard"))
+
+    spoke = await social.publish_turn(
+        "cat_a",
+        say="psst, over here",
+        target="cat_b",
+        expects_reply=True,
+    )
+    assert spoke.decision.spoke is True
+    assert spoke.decision.utterance.speaker_id == "cat_a"
+    assert spoke.decision.utterance.text == "psst, over here"
+    assert spoke.decision.utterance.target_id == "cat_b"
+    assert spoke.decision.utterance.bid_id
+
+    # Only the addressed cat hears a targeted line.
+    heard_b = await social.observe_turn("cat_b")
+    heard_c = await social.observe_turn("cat_c")
+    assert [i.utterance.text for i in heard_b.delivered_inbox] == ["psst, over here"]
+    assert heard_b.delivered_inbox[0].to_prompt_context()["bid_id"]
+    assert heard_c.delivered_inbox == []
+
+    rel = social.relationships_for("cat_a")
+    assert any(r.pair == ("cat_a", "cat_b") and r.trust > 0 for r in rel)
+
+
+async def test_agent_line_without_target_is_heard_by_whole_room() -> None:
+    world = WorldState()
+    social = SocialService(world=world)
+    for cid in ("cat_a", "cat_b", "cat_c"):
+        await world.ingest_tick(cid, _payload("Yard"))
+
+    await social.publish_turn("cat_a", say="hello everyone")
+
+    heard_b = await social.observe_turn("cat_b")
+    heard_c = await social.observe_turn("cat_c")
+    assert len(heard_b.delivered_inbox) == 1
+    assert len(heard_c.delivered_inbox) == 1
+
+
+async def test_silent_cat_falls_back_to_low_rate_moderator_beat() -> None:
+    world = WorldState()
+    social = SocialService(world=world)
+    await world.ingest_tick("cat_a", _payload("Yard"))
+    await world.ingest_tick("cat_b", _payload("Yard"))
+
+    first = await social.publish_turn("cat_a")  # no words → ambient greeting
+    second = await social.publish_turn("cat_a")  # still silent → stays quiet
+
+    assert first.decision.spoke is True
+    assert first.decision.note != "agent_spoke"
+    assert second.decision.spoke is False
+    assert second.decision.note == "recently spoke"
+
+
+async def test_observe_turn_listens_without_authoring() -> None:
+    world = WorldState()
+    social = SocialService(world=world)
+    await world.ingest_tick("cat_a", _payload("Yard"))
+    await world.ingest_tick("cat_b", _payload("Yard"))
+
+    observed = await social.observe_turn("cat_a")
+    assert observed.room is not None
+    assert observed.decision.spoke is False
+    assert observed.decision.note == "listening"
+    # Listening alone must not put anything in cat_b's inbox.
+    assert await social.observe_turn("cat_b") and social.transcript_for_room(
+        observed.room.room_key
+    ) == []
+
+
 async def test_leaving_zone_dissolves_room_for_new_set() -> None:
     world = WorldState()
     social = SocialService(world=world)
@@ -97,3 +171,34 @@ async def test_leaving_zone_dissolves_room_for_new_set() -> None:
     assert second.room.room_key != first_key
     assert "cat_b" not in second.room.members
     assert "cat_c" in second.room.members
+
+
+async def test_social_bid_feedback_arrives_on_sender_later_tick() -> None:
+    world = WorldState()
+    social = SocialService(world=world)
+    await world.ingest_tick("cat_a", _payload("Yard"))
+    await world.ingest_tick("cat_b", _payload("Yard"))
+
+    await social.publish_turn(
+        "cat_a",
+        say="come look",
+        target="cat_b",
+        expects_reply=True,
+    )
+    heard = await social.observe_turn("cat_b")
+    delivered = [item.to_prompt_context() for item in heard.delivered_inbox]
+
+    outcomes = social.resolve_observed_bids(
+        "cat_b",
+        delivered_inbox=delivered,
+        selected_intent="EXPLORE",
+        target_id="garden",
+        spoke=False,
+    )
+
+    assert outcomes[0]["status"] == "ignored"
+
+    feedback = await social.observe_turn("cat_a")
+    assert feedback.social_feedback
+    assert feedback.social_feedback[0].outcome == "ignored"
+    assert feedback.social_feedback[0].from_id == "cat_b"

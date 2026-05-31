@@ -1,11 +1,4 @@
-"""Slow/Fast Mind implementation package.
+from app.agent.mind.affordances import build_intent_affordances
+from app.agent.mind.context_builder import build_structured_context
 
-The root ``app.agent`` package owns runtime wiring and broad agent services.
-This package owns the LLM mind layer: intent selection, action planning,
-prompt context assembly, and shared parsing helpers.
-"""
-
-from app.agent.mind.fast import make_fast_mind
-from app.agent.mind.slow import make_slow_mind
-
-__all__ = ["make_fast_mind", "make_slow_mind"]
+__all__ = ["build_intent_affordances", "build_structured_context"]

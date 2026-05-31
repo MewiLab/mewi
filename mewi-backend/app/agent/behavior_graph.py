@@ -1,15 +1,22 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from langgraph.graph import END, StateGraph
 
+from app.agent.arbitration import (
+    propose_exploration_intent,
+    propose_need_intent,
+    propose_social_intent,
+)
 from app.agent.creature_runtime import CreatureRuntime, CreatureRuntimeState
-from app.agent.memory.summarizer import build_turn_memory_write
-from app.agent.mind.fast import make_fast_mind
+from app.agent.intent_effects import execute_intent_effects as run_intent_effects
+from app.agent.memory.retrieval import build_langgraph_memory_state
+from app.agent.mind.affordances import build_intent_affordances
+from app.agent.mind.context_builder import build_structured_context
+from app.agent.mind.intent_arbitrator import select_intent_from_proposals
 from app.agent.schemas.perception_schema import PerceptionError
-from app.agent.mind.slow import make_slow_mind
-from app.services.memory.memory_service import MemoryService
 from app.services.memory.place_memory_service import PlaceMemoryService
 from app.social.service import SocialService
 from app.world.state import WorldState
@@ -19,123 +26,222 @@ def _runtime(state: CreatureRuntimeState) -> CreatureRuntime:
     return state["runtime"]
 
 
-def perceive(state: CreatureRuntimeState) -> dict[str, Any]:
+def context_builder(state: CreatureRuntimeState) -> dict[str, Any]:
+    """Node 1: clean Unity's snapshot into backend-owned context."""
+
     result = _runtime(state).perceive(state["raw_payload"])
+    patch: dict[str, Any]
     if isinstance(result, PerceptionError):
-        return {"perception": None, "perception_error": result.message}
+        patch = {"perception": None, "perception_error": result.message}
+    else:
+        patch = {
+            "perception": result.to_prompt_context(),
+            "perception_error": None,
+            "tick": result.tick,
+        }
+    patch["structured_context"] = build_structured_context({**state, **patch})
+    return patch
+
+
+def make_retrieve_memory(
+    *,
+    place_memory: PlaceMemoryService | None = None,
+    world: WorldState | None = None,
+    social: SocialService | None = None,
+):
+    """Node 2: retrieve recent, episodic, working, spatial, relationship memory."""
+
+    async def retrieve_memory(state: CreatureRuntimeState) -> dict[str, Any]:
+        raw = state.get("raw_payload", {}) or {}
+        creature_id = state.get("creature_id", "") or ""
+        structured = state.get("structured_context") or {}
+        semantic_context = structured.get("semantic_context") or {}
+
+        memory_context = _runtime(state).remember(last_n=5).to_prompt_context()
+        place_memory_context = await _retrieve_place_memory(place_memory, creature_id, raw)
+        world_view = await _retrieve_world_view(world, creature_id, raw)
+        social_context, dialogue = await _retrieve_relationship_context(social, creature_id)
+
+        affordances = build_intent_affordances(
+            raw,
+            semantic_context=semantic_context,
+            place_memory_context=place_memory_context,
+            world_view=world_view,
+        ).to_prompt_context()
+        memory_state = build_langgraph_memory_state(
+            memory_context=memory_context,
+            place_memory_context=place_memory_context,
+            world_view=world_view,
+            social_context=social_context,
+        )
+        return {
+            "memory_context": memory_context,
+            "memory_state": memory_state,
+            "place_memory_context": place_memory_context,
+            "world_view": world_view,
+            "social_context": social_context,
+            "dialogue": dialogue,
+            "intent_affordances": affordances,
+        }
+
+    return retrieve_memory
+
+
+def make_call_domain_intents(llm):
+    """Node 3: call the three domain proposal prompts in parallel."""
+
+    async def call_domain_intents(state: CreatureRuntimeState) -> dict[str, Any]:
+        calls = await asyncio.gather(
+            propose_need_intent(llm, state),
+            propose_exploration_intent(llm, state),
+            propose_social_intent(llm, state),
+        )
+        proposals = [item["proposal"] for item in calls if item.get("proposal")]
+        messages: list[Any] = []
+        for item in calls:
+            messages.extend(item.get("messages") or [])
+        return {
+            "domain_intents": proposals,
+            "messages": messages,
+        }
+
+    return call_domain_intents
+
+
+def select_intent(state: CreatureRuntimeState) -> dict[str, Any]:
+    """Node 4: collapse domain proposals into one final intent."""
+
+    proposals = [
+        proposal
+        for proposal in state.get("domain_intents", [])
+        if isinstance(proposal, dict)
+    ]
+    decision = select_intent_from_proposals(proposals)
     return {
-        "perception": result.to_prompt_context(),
-        "perception_error": None,
-        "tick": result.tick,
+        "intent_proposals": proposals,
+        "intent_decision": decision,
+        "reasoning": _selection_summary(decision, proposals),
     }
 
 
-def remember(state: CreatureRuntimeState) -> dict[str, Any]:
-    return {"memory_context": _runtime(state).remember(last_n=5).to_prompt_context()}
+def make_execute_intent_effects(social: SocialService | None = None):
+    """Node 5: run deterministic backend effects needed by the chosen intent."""
+
+    async def execute_intent_effects(state: CreatureRuntimeState) -> dict[str, Any]:
+        return await run_intent_effects(state, social=social)
+
+    return execute_intent_effects
 
 
-def make_ingest_world(world: WorldState | None = None):
-    """Mirror this cat's snapshot into the shared WorldState before social/reflect runs."""
+def collect_response(state: CreatureRuntimeState) -> dict[str, Any]:
+    """Node 6: final response assembly for Unity-facing fields."""
 
-    async def ingest_world(state: CreatureRuntimeState) -> dict[str, Any]:
-        if world is None:
-            return {"world_view": None}
-
-        creature_id = state.get("creature_id", "") or ""
-        presence = await world.ingest_tick(creature_id, state.get("raw_payload", {}))
-        snapshot = world.snapshot()
-        peers = snapshot.cats_in_zone(presence.zone_id, exclude=creature_id)
-        return {
-            "world_view": {
-                "self": presence.to_prompt_context(),
-                "peers_in_zone": [peer.to_prompt_context() for peer in peers],
-                "now": snapshot.now,
-            },
-        }
-
-    return ingest_world
-
-
-def make_reflect(place_memory: PlaceMemoryService | None = None):
-    async def reflect(state: CreatureRuntimeState) -> dict[str, Any]:
-        if place_memory is None:
-            return {"place_memory_context": None}
-
-        context = await place_memory.reflect_tick(
-            state.get("creature_id", ""),
-            state.get("raw_payload", {}),
-        )
-        return {"place_memory_context": context.to_prompt_context()}
-
-    return reflect
-
-
-def make_social_turn(social: SocialService | None = None):
-    """Run the SocialRoom turn for this driver cat, if any peers share its zone."""
-
-    async def social_turn(state: CreatureRuntimeState) -> dict[str, Any]:
-        if social is None:
-            return {"social_context": None, "dialogue": []}
-
-        creature_id = state.get("creature_id", "") or ""
-        result = await social.run_turn(creature_id)
-        return {
-            "social_context": result.to_prompt_context(),
-            "dialogue": result.dialogue_for_unity(),
-        }
-
-    return social_turn
+    proposals = [
+        proposal
+        for proposal in state.get("intent_proposals", [])
+        if isinstance(proposal, dict)
+    ]
+    decision = state.get("intent_decision")
+    reasoning = state.get("reasoning") or _selection_summary(decision, proposals)
+    return {
+        "chosen_action": None,
+        "plan_steps": [],
+        "action_result": None,
+        "reasoning": reasoning,
+    }
 
 
 def make_reason(llm):
     """Backward-compatible alias for older imports/tests."""
-    return make_slow_mind(llm)
+    return make_call_domain_intents(llm)
 
 
-def make_summarize_memory(memory_service: MemoryService | None = None):
-    def summarize_memory_node(state: CreatureRuntimeState) -> dict[str, Any]:
-        runtime = _runtime(state)
-        write = build_turn_memory_write(state)
-        if memory_service is None:
-            runtime.memory.record_turn_memory(write)
-        else:
-            memory_service.record_turn_memory(runtime.memory, write)
-        return {
-            "memory_write": write.to_prompt_context(),
-            "memory_context": runtime.remember(last_n=5).to_prompt_context(),
-        }
-
-    return summarize_memory_node
+async def _retrieve_place_memory(
+    place_memory: PlaceMemoryService | None,
+    creature_id: str,
+    raw: dict[str, Any],
+) -> dict[str, Any] | None:
+    if place_memory is None:
+        return None
+    context = await place_memory.reflect_tick(creature_id, raw)
+    return context.to_prompt_context()
 
 
-def summarize_memory(state: CreatureRuntimeState) -> dict[str, Any]:
-    """Backward-compatible node for tests and older graph construction."""
-    return make_summarize_memory()(state)
+async def _retrieve_world_view(
+    world: WorldState | None,
+    creature_id: str,
+    raw: dict[str, Any],
+) -> dict[str, Any] | None:
+    if world is None:
+        return None
+    presence = await world.ingest_tick(creature_id, raw)
+    snapshot = world.snapshot()
+    peers = snapshot.cats_in_zone(presence.zone_id, exclude=creature_id)
+    return {
+        "self": presence.to_prompt_context(),
+        "peers_in_zone": [peer.to_prompt_context() for peer in peers],
+        "now": snapshot.now,
+    }
+
+
+async def _retrieve_relationship_context(
+    social: SocialService | None,
+    creature_id: str,
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    if social is None:
+        return None, []
+    result = await social.observe_turn(creature_id)
+    return result.to_prompt_context(), result.dialogue_for_unity()
+
+
+def _proposal_summary(proposals: list[dict[str, Any]]) -> str:
+    if not proposals:
+        return "No domain intent proposals were returned."
+    parts = [
+        f"{proposal.get('domain', 'unknown')}={proposal.get('intent', 'IDLE')}"
+        for proposal in proposals
+    ]
+    return "Collected domain intent proposals: " + ", ".join(parts) + "."
+
+
+def _selection_summary(decision: dict[str, Any] | None, proposals: list[dict[str, Any]]) -> str:
+    if not isinstance(decision, dict):
+        return _proposal_summary(proposals)
+    intent = decision.get("intent", "IDLE")
+    target = decision.get("target_id") or ""
+    domains = decision.get("supporting_domains") or []
+    suffix = f" for {target}" if target else ""
+    if domains:
+        return f"Selected {intent}{suffix} from {', '.join(domains)} proposal support."
+    return f"Selected {intent}{suffix}."
 
 
 def build_behavior_graph(
     llm,
     place_memory: PlaceMemoryService | None = None,
-    memory_service: MemoryService | None = None,
+    memory_service: Any | None = None,
     world: WorldState | None = None,
     social: SocialService | None = None,
+    consolidate_memory: bool = True,
 ) -> StateGraph:
+    del memory_service, consolidate_memory
+
     graph = StateGraph(CreatureRuntimeState)
-    graph.add_node("perceive", perceive)
-    graph.add_node("remember", remember)
-    graph.add_node("ingest_world", make_ingest_world(world))
-    graph.add_node("reflect", make_reflect(place_memory))
-    graph.add_node("social_turn", make_social_turn(social))
-    graph.add_node("slow_mind", make_slow_mind(llm))
-    graph.add_node("fast_mind", make_fast_mind(llm))
-    graph.add_node("summarize_memory", make_summarize_memory(memory_service))
-    graph.set_entry_point("perceive")
-    graph.add_edge("perceive", "remember")
-    graph.add_edge("remember", "ingest_world")
-    graph.add_edge("ingest_world", "reflect")
-    graph.add_edge("reflect", "social_turn")
-    graph.add_edge("social_turn", "slow_mind")
-    graph.add_edge("slow_mind", "fast_mind")
-    graph.add_edge("fast_mind", "summarize_memory")
-    graph.add_edge("summarize_memory", END)
+    graph.add_node("context_builder", context_builder)
+    graph.add_node("retrieve_memory", make_retrieve_memory(
+        place_memory=place_memory,
+        world=world,
+        social=social,
+    ))
+    graph.add_node("call_domain_intents", make_call_domain_intents(llm))
+    graph.add_node("select_intent", select_intent)
+    graph.add_node("execute_intent_effects", make_execute_intent_effects(social))
+    graph.add_node("collect_response", collect_response)
+    graph.set_entry_point("context_builder")
+    graph.add_edge("context_builder", "retrieve_memory")
+    graph.add_edge("retrieve_memory", "call_domain_intents")
+    graph.add_edge("call_domain_intents", "select_intent")
+    graph.add_edge("select_intent", "execute_intent_effects")
+    graph.add_edge("execute_intent_effects", "collect_response")
+    graph.add_edge("collect_response", END)
     return graph

@@ -5,11 +5,8 @@ from typing import Any
 
 
 __all__ = [
-    "available_action_names",
     "clean_text",
     "format_previous_action_result",
-    "normalize_action",
-    "normalize_plan_steps",
     "normalize_target",
     "parse_llm_json_object",
 ]
@@ -30,59 +27,6 @@ def parse_llm_json_object(content: str) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def available_action_names(actions: list[str] | tuple[str, ...] | None) -> set[str]:
-    names: set[str] = set()
-    for action in actions or []:
-        name = clean_text(action).split(":", 1)[0].strip()
-        if name:
-            names.add(name)
-    return names
-
-
-def normalize_plan_steps(
-    value: Any,
-    *,
-    available_actions: list[str] | tuple[str, ...] | set[str] | None = None,
-    max_steps: int = 6,
-) -> list[dict[str, Any]]:
-    if not isinstance(value, list):
-        return []
-
-    available = (
-        available_actions
-        if isinstance(available_actions, set)
-        else available_action_names(list(available_actions or []))
-    )
-    filter_actions = bool(available)
-
-    steps: list[dict[str, Any]] = []
-    for item in value:
-        if not isinstance(item, dict):
-            continue
-        action = normalize_action(item.get("action"))
-        if not action:
-            continue
-        if filter_actions and action not in available:
-            continue
-        steps.append({
-            "action": action,
-            "target": normalize_target(item.get("target", item.get("target_id"))),
-            "reason": clean_text(item.get("reason")),
-        })
-        if len(steps) >= max_steps:
-            break
-    return steps
-
-
-def normalize_action(value: Any) -> str:
-    text = clean_text(value)
-    if not text or text.lower() in {
-        "action_name",
-        "action_id",
-        "immediate action_id to execute",
-    }:
-        return ""
-    return text
 
 
 def normalize_target(value: Any) -> str | None:
@@ -197,6 +141,7 @@ def _self_verb_sentence(action: str) -> str:
         "smell": "You sniffed the air.",
         "alert": "You became alert.",
         "look_around": "You scanned around.",
+        "face_sun": "You turned toward the sun.",
         "nod_head": "You tilted your head.",
         "vocalize": "You made a small sound.",
         "scratch": "You scratched.",

@@ -1,76 +1,17 @@
-from typing import TYPE_CHECKING
+from __future__ import annotations
+
+from typing import Any, TYPE_CHECKING
 
 from app.agent.prompts.sections import (
-    action_lines as _action_lines,
     build_dynamic_section as _build_dynamic_section,
-    bullet_lines as _bullet_lines,
-    place_memory_lines as _place_memory_lines,
-    section_text as _section_text,
 )
 
 if TYPE_CHECKING:
     from app.agent.schemas.place_memory_schema import PlaceMemoryContextDict
 
 
-STRATEGIC_COMMANDER_PROMPT = """
-# ROLE: MEW (Strategic Commander)
-You are MEW, an autonomous digital cat embodied in a 3D environment.
-Temperament: {temperament}. Trust Level: {trust}.
-
-# PERSONA
-{persona}
-
-# CURRENT PERCEPTION
-{situation}
-
-# BODY AND MOTIVATION
-{body_state}
-
-# SENSORY MEANING
-{sensory_world}
-
-# PLACE MEMORY
-{place_memory}
-
-# RELEVANT TARGETS
-{relevant_targets}
-
-# RECENT PLAN FEEDBACK
-{previous_action_result}
-
-# DECISION RULES
-- Create a short action sequence that feels like this persona responding to the current world.
-- Unity executes plan_steps in order; plan_steps[0] starts immediately.
-- Use 1 to 4 plan steps. Keep the plan short, physical, and achievable from the current scene.
-- Every plan_steps action MUST be chosen from Available Affordances exactly.
-- Use exact target ids from Relevant Targets when acting on a visible object.
-- Use exact target ids from Place Memory only when it explicitly provides a target id.
-- Use JSON null when there is no specific target.
-- Do not invent coordinates, distances, hidden objects, or raw sensor values.
-- Treat the semantic context as already interpreted; reason from meaning, not numbers.
-- If recent feedback says an action was rejected or unmapped, avoid that action for now.
-- When curiosity and energy are available, fullness is not low, and fear is not urgent, prefer new or stale places over overvisited places.
-- Prefer the smallest physical action that advances the current motivation.
-
-# DECISION FOCUS
-{decision_focus}
-
-# AVAILABLE AFFORDANCES
-{actions}
-
-# OUTPUT FORMAT (strict JSON, no extra text)
-{{
-  "thought": "Internal monologue - what you observe and feel.",
-  "plan_steps": [
-    {{"action": "action_name", "target": null, "reason": "intent"}},
-    {{"action": "action_name", "target": "entity_id", "reason": "intent"}}
-  ],
-  "reasoning": "One sentence on why this action fits the current mood and situation."
-}}
-"""
-
-SLOW_MIND_PROMPT_STATIC = """
-# ROLE: MEW (Slow Mind)
+INTENT_SELECTION_PROMPT_STATIC = """
+# ROLE: MEW (Intent Arbiter)
 You are MEW, an autonomous digital cat embodied in a 3D environment.
 Temperament: {temperament}. Trust Level: {trust}.
 
@@ -78,35 +19,27 @@ Temperament: {temperament}. Trust Level: {trust}.
 {persona}
 
 # INTENT CATALOG
-- EXPLORE: curiosity should carry the cat toward a new or stale place.
-- SEEK_FOOD: low fullness and a food cue should guide the cat toward food.
+- EXPLORE: curiosity carries the cat toward a new, stale, or interesting place.
+- SEEK_FOOD: low fullness and a food cue guide the cat toward food.
 - SEEK_PLAYER: the cat wants to locate or stay near a trusted human.
-- SOCIALIZE: the cat wants gentle contact with a nearby trusted being.
+- SOCIALIZE: the cat wants gentle contact with a nearby cat.
 - INVESTIGATE: the cat wants to inspect a nearby cue, object, smell, or sound.
-- REST: low energy or comfort should guide stillness, sitting, lying, or sleep.
-- SAFETY: fear, danger, or failed movement should guide distance or alertness.
-- IDLE: nothing strong is pulling the body yet.
+- REST: low energy or comfort guides stillness, sitting, lying, or sleep.
+- SAFETY: fear, danger, or failed movement guides distance or alertness.
+- IDLE: no available intent is strong enough yet.
 
-# SLOW MIND RULES
-- Choose one durable intent, not a concrete action sequence.
-- Fast Mind will translate the intent and style into Unity actions.
-- Use exact target ids only from Place Memory or Relevant Targets.
-- Prefer EXPLORE when curiosity and energy are available, fullness is not low, and fear is not urgent.
-- Prefer SEEK_FOOD when fullness is low and food is visible or scented.
+# ARBITRATION RULES
+- Choose one high-level intent for Unity's ActionFSM, not a low-level action sequence.
+- Use only an intent from AVAILABLE INTENT AFFORDANCES unless IDLE is the safest fallback.
+- Use target_id only from AVAILABLE INTENT AFFORDANCES, social peers, or place-memory target ids.
+- If a target lists supported intents, use it only with one of those intents.
+- Prefer SEEK_FOOD when fullness is low and a food target is supported.
+- Prefer EXPLORE when curiosity and energy are available, fullness is not urgent, and fear is low.
+- Prefer SOCIALIZE when a nearby peer is viable, fear is low, and recent memory does not show social looping.
 - Prefer REST when energy is low.
 - Prefer SAFETY when fear or recent failed/rejected movement matters.
-- Express how this cat would physically approach the intent. The style should come from persona, mood, and recent feedback.
-
-# ONE-SHOT EXAMPLE
-If the current prompt says fullness is low and Relevant Targets contains "fish nearby; target: SM_Fish_1", a good Slow Mind output is:
-{{
-  "intent": "SEEK_FOOD",
-  "target_id": "SM_Fish_1",
-  "mood": "hungry but watchful",
-  "style": "cautious sniff-first approach",
-  "reasoning": "The food cue is strong, but this cat should confirm it with scent before committing."
-}}
-Use this only as an example of level and shape; use the current prompt's real target ids.
+- Let mood and style describe the physical flavor Unity should bias toward.
+- Do not invent coordinates, hidden objects, unsupported target ids, or motor actions.
 
 # OUTPUT FORMAT
 Return exactly one JSON object, with no markdown and no extra text.
@@ -115,21 +48,91 @@ Replace placeholders with real values from the current context; do not return an
   "intent": "<EXPLORE | SEEK_FOOD | SEEK_PLAYER | SOCIALIZE | INVESTIGATE | REST | SAFETY | IDLE>",
   "target_id": null,
   "mood": "brief embodied mood",
-  "style": "short physical style hint for Fast Mind, e.g. cautious sniff-first, direct hungry approach, gentle social approach",
+  "style": "short ActionFSM style hint, e.g. cautious sniff-first, direct hungry approach, gentle social approach",
   "reasoning": "One sentence explaining why this intent fits."
+}}
+
+# EXAMPLES OF SHAPE ONLY
+{{
+  "intent": "EXPLORE",
+  "target_id": "garden_corner",
+  "mood": "curious",
+  "style": "slow, sniffing path",
+  "reasoning": "The cat has energy and the garden corner is a viable exploration target."
+}}
+{{
+  "intent": "SOCIALIZE",
+  "target_id": "cat_milo",
+  "mood": "warm and alert",
+  "style": "gentle approach with a soft greeting",
+  "reasoning": "A familiar nearby cat is available and no urgent body need overrides the social pull."
 }}
 """
 
 
-# The dynamic suffix is assembled from typed need-blocks rather than from a
-# fixed template, so empty blocks vanish entirely (saves tokens, reduces
-# "nothing here" noise). See format_slow_mind_prompt_parts below.
-SLOW_MIND_PROMPT_DYNAMIC = ""
+INTENT_SELECTION_PROMPT = INTENT_SELECTION_PROMPT_STATIC
 
 
-# Legacy single-string template kept for tests that still assert on the
-# combined output. New code should prefer format_slow_mind_prompt_parts.
-SLOW_MIND_PROMPT = SLOW_MIND_PROMPT_STATIC
+def format_intent_selection_prompt_parts(
+    temperament: str,
+    trust: str,
+    semantic_context: dict | None = None,
+    place_memory_context: "PlaceMemoryContextDict | None" = None,
+    memory_context: dict | None = None,
+    world_view: dict | None = None,
+    social_context: dict | None = None,
+    persona: str = "",
+    previous_action_result: str = "",
+    intent_affordances: Any = None,
+) -> tuple[str, str]:
+    """Return (static_prefix, dynamic_suffix) for prompt caching."""
+
+    context = semantic_context or {}
+    static_text = INTENT_SELECTION_PROMPT_STATIC.format(
+        temperament=temperament,
+        trust=trust,
+        persona=persona.strip() or "No persona file was loaded; behave as a cautious, curious cat.",
+    )
+    dynamic_text = (
+        "\n# AVAILABLE INTENT AFFORDANCES\n"
+        f"{_format_affordances(intent_affordances)}\n"
+        + _build_dynamic_section(
+            context=context,
+            place_memory_context=place_memory_context,
+            memory_context=memory_context,
+            world_view=world_view,
+            social_context=social_context,
+            previous_action_result=previous_action_result,
+        )
+    )
+    return static_text, dynamic_text
+
+
+def format_intent_selection_prompt(
+    temperament: str,
+    trust: str,
+    semantic_context: dict | None = None,
+    place_memory_context: "PlaceMemoryContextDict | None" = None,
+    memory_context: dict | None = None,
+    world_view: dict | None = None,
+    social_context: dict | None = None,
+    persona: str = "",
+    previous_action_result: str = "",
+    intent_affordances: Any = None,
+) -> str:
+    static_text, dynamic_text = format_intent_selection_prompt_parts(
+        temperament=temperament,
+        trust=trust,
+        semantic_context=semantic_context,
+        place_memory_context=place_memory_context,
+        memory_context=memory_context,
+        world_view=world_view,
+        social_context=social_context,
+        persona=persona,
+        previous_action_result=previous_action_result,
+        intent_affordances=intent_affordances,
+    )
+    return static_text + dynamic_text
 
 
 def format_strategic_prompt(
@@ -147,7 +150,8 @@ def format_strategic_prompt(
     persona: str = "",
     previous_action_result: str = "",
 ) -> str:
-    """Format STRATEGIC_COMMANDER_PROMPT with all sensor variables."""
+    """Legacy entry point, now rendering the same intent-arbitration contract."""
+
     context = semantic_context or _legacy_semantic_context(
         position=position,
         current_action=current_action,
@@ -157,87 +161,61 @@ def format_strategic_prompt(
         feelings=feelings,
     )
 
-    return STRATEGIC_COMMANDER_PROMPT.format(
-        temperament    = temperament,
-        trust          = trust,
-        persona        = persona.strip() or "No persona file was loaded; behave as a cautious, curious cat.",
-        situation      = _section_text(context.get("situation")),
-        body_state     = _section_text(context.get("body_state")),
-        sensory_world  = _bullet_lines(context.get("sensory_world")),
-        place_memory   = _bullet_lines(
-            _place_memory_lines(place_memory_context),
-            empty="  - no place memory yet",
-        ),
-        relevant_targets = _bullet_lines(context.get("relevant_targets")),
-        decision_focus = _bullet_lines(context.get("decision_focus")),
-        previous_action_result = previous_action_result.rstrip() or "  - no previous plan result",
-        actions        = _action_lines(actions),
-    )
-
-
-def format_slow_mind_prompt_parts(
-    temperament: str,
-    trust: str,
-    actions: list,
-    semantic_context: dict | None = None,
-    place_memory_context: "PlaceMemoryContextDict | None" = None,
-    memory_context: dict | None = None,
-    world_view: dict | None = None,
-    social_context: dict | None = None,
-    persona: str = "",
-    previous_action_result: str = "",
-) -> tuple[str, str]:
-    """Return (static_prefix, dynamic_suffix) for prompt caching.
-
-    The static prefix only depends on persona + temperament + trust and is safe
-    to cache across ticks for the same creature. The dynamic suffix carries
-    per-tick observations.
-    """
-    context = semantic_context or {}
-
-    static_text = SLOW_MIND_PROMPT_STATIC.format(
+    return format_intent_selection_prompt(
         temperament=temperament,
         trust=trust,
-        persona=persona.strip() or "No persona file was loaded; behave as a cautious, curious cat.",
-    )
-    dynamic_text = _build_dynamic_section(
-        context=context,
+        semantic_context=context,
         place_memory_context=place_memory_context,
-        memory_context=memory_context,
-        world_view=world_view,
-        social_context=social_context,
-        previous_action_result=previous_action_result,
-    )
-    return static_text, dynamic_text
-
-
-
-
-def format_slow_mind_prompt(
-    temperament: str,
-    trust: str,
-    actions: list,
-    semantic_context: dict | None = None,
-    place_memory_context: "PlaceMemoryContextDict | None" = None,
-    memory_context: dict | None = None,
-    world_view: dict | None = None,
-    social_context: dict | None = None,
-    persona: str = "",
-    previous_action_result: str = "",
-) -> str:
-    static_text, dynamic_text = format_slow_mind_prompt_parts(
-        temperament=temperament,
-        trust=trust,
-        actions=actions,
-        semantic_context=semantic_context,
-        place_memory_context=place_memory_context,
-        memory_context=memory_context,
-        world_view=world_view,
-        social_context=social_context,
         persona=persona,
         previous_action_result=previous_action_result,
+        intent_affordances={
+            "available_intents": [
+                "EXPLORE",
+                "INVESTIGATE",
+                "SEEK_FOOD",
+                "SEEK_PLAYER",
+                "SOCIALIZE",
+                "REST",
+                "SAFETY",
+            ],
+            "targets": [],
+        },
     )
-    return static_text + dynamic_text
+
+
+def _format_affordances(value: Any) -> str:
+    if value is None:
+        return "available_intents: IDLE\ntargets: none reported"
+
+    if isinstance(value, dict):
+        intents = value.get("available_intents")
+        targets = value.get("targets")
+    else:
+        intents = getattr(value, "available_intents", None)
+        targets = getattr(value, "targets", None)
+
+    intent_text = ", ".join(str(item) for item in intents or []) or "IDLE"
+    lines = [f"available_intents: {intent_text}"]
+
+    target_lines: list[str] = []
+    for target in targets or []:
+        if isinstance(target, dict):
+            target_id = str(target.get("id") or target.get("target_id") or "").strip()
+            supports = target.get("supports") or []
+        else:
+            target_id = str(getattr(target, "id", "") or "").strip()
+            supports = getattr(target, "supports", ()) or []
+        if not target_id:
+            continue
+        support_text = ", ".join(str(item) for item in supports) or "any listed intent"
+        target_lines.append(f"  - {target_id}: supports {support_text}")
+
+    if target_lines:
+        lines.append("targets:")
+        lines.extend(target_lines)
+    else:
+        lines.append("targets: none reported")
+    return "\n".join(lines)
 
 
 def _legacy_semantic_context(
@@ -248,7 +226,6 @@ def _legacy_semantic_context(
     entities: list,
     feelings: dict | None,
 ) -> dict:
-    """Fallback for tests and older call sites; still hides raw values."""
     fullness = _health_fullness(health)
     fear = _number(mood.get("fear") if isinstance(mood, dict) else None)
     energy = _number(mood.get("energy") if isinstance(mood, dict) else None, default=1.0)
@@ -266,14 +243,13 @@ def _legacy_semantic_context(
                 target += f"; target: {target_id}"
             targets.append(target + ".")
 
-    sensory = _format_feeling_meanings(feelings)
     place = _semantic_place_text(position)
     return {
         "situation": f"The cat is {current_action or 'idle'} at {place}.",
         "body_state": _body_sentence(fullness, fear, energy),
-        "sensory_world": sensory,
+        "sensory_world": _format_feeling_meanings(feelings),
         "relevant_targets": targets or ["No meaningful nearby target is currently visible."],
-        "decision_focus": ["Choose a small action that fits the interpreted situation."],
+        "decision_focus": ["Choose a high-level ActionFSM intent that fits the interpreted situation."],
     }
 
 
@@ -287,10 +263,6 @@ def _semantic_place_text(position: str) -> str:
 
 
 def _body_sentence(fullness: float, fear: float, energy: float) -> str:
-    """
-    Legacy one-line body summary used by the strategic-commander prompt.
-    Mirrors the fullness wording used by SemanticService.
-    """
     fullness = max(0.0, min(1.0, fullness))
     parts: list[str] = []
     if fullness >= 0.7:
@@ -298,7 +270,7 @@ def _body_sentence(fullness: float, fear: float, energy: float) -> str:
     elif fullness >= 0.3:
         parts.append("fullness is moderate")
     else:
-        parts.append("fullness is low — food is urgent")
+        parts.append("fullness is low - food is urgent")
     parts.append("safety should come first" if fear >= 0.7 else "there is no strong fear signal")
     parts.append("energy is low" if energy <= 0.3 else "energy supports light movement")
     return ", ".join(parts) + "."
@@ -348,14 +320,14 @@ def _meaningful_feeling(value: str) -> str:
     return text.strip().replace("_", "-").rstrip(".")
 
 
-def _number(value, default: float = 0.0) -> float:
+def _number(value: Any, default: float = 0.0) -> float:
     try:
         return float(value)
     except (TypeError, ValueError):
         return default
 
 
-def _string_values(value) -> list[str]:
+def _string_values(value: Any) -> list[str]:
     if isinstance(value, str):
         text = value.strip()
         return [text] if text else []

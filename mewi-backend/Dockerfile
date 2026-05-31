@@ -16,7 +16,7 @@ ENV UV_COMPILE_BYTECODE=1
 
 # Install deps first (cached unless pyproject.toml or uv.lock change)
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-install-project --no-dev --link-mode=copy
+RUN uv sync --frozen --extra report-agent --no-install-project --no-dev --link-mode=copy
 
 
 ### Stage 2: lean runtime image ###

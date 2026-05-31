@@ -1,5 +1,5 @@
 from app.agent.mind.context import format_previous_action_result
-from app.agent.prompts import format_slow_mind_prompt, format_strategic_prompt
+from app.agent.prompts import format_intent_selection_prompt, format_strategic_prompt
 
 
 def test_strategic_prompt_includes_feeling_cues():
@@ -20,7 +20,7 @@ def test_strategic_prompt_includes_feeling_cues():
         },
     )
 
-    assert "SENSORY MEANING" in prompt
+    assert "SENSORY CUES" in prompt
     assert "old fish" in prompt
     assert "fresh fish oil" in prompt
     assert "rope creak" in prompt
@@ -42,7 +42,7 @@ def test_strategic_prompt_handles_missing_feelings():
         actions=["idle"],
     )
 
-    assert "SENSORY MEANING" in prompt
+    assert "SENSORY CUES" in prompt
     assert "No distinct smell" in prompt
 
 
@@ -90,16 +90,14 @@ def test_strategic_prompt_includes_place_memory_context():
         },
     )
 
-    assert "PLACE MEMORY" in prompt
     assert "Bamboo Boardwalk feels overvisited" in prompt
     assert "target id: East_Roof" in prompt
 
 
-def test_slow_mind_prompt_outputs_intent_not_action_sequence():
-    prompt = format_slow_mind_prompt(
+def test_intent_selection_prompt_outputs_directive_not_action_sequence():
+    prompt = format_intent_selection_prompt(
         temperament="curious",
         trust="unknown",
-        actions=["go_to: Move toward a place.", "idle: Wait."],
         semantic_context={
             "situation": "The cat is idle on Bamboo Boardwalk.",
             "body_state": "Curiosity is available and energy supports movement.",
@@ -125,20 +123,24 @@ def test_slow_mind_prompt_outputs_intent_not_action_sequence():
             ],
         },
         memory_context={"short_term_lines": ["action: Last plan worked."]},
+        intent_affordances={
+            "available_intents": ["EXPLORE", "INVESTIGATE", "SEEK_FOOD", "SOCIALIZE", "REST", "SAFETY"],
+            "targets": [{"id": "East_Roof", "supports": ["EXPLORE"]}],
+        },
     )
 
-    assert "SLOW MIND RULES" in prompt
-    assert "Choose one durable intent" in prompt
-    assert "# ONE-SHOT EXAMPLE" in prompt
+    assert "ARBITRATION RULES" in prompt
+    assert "Choose one high-level intent" in prompt
+    assert "# AVAILABLE INTENT AFFORDANCES" in prompt
     assert "# WHERE SHE IS" in prompt
     assert "# BODY" in prompt
     assert "# EXPLORE FRONTIERS" in prompt
     assert "# SHORT TERM MEMORY" in prompt
     assert "# LAST TICK" in prompt
     assert '"intent": "<EXPLORE | SEEK_FOOD' in prompt
-    assert '"style": "short physical style hint' in prompt
-    assert "AVAILABLE AFFORDANCES" not in prompt
+    assert '"style": "short ActionFSM style hint' in prompt
     assert '"plan_steps"' not in prompt
+    assert "East_Roof: supports EXPLORE" in prompt
     assert "target id: East_Roof" in prompt
     assert "Bamboo Boardwalk feels overvisited" in prompt
     # Empty blocks are omitted entirely — fewer tokens, clearer signal.
@@ -148,11 +150,10 @@ def test_slow_mind_prompt_outputs_intent_not_action_sequence():
     assert "# WHAT CHANGED" not in prompt
 
 
-def test_slow_mind_prompt_includes_backend_social_context():
-    prompt = format_slow_mind_prompt(
+def test_intent_selection_prompt_includes_backend_social_context():
+    prompt = format_intent_selection_prompt(
         temperament="curious",
         trust="unknown",
-        actions=["vocalize: Make a sound.", "sit: Sit down."],
         semantic_context={
             "situation": "The cat is idle on the dock.",
             "body_lines": ["fullness: fullness is high"],

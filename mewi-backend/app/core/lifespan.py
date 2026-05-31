@@ -11,6 +11,7 @@ from app.core.supabase import create_supabase
 from app.agent.llm_provider import create_llm_provider, log_llm_provider_selection
 from app.agent.behavior_graph import build_behavior_graph
 from app.agent.prompt_loader import PersonaManager
+from app.cat_journal.raw_agent_graph import RawCatJournal
 from app.repositories.memory_repo import MemoryRepository
 from app.repositories.place_memory_cache import PlaceMemoryCache
 from app.repositories.place_memory_repo import PlaceMemoryRepository
@@ -104,11 +105,14 @@ async def lifespan(app: FastAPI):
         redis=app.state.redis,
         settings=settings,
     )
+    app.state.cat_journal = RawCatJournal.from_settings(settings)
+    logger.info("Cat journal raw graph logs: %s", app.state.cat_journal.root_dir)
 
     app.state.agent_tick_worker = AgentTickWorker(
         service=app.state.agent_tick_service,
         graph=app.state.behavior_graph,
         persona_manager=app.state.persona_manager,
+        raw_journal=app.state.cat_journal,
     )
     app.state.agent_tick_worker_task = (
         asyncio.create_task(app.state.agent_tick_worker.start())

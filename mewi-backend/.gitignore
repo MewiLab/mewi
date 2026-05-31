@@ -218,6 +218,9 @@ poetry.toml
 # ruff
 .ruff_cache/
 
+# Local backend-owned raw cat decision journals
+app/cat_journal/journal/
+
 # LSP config files
 pyrightconfig.json
 

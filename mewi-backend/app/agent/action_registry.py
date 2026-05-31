@@ -36,9 +36,10 @@ ACTION_DEFINITIONS = (
     ActionDefinition("groom", "Clean self."),
     ActionDefinition("smell", "Investigate by smelling."),
     ActionDefinition("alert", "Become attentive to possible danger or interest."),
-    ActionDefinition("vocalize", "Make a sound."),
+    ActionDefinition("vocalize", "Make a sound or speak. The only action that carries spoken words ('say') to another cat; set 'target' to the cat you address, or null to talk to yourself."),
     ActionDefinition("scratch", "Scratch a nearby surface or self."),
     ActionDefinition("look_around", "Scan the surroundings."),
+    ActionDefinition("face_sun", "Turn the body toward the sun when a sun target is visible or registered."),
     ActionDefinition("nod_head", "Make a small head gesture."),
     ActionDefinition("flee", "Move away from danger."),
 )

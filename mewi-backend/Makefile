@@ -1,5 +1,5 @@
 # Runner
-PY := uv run
+PY := uv run --extra report-agent
 PYTEST_ARGS ?=
 
 .PHONY: help dev docker-up docker-down test test-s test-unit test-integration test-all migration migrate migrate-ci

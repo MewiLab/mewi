@@ -1,25 +1,3 @@
-%YAML 1.1
-%TAG !u! tag:unity3d.com,2011:
---- !u!114 &11400000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3711d43f161c948ef8a43b3f90cbf830, type: 3}
-  m_Name: CreatureConfig
-  m_EditorClassIdentifier: Assembly-CSharp::CreatureConfig
-  sightRange: 12
-  hearingRange: 8
-  fieldOfViewDeg: 160
-  fastApproachSpeed: 3
-  feelingScanRadius: 12
-  maxFeelingEvents: 16
-  mindTickInterval: 3
-  trustDecayRate: 0.01
-  fearDecayRate: 0.02
-  fullnessDecayRate: 0.0000389
-  personalSpaceRadius: 2
+version https://git-lfs.github.com/spec/v1
+oid sha256:d7169541ecf1b8661736fc2dd3d14178990c9ff59aead44b9d922124e0e359d4
+size 684
