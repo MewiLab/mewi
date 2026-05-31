@@ -7,10 +7,12 @@ public class CreatureController : MonoBehaviour
     public CreatureConfig  config;
     CreatureBlackboard     _board;
     CreaturePerception     _perception;
-    PeriodicMind           _mind;
+    MindTicker             _mind;
     CreatureWorker         _worker;
     SnapshotManager        _snapshot;
     ZoneScanner            _zoneScanner;
+    PresenceTraceEmitter   _traceEmitter;
+    readonly CreatureSelfStatus _selfStatus = new CreatureSelfStatus();
 
     /// <summary>
     /// DI, Initialization order is clear and testable without Unity magic.
@@ -19,10 +21,11 @@ public class CreatureController : MonoBehaviour
     {
         _board       = GetComponent<CreatureBlackboard>();
         _perception  = GetComponent<CreaturePerception>();
-        _mind        = GetComponent<PeriodicMind>();
+        _mind        = GetComponent<MindTicker>();
         _worker      = GetComponent<CreatureWorker>();
         _snapshot    = GetComponent<SnapshotManager>();
         _zoneScanner = GetComponent<ZoneScanner>();
+        _traceEmitter = GetComponent<PresenceTraceEmitter>();
 
         if (_worker == null) _worker = GetComponentInChildren<CreatureWorker>();
         if (_worker == null) _worker = GetComponentInParent<CreatureWorker>();
@@ -49,6 +52,8 @@ public class CreatureController : MonoBehaviour
         if (_worker != null)      _worker.Init(_board);
         if (_snapshot != null)    _snapshot.Init(_board);
         if (_zoneScanner != null) _zoneScanner.Init(_board);
+        if (_traceEmitter != null) _traceEmitter.Init(_board);
+        _selfStatus.Init(_board, config);
     }
 
     /// <summary>
@@ -57,15 +62,15 @@ public class CreatureController : MonoBehaviour
     /// </summary>
     void Start()
     {
-        if (_mind != null) _mind.StartThinking();
+        if (_mind != null) _mind.StartTicking();
     }
 
     void Update()
     {
-        _board.health.DecayFullness(config != null ? config.fullnessDecayRate : 0.0000389f, Time.deltaTime);
-
-        if (_perception != null)  _perception.Tick();
+        _selfStatus.Tick(Time.deltaTime);
         if (_zoneScanner != null) _zoneScanner.Tick();
+        if (_traceEmitter != null) _traceEmitter.Tick();
+        if (_perception != null)  _perception.Tick();
         if (_worker != null)      _worker.Tick();
 
         _board.UpdateDebugDisplay();
@@ -73,7 +78,7 @@ public class CreatureController : MonoBehaviour
 
     void OnDisable()
     {
-        if (_mind != null) _mind.StopThinking();
+        if (_mind != null) _mind.StopTicking();
     }
 
     void OnDrawGizmosSelected() { }

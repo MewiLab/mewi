@@ -3,6 +3,7 @@ using UnityEngine;
 public enum LayerSource
 {
     Mind = 0,
+    Neutral = 1,
 }
 
 public struct IntentMessage

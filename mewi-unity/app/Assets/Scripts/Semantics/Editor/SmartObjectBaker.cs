@@ -14,6 +14,10 @@ using UnityEngine.SceneManagement;
 ///
 /// Runtime never consults SemanticCategoryConfig. The baker is the only
 /// bridge from name-patterns to runtime semantics.
+/// 
+/// Example:
+/// a prop named SM_Fish_01 can be baked into a runtime 
+/// object tagged like prop.fish
 /// </summary>
 public static class SmartObjectBaker
 {

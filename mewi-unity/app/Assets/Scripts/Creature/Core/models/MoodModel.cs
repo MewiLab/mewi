@@ -17,6 +17,18 @@ public class MoodModel
     [Range(0f, 1f)] public float energy    = 0.7f;
     [Range(0f, 1f)] public float social    = 0.4f;  // desire for company
 
+    /// <summary>
+    /// Continuous decay toward neutral. CreatureSelfStatus calls this per-frame,
+    /// so rates are per-second and scaled by dt.
+    /// </summary>
+    public void Decay(float dt, float fearRatePerSec, float trustRatePerSec, float energyDrainPerSec)
+    {
+        fear   = Mathf.MoveTowards(fear,  0.2f, fearRatePerSec  * dt);
+        trust  = Mathf.MoveTowards(trust, 0.3f, trustRatePerSec * dt);
+        energy -= energyDrainPerSec * dt;
+        Clamp();
+    }
+
     /// <summary>Clamp all values to 0–1 after modification.</summary>
     public void Clamp()
     {

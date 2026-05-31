@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Shared data bus for creature state.
-/// Mind-only runtime: PeriodicMind enqueues a plan, the motor worker peeks
-/// the head intent each tick and pops it once the body finishes executing.
+/// Per-creature runtime state buffer
+/// Holds Unity-local queues, sensory state, and short-lived lookup caches.
+/// Durable memory belongs to the backend.
 /// </summary>
 public class CreatureBlackboard : MonoBehaviour
 {
@@ -19,6 +19,46 @@ public class CreatureBlackboard : MonoBehaviour
     readonly Queue<IntentMessage> _mindQueue = new Queue<IntentMessage>();
     readonly Queue<PlanExecutionReport> _completedPlanReports = new Queue<PlanExecutionReport>();
 
+    /// <summary>Latest behavior weights read by CatBehaviorFSM.</summary>
+    public CatBehaviorWeights MindWeights { get; private set; } = new CatBehaviorWeights();
+
+    /// <summary>Optional target key the FSM should bias toward.</summary>
+    public string MindFocusTarget { get; private set; } = "";
+
+    /// <summary>True when empty-queue decisions come from the behavior FSM.</summary>
+    public bool DirectiveModeEnabled { get; private set; }
+
+    // -------------------------------------------------------------------------
+    // Perception State
+    // -------------------------------------------------------------------------
+
+    [HideInInspector] public Transform closestPlayer;
+    [HideInInspector] public float     closestPlayerDist = Mathf.Infinity;
+    [HideInInspector] public bool      playerInSight;
+
+    /// <summary>Motor target currently used for follow-style movement.</summary>
+    [HideInInspector] public Transform followTarget;
+
+    /// <summary>Frame-local sensory events written by perception.</summary>
+    public List<SensoryEvent> sensorEvents = new List<SensoryEvent>();
+
+    /// <summary>Frame-local feeling events written by feeling relays.</summary>
+    public List<FeelingEvent> feelingEvents = new List<FeelingEvent>();
+
+    /// <summary>Current spatial zones, ordered outermost to innermost.</summary>
+    [HideInInspector] public List<ZoneVolume> activeZones = new List<ZoneVolume>();
+
+    // -------------------------------------------------------------------------
+    // Vitals
+    // -------------------------------------------------------------------------
+
+    public MoodModel   mood   = new MoodModel();
+    public HealthModel health = new HealthModel();
+
+    // -------------------------------------------------------------------------
+    // Identity
+    // -------------------------------------------------------------------------
+
     public string CreatureId
     {
         get
@@ -28,6 +68,10 @@ public class CreatureBlackboard : MonoBehaviour
             return creatureId;
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Mind Action Queue
+    // -------------------------------------------------------------------------
 
     public IntentMessage? MindIntent
     {
@@ -40,6 +84,7 @@ public class CreatureBlackboard : MonoBehaviour
     public int  QueuedMindIntentCount => PendingMindIntentCount();
     public bool HasMindPlan           => TryPeekMindIntent(out _);
 
+    /// <summary>Replace the queue with one explicit action.</summary>
     public void SetMindIntent(
         string intent,
         Vector3 directionHint = default,
@@ -51,6 +96,7 @@ public class CreatureBlackboard : MonoBehaviour
         _mindQueue.Enqueue(IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint, commandId, requestId, targetKey));
     }
 
+    /// <summary>Replace all queued mind actions with a backend-authored plan.</summary>
     public void ReplaceMindPlan(IEnumerable<IntentMessage> intents)
     {
         _mindQueue.Clear();
@@ -66,11 +112,7 @@ public class CreatureBlackboard : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Insert follow-up intents immediately behind the current queue head.
-    /// Used for scene-authored expansions such as "go_to climb entry" →
-    /// "climb" → "go_to climb exit".
-    /// </summary>
+    /// <summary>Insert local follow-up actions immediately after the active action.</summary>
     public void InsertMindIntentsAfterCurrent(IEnumerable<IntentMessage> intents)
     {
         if (intents == null)
@@ -110,10 +152,29 @@ public class CreatureBlackboard : MonoBehaviour
         followTarget = null;
     }
 
-    /// <summary>
-    /// Pop the current queue head. Returns the popped intent. False when there
-    /// was nothing active to pop.
-    /// </summary>
+    /// <summary>Peek the active action without removing it.</summary>
+    public bool TryPeekMindIntent(out IntentMessage head)
+    {
+        TrimInactiveMindIntents();
+        if (_mindQueue.Count == 0)
+        {
+            head = default;
+            return false;
+        }
+
+        head = _mindQueue.Peek();
+        return true;
+    }
+
+    /// <summary>Peek the active action, or return idle when the queue is empty.</summary>
+    public IntentMessage ResolveActiveIntent()
+    {
+        return TryPeekMindIntent(out var head)
+            ? head
+            : IntentMessage.Create("idle", LayerSource.Mind);
+    }
+
+    /// <summary>Remove and return the active action.</summary>
     public bool TryPopMindIntent(out IntentMessage popped)
     {
         TrimInactiveMindIntents();
@@ -130,6 +191,33 @@ public class CreatureBlackboard : MonoBehaviour
             followTarget = null;
         return true;
     }
+
+    /// <summary>Append one FSM-generated micro-action to the action queue.</summary>
+    public void EnqueueMindMicroAction(IntentMessage intent)
+    {
+        if (string.IsNullOrWhiteSpace(intent.Intent))
+            return;
+        _mindQueue.Enqueue(intent);
+    }
+
+    // -------------------------------------------------------------------------
+    // FSM Controls
+    // -------------------------------------------------------------------------
+
+    /// <summary>Switch empty-queue behavior to CatBehaviorFSM for this play session.</summary>
+    public void EnableDirectiveMode() => DirectiveModeEnabled = true;
+
+    /// <summary>Replace behavior weights and optional focus target for CatBehaviorFSM.</summary>
+    public void SetMindWeights(CatBehaviorWeights weights, string focusTarget = "")
+    {
+        if (weights != null)
+            MindWeights = weights;
+        MindFocusTarget = focusTarget ?? "";
+    }
+
+    // -------------------------------------------------------------------------
+    // Report Queue
+    // -------------------------------------------------------------------------
 
     public void EnqueuePlanExecutionReport(PlanExecutionReport report)
     {
@@ -149,30 +237,27 @@ public class CreatureBlackboard : MonoBehaviour
         return false;
     }
 
-    /// <summary>
-    /// Peek the current head intent without removing it. Expired heads are
-    /// skipped so a stale slot cannot block the rest of the queued plan.
-    /// </summary>
-    public bool TryPeekMindIntent(out IntentMessage head)
-    {
-        TrimInactiveMindIntents();
-        if (_mindQueue.Count == 0)
-        {
-            head = default;
-            return false;
-        }
+    // -------------------------------------------------------------------------
+    // Gameplay Updates
+    // -------------------------------------------------------------------------
 
-        head = _mindQueue.Peek();
-        return true;
+    /// <summary>Called when this creature takes a bite.</summary>
+    public void RecordBite(float fullnessGain = 0.35f)
+    {
+        health.AddFullness(fullnessGain);
     }
 
-    /// <summary>Peek the current head intent, or "idle" when nothing is queued.</summary>
-    public IntentMessage ResolveActiveIntent()
+    /// <summary>Refresh Inspector-only queue labels.</summary>
+    public void UpdateDebugDisplay()
     {
-        return TryPeekMindIntent(out var head)
-            ? head
-            : IntentMessage.Create("idle", LayerSource.Mind);
+        int queued = QueuedMindIntentCount;
+        _debugMindSlot  = TryPeekMindIntent(out var head) ? head.ToString() : "—";
+        _debugMindQueue = queued > 0 ? $"{queued} queued" : "empty";
     }
+
+    // -------------------------------------------------------------------------
+    // Queue Helpers
+    // -------------------------------------------------------------------------
 
     void TrimInactiveMindIntents()
     {
@@ -189,25 +274,9 @@ public class CreatureBlackboard : MonoBehaviour
         return Mathf.Max(0, _mindQueue.Count - 1);
     }
 
-    /// <summary>Called by <see cref="EdibleObject"/> when this cat takes a bite.</summary>
-    public void RecordBite(float fullnessGain = 0.35f)
-    {
-        health.AddFullness(fullnessGain);
-    }
-
-    // ─────────────────────────────────────────────
-    // PERCEPTION — written by CreaturePerception
-    // ─────────────────────────────────────────────
-
-    [HideInInspector] public Transform closestPlayer;
-    [HideInInspector] public float     closestPlayerDist = Mathf.Infinity;
-    [HideInInspector] public bool      playerInSight;
-
-    /// <summary>Resolved target currently used by the motor for follow-style movement.</summary>
-    [HideInInspector] public Transform followTarget;
-
-    /// <summary>Recent sensory events for this frame, cleared each tick.</summary>
-    public List<SensoryEvent> sensorEvents = new List<SensoryEvent>();
+    // -------------------------------------------------------------------------
+    // Recent Target Cache
+    // -------------------------------------------------------------------------
 
     struct RecentTargetRecord
     {
@@ -216,16 +285,15 @@ public class CreatureBlackboard : MonoBehaviour
         public bool hasPerceivedPosition;
     }
 
-    /// <summary>Recent visible target keys mapped back to their Unity transforms and perceived positions.</summary>
+    /// <summary>Maps target keys from snapshots/plans to live Unity objects.</summary>
     readonly Dictionary<string, RecentTargetRecord> _recentTargets =
         new Dictionary<string, RecentTargetRecord>(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Recent felt-world events for this frame, cleared each perception tick.</summary>
-    public List<FeelingEvent> feelingEvents = new List<FeelingEvent>();
-
+    /// <summary>Remember a perceived target and its current position.</summary>
     public void RememberPerceivedTarget(string key, Transform target)
         => RememberPerceivedTarget(key, target, target != null ? target.position : Vector3.zero);
 
+    /// <summary>Remember a perceived target and the position reported to the backend.</summary>
     public void RememberPerceivedTarget(string key, Transform target, Vector3 perceivedPosition)
     {
         if (string.IsNullOrWhiteSpace(key) || target == null) return;
@@ -237,6 +305,7 @@ public class CreatureBlackboard : MonoBehaviour
         };
     }
 
+    /// <summary>Resolve a recent target key to a live Transform.</summary>
     public bool TryResolveRecentTarget(string key, out Transform target)
     {
         target = null;
@@ -249,12 +318,11 @@ public class CreatureBlackboard : MonoBehaviour
             return true;
         }
 
-        if (target == null)
-            _recentTargets.Remove(normalized);
-
+        _recentTargets.Remove(normalized);
         return false;
     }
 
+    /// <summary>Resolve a recent target key to its last perceived position.</summary>
     public bool TryResolveRecentTargetPosition(string key, out Vector3 position, out Transform target)
     {
         position = Vector3.zero;
@@ -274,30 +342,5 @@ public class CreatureBlackboard : MonoBehaviour
         target = record.target;
         position = record.hasPerceivedPosition ? record.perceivedPosition : record.target.position;
         return true;
-    }
-
-    /// <summary>
-    /// Current spatial zones, outermost → innermost. Written by ZoneScanner,
-    /// read by SelfChannel and SpatialChannel.
-    /// </summary>
-    [HideInInspector] public List<ZoneVolume> activeZones = new List<ZoneVolume>();
-
-    // ─────────────────────────────────────────────
-    // MOOD — written by PeriodicMind
-    // ─────────────────────────────────────────────
-
-    public MoodModel   mood   = new MoodModel();
-    public HealthModel health = new HealthModel();
-
-    // ─────────────────────────────────────────────
-    // FRAME MANAGEMENT
-    // ─────────────────────────────────────────────
-
-    /// <summary>Update Inspector debug strings. Call at end of frame.</summary>
-    public void UpdateDebugDisplay()
-    {
-        int queued = QueuedMindIntentCount;
-        _debugMindSlot  = TryPeekMindIntent(out var head) ? head.ToString() : "—";
-        _debugMindQueue = queued > 0 ? $"{queued} queued" : "empty";
     }
 }

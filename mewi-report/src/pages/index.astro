@@ -1,112 +1,240 @@
 ---
 // src/pages/index.astro
 import Base from '../layouts/Base.astro';
-import { readdir, readFile } from 'node:fs/promises';
-import path from 'node:path';
+import { catProfiles } from '../utils/cats';
+import { loadReportRoutes } from '../utils/reportRoutes';
 
-type ReportLink = {
-  id: string;
-  routeId: string;
-  displayName: string;
-};
-
-let reports: ReportLink[] = [];
-try {
-  const dataDir = path.join(process.cwd(), 'src', 'data');
-  const files = await readdir(dataDir);
-  const reportFiles = files
-    .filter(f => f.startsWith('report_') && f.endsWith('.json'))
-    .sort();
-
-  reports = await Promise.all(reportFiles.map(async f => {
-    const id = f.replace('report_', '').replace('.json', '');
-    const raw = await readFile(path.join(dataDir, f), 'utf-8');
-    const report = JSON.parse(raw);
-    return {
-      id,
-      routeId: report.user?.handle ?? report.user?.report_slug ?? id,
-      displayName: report.user?.display_name ?? report.user?.handle ?? id,
-    };
-  }));
-} catch { /* no data yet */ }
+const reports = await loadReportRoutes();
+const reportCount = reports.length;
 ---
 
-<Base title="Mewi · Reports">
+<Base title="Mewi · Cat Index" wide>
   <header class="home-header">
-    <div class="label" style="margin-bottom:.5rem">Mewi · behavioral reports</div>
-    <h1 class="home-title serif">
-      What the cats<br/>remember
-    </h1>
-    <p class="home-sub">
-      Each report is a record of a human–cat relationship built across sessions
-      in the fishing village. Select a user to read their trace.
-    </p>
-  </header>
-
-  {reports.length === 0 ? (
-    <div class="empty">
-      <div class="label" style="margin-bottom:.5rem">No reports yet</div>
-      <p class="empty-sub">
-        Run <code>python3 pipeline/scripts/process.py</code> to process raw session data,
-        then rebuild the site.
+    <div class="home-head-copy">
+      <div class="label">Mewi · persona index</div>
+      <h1 class="home-title serif">Sixteen ways<br/>to be a cat.</h1>
+      <p class="home-sub">
+        A compact atlas of the backend personas — one cat for each MBTI shape,
+        from threshold-readers to room-mediators. Tap a face to read its mind.
       </p>
     </div>
-  ) : (
-    <ul class="user-list">
-      {reports.map(report => (
-        <li>
-          <a class="user-card raised" href={`/user/report/${encodeURIComponent(report.routeId)}`}>
-            <span class="uc-id">{report.displayName}</span>
-            <span class="uc-arrow">→</span>
-          </a>
-        </li>
-      ))}
-    </ul>
-  )}
+    <div class="home-head-meta" aria-hidden="true">
+      <span class="count serif">16</span>
+      <span class="count-label">personas</span>
+    </div>
+  </header>
+
+  <section class="cat-gallery" aria-label="Cat personality profiles">
+    {catProfiles.map((cat, index) => (
+      <a
+        class="cat-chip"
+        href={`/cats/${cat.id}`}
+        style={`--cat-accent:${cat.accent}`}
+      >
+        <span class="chip-avatar">
+          <span class="chip-ring" aria-hidden="true"></span>
+          <span class="chip-mark serif">{cat.name.slice(0, 1)}</span>
+          <span class="chip-index">{String(index + 1).padStart(2, '0')}</span>
+        </span>
+        <span class="chip-name serif">{cat.name}</span>
+        <span class="chip-mbti">{cat.mbti}</span>
+        <span class="chip-tags">
+          {cat.temperament.slice(0, 2).map(tag => <span>{tag}</span>)}
+        </span>
+      </a>
+    ))}
+  </section>
+
+  <section class="report-strip">
+    <div>
+      <div class="label">Reports</div>
+      <p>
+        The report side stays focused on the human trace — one quiet page per
+        player, drawn from how the cats remember them.
+      </p>
+    </div>
+    <a class="strip-link" href="/user/report">
+      {reportCount > 0 ? `Browse ${reportCount} report${reportCount === 1 ? '' : 's'} →` : 'No reports yet'}
+    </a>
+  </section>
 </Base>
 
 <style>
 .home-header {
-  padding: 2.5rem 0 2rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2rem;
+  align-items: end;
+  padding: 3.5rem 0 2.25rem;
   border-bottom: 0.5px solid var(--border);
-  margin-bottom: 2rem;
 }
 .home-title {
-  font-size: clamp(1.8rem, 4vw, 2.5rem);
-  font-weight: 400; line-height: 1.15;
-  color: var(--ink); margin-bottom: .5rem;
+  font-size: clamp(2.6rem, 8vw, 6rem);
+  line-height: .9;
+  font-weight: 400;
+  color: var(--ink);
+  margin: .6rem 0 1.1rem;
 }
 .home-sub {
-  font-size: 13px; color: var(--ink2);
-  line-height: 1.7; max-width: 420px;
+  color: var(--ink2);
+  line-height: 1.85;
+  font-size: 13px;
+  max-width: 440px;
+}
+.home-head-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1;
+}
+.count {
+  font-size: clamp(3rem, 10vw, 7rem);
+  color: var(--ink);
+  opacity: .12;
+  font-weight: 400;
+}
+.count-label {
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-top: .4rem;
 }
 
-.user-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-.user-card {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 1rem 1.25rem;
-  transition: border-color var(--transition), background var(--transition);
-  text-decoration: none;
+/* gallery of circular profiles */
+.cat-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2.25rem 1rem;
+  padding: 3rem 0 2.5rem;
 }
-.user-card:hover { background: var(--bg2); border-color: var(--border-md); }
-.uc-id { font-size: 13px; color: var(--ink); }
-.uc-arrow { color: var(--ink3); font-size: 14px; }
-
-.raised {
+.cat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: .55rem;
+}
+.chip-avatar {
+  position: relative;
+  width: clamp(78px, 11vw, 116px);
+  height: clamp(78px, 11vw, 116px);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(120% 120% at 30% 25%,
+      color-mix(in srgb, var(--cat-accent) 22%, var(--surface)) 0%,
+      var(--surface) 70%);
+  box-shadow: 0 8px 24px rgba(26, 23, 20, .06);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.chip-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--cat-accent) 45%, var(--border));
+  transition: border-color var(--transition), transform var(--transition);
+}
+.chip-mark {
+  font-size: clamp(2.1rem, 4vw, 3.1rem);
+  line-height: 1;
+  color: var(--cat-accent);
+}
+.chip-index {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
   background: var(--surface);
   border: 0.5px solid var(--border);
-  border-radius: var(--radius-lg);
+  color: var(--ink3);
+  font-size: 9px;
+}
+.cat-chip:hover .chip-avatar {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px rgba(26, 23, 20, .12);
+}
+.cat-chip:hover .chip-ring {
+  border-color: var(--cat-accent);
+  transform: scale(1.04);
+}
+.chip-name {
+  color: var(--ink);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.chip-mbti {
+  color: var(--ink3);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.chip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-top: .1rem;
+}
+.chip-tags span {
+  border: 0.5px solid var(--border);
+  border-radius: 999px;
+  color: var(--ink3);
+  font-size: 9px;
+  padding: .15rem .45rem;
+  transition: border-color var(--transition), color var(--transition);
+}
+.cat-chip:hover .chip-tags span {
+  border-color: color-mix(in srgb, var(--cat-accent) 40%, var(--border));
+  color: var(--ink2);
 }
 
-.empty {
-  padding: 2rem 0;
-  border-top: 0.5px solid var(--border);
+.report-strip {
+  margin-top: 1rem;
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem 1.35rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  align-items: center;
+  background: var(--surface);
 }
-.empty-sub { font-size: 12px; color: var(--ink3); line-height: 1.7; }
-code {
-  font-family: var(--font-mono);
-  font-size: 11px; color: var(--ink2);
+.report-strip p {
+  color: var(--ink2);
+  font-size: 12px;
+  line-height: 1.75;
+  max-width: 620px;
+  margin-top: .35rem;
+}
+.strip-link {
+  border: 0.5px solid var(--border);
+  border-radius: 999px;
+  padding: .6rem .95rem;
+  color: var(--ink2);
+  font-size: 11px;
+  white-space: nowrap;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.strip-link:hover {
   background: var(--bg2);
-  padding: .1rem .35rem; border-radius: 3px;
+  color: var(--ink);
+  border-color: var(--border-md);
+}
+
+@media (max-width: 980px) {
+  .cat-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .home-header { grid-template-columns: 1fr; align-items: start; }
+  .home-head-meta { flex-direction: row; align-items: baseline; gap: .6rem; }
+  .cat-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem .75rem; }
+  .report-strip { align-items: stretch; flex-direction: column; }
+  .strip-link { text-align: center; }
 }
 </style>

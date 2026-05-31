@@ -1,5 +1,3 @@
-// MoodChannel.cs — writes the agent's emotional state.
-
 using UnityEngine;
 
 public sealed class MoodChannel : ISnapshotChannel

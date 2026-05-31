@@ -20,8 +20,11 @@ public class CreatureConfig : ScriptableObject
 
     [Header("Mind")]
     public float mindTickInterval     = 3f;     // seconds between periodic updates
+
+    [Header("Self Status Drift")]
     public float trustDecayRate       = 0.01f;  // per tick, toward neutral
     public float fearDecayRate        = 0.02f;
+    public float energyDecayRate      = 0.02f;
     [FormerlySerializedAs("hungerGrowthRate")]
     [Tooltip("Fullness lost per real-time second. 0.0000389 means a full fish meal reaches the backend 'low fullness' band after about 5 hours.")]
     public float fullnessDecayRate    = 0.0000389f;

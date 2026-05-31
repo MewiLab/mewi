@@ -1,8 +1,7 @@
-// SelfChannel.cs
-//
-// Writes "where I am" + "what I'm currently doing" — the basic self-context.
+/// </summary>
+// Writes "where I am" + "what I'm currently doing"
 // ZoneScanner's activeZones is the current spatial source of truth.
-
+/// </summary>
 using UnityEngine;
 
 public sealed class SelfChannel : ISnapshotChannel

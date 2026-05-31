@@ -1,15 +1,3 @@
-// ISnapshotChannel.cs
-//
-// Contract for one semantic channel (eye perception, mood, spatial, …).
-// Each channel reads one slice of state from the blackboard and writes its
-// matching slot on the SnapshotPayload.
-//
-// SnapshotManager iterates the registered channels in order and produces
-// the final JSON. Adding a new channel = implement this + register it.
-//
-// Channels are PLAIN C# classes — not MonoBehaviours. State they need
-// (transforms, tunables) is passed in via constructor or context.
-
 using UnityEngine;
 
 public interface ISnapshotChannel

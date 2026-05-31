@@ -6,7 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "pipeline": "uv run pipeline/scripts/process.py && uv run pipeline/scripts/visualize.py"
+    "charts": "uv run pipeline/scripts/visualize.py"
   },
   "dependencies": {
     "astro": "^4.15.0",

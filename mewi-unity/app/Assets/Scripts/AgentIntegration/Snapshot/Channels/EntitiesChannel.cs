@@ -1,5 +1,4 @@
-// EntitiesChannel.cs
-//
+/// </summary>
 // Eye-perception channel: reads CreaturePerception's sensorEvents from the
 // blackboard, summarises them down to the most informative slice, and writes
 // the wire-format entity list to the snapshot.
@@ -9,7 +8,7 @@
 //   - Cap per category so one noisy group can't crowd out the rest.
 //   - Take the top N after capping.
 //   - Project world position to cat-relative distance + 8-way direction bucket.
-
+/// </summary>
 using System.Collections.Generic;
 using UnityEngine;
 

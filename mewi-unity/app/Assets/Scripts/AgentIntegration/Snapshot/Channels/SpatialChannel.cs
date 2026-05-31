@@ -1,38 +1,33 @@
-// SpatialChannel.cs
-//
+/// </summary>
 // Spatial-context channel: reads the sorted ZoneVolume list from the blackboard
 // and projects it to the zones[] wire array.
 //
 // Each ZoneEntry carries only the properties meaningful for that zone —
 // confinement and surface are empty string when not set on the ZoneVolume.
 // Python reads zones[-1] for current state, zones[0] for broad context.
-
+/// </summary>
 using UnityEngine;
-using UnityEngine.AI;
 using System;
 using System.Collections.Generic;
 
 public sealed class SpatialChannel : ISnapshotChannel
 {
-    struct ZoneCandidate
-    {
-        public string id;
-        public float sqrDistance;
-        public bool hasCompletePath;
-    }
-
     readonly int _maxReachableZones;
     readonly float _reachableZoneRadius;
     readonly bool _requireNavMeshPath;
+    readonly NavigationSafetyConfig _navigationSafety;
+    readonly List<ReachableAffordance> _reachablePlaceBuffer = new List<ReachableAffordance>();
 
     public SpatialChannel(
         int maxReachableZones = 12,
         float reachableZoneRadius = 60f,
-        bool requireNavMeshPath = true)
+        bool requireNavMeshPath = true,
+        NavigationSafetyConfig navigationSafety = null)
     {
         _maxReachableZones = Mathf.Max(0, maxReachableZones);
         _reachableZoneRadius = Mathf.Max(0f, reachableZoneRadius);
         _requireNavMeshPath = requireNavMeshPath;
+        _navigationSafety = navigationSafety ?? new NavigationSafetyConfig();
     }
 
     public string ChannelId => "spatial_context";
@@ -65,12 +60,17 @@ public sealed class SpatialChannel : ISnapshotChannel
         }
 
         string[] activeZoneIds = ActiveZoneIds(entries);
+        List<ReachableAffordance> reachablePlaces = BuildReachablePlaces(self, activeZoneIds);
         payload.spatial_context = new SpatialData { zones = entries.ToArray() };
         payload.place_context = new PlaceContextData
         {
             current_zone_id = entries.Count > 0 ? entries[entries.Count - 1].id : "",
             active_zone_ids = activeZoneIds,
-            reachable_zone_ids = ReachableZoneIds(self, activeZoneIds),
+            reachable_zone_ids = CandidateZoneIds(reachablePlaces),
+        };
+        payload.navigation_context = new NavigationContextData
+        {
+            zone_routes = ZoneRouteEntries(reachablePlaces),
         };
     }
 
@@ -85,67 +85,72 @@ public sealed class SpatialChannel : ISnapshotChannel
         return ids.ToArray();
     }
 
-    string[] ReachableZoneIds(Transform self, string[] activeZoneIds)
+    List<ReachableAffordance> BuildReachablePlaces(Transform self, string[] activeZoneIds)
     {
         if (self == null || _maxReachableZones <= 0)
-            return new string[0];
-
-        var active = new HashSet<string>(activeZoneIds ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var candidates = new List<ZoneCandidate>();
-        ZoneVolume[] zones = UnityEngine.Object.FindObjectsByType<ZoneVolume>(FindObjectsSortMode.None);
-        float radiusSqr = _reachableZoneRadius * _reachableZoneRadius;
-
-        for (int i = 0; i < zones.Length; i++)
         {
-            ZoneVolume zone = zones[i];
-            if (zone == null) continue;
-
-            string id = zone.EffectiveZoneId;
-            if (string.IsNullOrWhiteSpace(id) || !seen.Add(id))
-                continue;
-            if (active.Contains(id))
-                continue;
-
-            Vector3 center = ZoneVolumeUtility.CenterOrTransform(zone);
-            float sqrDistance = (center - self.position).sqrMagnitude;
-            if (_reachableZoneRadius > 0f && sqrDistance > radiusSqr)
-                continue;
-
-            bool hasCompletePath = !_requireNavMeshPath || HasCompleteNavMeshPath(self.position, center);
-            candidates.Add(new ZoneCandidate
-            {
-                id = id,
-                sqrDistance = sqrDistance,
-                hasCompletePath = hasCompletePath,
-            });
+            _reachablePlaceBuffer.Clear();
+            return _reachablePlaceBuffer;
         }
 
-        candidates.Sort((a, b) =>
-        {
-            int byPath = b.hasCompletePath.CompareTo(a.hasCompletePath);
-            if (byPath != 0) return byPath;
-            return a.sqrDistance.CompareTo(b.sqrDistance);
-        });
+        var active = new HashSet<string>(activeZoneIds ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+        ZoneVolume[] zones = UnityEngine.Object.FindObjectsByType<ZoneVolume>(FindObjectsSortMode.None);
 
+        ReachableAffordanceScanner.ScanPlaces(
+            self,
+            zones,
+            active,
+            _reachablePlaceBuffer,
+            _maxReachableZones,
+            _reachableZoneRadius,
+            _requireNavMeshPath,
+            ResolveNavigationSafety(self) ?? _navigationSafety);
+
+        return _reachablePlaceBuffer;
+    }
+
+    string[] CandidateZoneIds(List<ReachableAffordance> candidates)
+    {
         int count = Mathf.Min(_maxReachableZones, candidates.Count);
         var ids = new string[count];
         for (int i = 0; i < count; i++)
-            ids[i] = candidates[i].id;
+            ids[i] = candidates[i].target_id;
         return ids;
     }
 
-    static bool HasCompleteNavMeshPath(Vector3 from, Vector3 to)
+    static ZoneRouteEntry[] ZoneRouteEntries(List<ReachableAffordance> candidates)
     {
-        if (!NavMesh.SamplePosition(from, out NavMeshHit start, 3f, NavMesh.AllAreas))
-            return false;
-        if (!NavMesh.SamplePosition(to, out NavMeshHit end, 6f, NavMesh.AllAreas))
-            return false;
+        int count = candidates != null ? candidates.Count : 0;
+        var entries = new ZoneRouteEntry[count];
 
-        var path = new NavMeshPath();
-        if (!NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path))
-            return false;
+        for (int i = 0; i < count; i++)
+        {
+            ReachableAffordance candidate = candidates[i];
+            entries[i] = new ZoneRouteEntry
+            {
+                id = candidate.target_id,
+                status = candidate.path_status ?? "",
+                reason = candidate.reason ?? "",
+                distance = candidate.distance,
+                path_length = candidate.path_length,
+            };
+        }
 
-        return path.status == NavMeshPathStatus.PathComplete;
+        return entries;
+    }
+
+    static NavigationSafetyConfig ResolveNavigationSafety(Transform self)
+    {
+        MalbersAnimalAdapter adapter = ResolveAdapter(self);
+        return adapter != null ? adapter.navigationSafety : null;
+    }
+
+    static MalbersAnimalAdapter ResolveAdapter(Transform self)
+    {
+        if (self == null) return null;
+
+        return self.GetComponent<MalbersAnimalAdapter>()
+            ?? self.GetComponentInParent<MalbersAnimalAdapter>()
+            ?? self.GetComponentInChildren<MalbersAnimalAdapter>();
     }
 }

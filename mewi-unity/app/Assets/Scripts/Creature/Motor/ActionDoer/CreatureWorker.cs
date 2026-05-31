@@ -40,7 +40,6 @@ public class CreatureWorker : MonoBehaviour
     bool _hasActiveIntent;
     string _planRequestId = "";
     string _planId = "";
-    string _activeDirectiveKey = "";
     bool _warnedUninitialized;
 
     public bool IsBusy => _adapter != null && _adapter.IsBusy;
@@ -653,17 +652,20 @@ public class CreatureWorker : MonoBehaviour
     {
         if (_hasActiveIntent || (_adapter != null && _adapter.IsBusy)) return;
         if (_board != null && _board.HasMindPlan) return;
-        // In directive mode the queue empties between every micro-action; the
-        // report boundary is the directive's TTL, handled in ServiceDirective.
-        // Don't flush a half-finished directive here.
-        if (_board != null && _board.TryGetActiveDirective(out _)) return;
+        // In FSM mode the action queue empties between every micro-action, so
+        // queue-drain is not the report boundary. PeriodicMind pulls a report on
+        // its heartbeat via FlushReport(); don't flush a half-finished batch here.
+        if (_board != null && _board.DirectiveModeEnabled) return;
         FlushPlan();
     }
 
     /// <summary>
-    /// Emit the accumulated plan steps as one report and reset plan state. Used
-    /// both on queue-drain (legacy) and on directive boundary (TTL / new directive).
+    /// Heartbeat flush: PeriodicMind calls this once per mind tick so the steps
+    /// the cat has executed since the last tick are reported back to the LLM.
     /// </summary>
+    public void FlushReport() => FlushPlan();
+
+    /// <summary>Emit the accumulated plan steps as one report and reset plan state.</summary>
     void FlushPlan()
     {
         if (_currentPlanSteps.Count == 0) return;
@@ -686,34 +688,17 @@ public class CreatureWorker : MonoBehaviour
     }
 
     /// <summary>
-    /// Worker-as-orchestrator step, run only when the micro-action queue is empty.
-    /// While a directive is active it asks the FSM for the next single action and
-    /// queues it. When the directive's TTL elapses (or a new directive arrives) it
-    /// flushes the accumulated steps as a report so the slow mind can re-bias. With
-    /// no active directive it keeps the cat moving with autonomous, unreported
-    /// (Neutral) filler so it never freezes between backend replies.
+    /// Worker-as-orchestrator step, run when the action queue is empty. Asks the
+    /// FSM for the next single action (scored from the blackboard's weight buffer
+    /// and live needs) and queues it, so the cat is always doing something. The
+    /// report is flushed separately on PeriodicMind's heartbeat via FlushReport().
     /// </summary>
     void ServiceDirective()
     {
         if (_board == null || _behaviorFSM == null) return;
         if (!_board.DirectiveModeEnabled) return;
 
-        bool hasDirective = _board.TryGetActiveDirective(out MindDirective directive);
-        string key = hasDirective ? (directive.RequestId ?? "") : "";
-
-        // Directive boundary: TTL lapsed or a new directive id appeared.
-        if (key != _activeDirectiveKey)
-        {
-            FlushPlan();
-            _behaviorFSM.ResetDirectiveProgress();
-            _activeDirectiveKey = key;
-        }
-
-        IntentMessage source = hasDirective
-            ? directive.AsSource(LayerSource.Mind)
-            : IntentMessage.Create("IDLE", LayerSource.Neutral);
-
-        if (_behaviorFSM.TryNextAction(source, _board, out IntentMessage micro))
+        if (_behaviorFSM.TryNextAction(_board, out IntentMessage micro))
             _board.EnqueueMindMicroAction(micro);
     }
 

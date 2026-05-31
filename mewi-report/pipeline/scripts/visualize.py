@@ -314,7 +314,7 @@ def main() -> None:
         files = [f for f in files if _matches_user_filter(f, args.user)]
 
     if not files:
-        print("No processed data files found. Run process.py first.")
+        print("No processed data files found. Post raw sessions to the backend report route first.")
         return
 
     for fp in files:

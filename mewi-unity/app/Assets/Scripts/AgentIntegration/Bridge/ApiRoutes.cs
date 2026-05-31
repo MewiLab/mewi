@@ -1,6 +1,5 @@
 // Central registry for the backend websocket path.
-// Unity only knows one base URL (BackendConfig.baseUrl); this class owns the route.
-// When the backend gains an API Gateway, only baseUrl changes — nothing here moves.
+// Unity only knows one base URL (BackendConfig.baseUrl)
 // When routes version up (e.g. /api/v2/...), update once here.
 public static class ApiRoutes
 {

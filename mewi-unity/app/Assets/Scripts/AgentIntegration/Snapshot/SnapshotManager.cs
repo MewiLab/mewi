@@ -1,16 +1,7 @@
+/// </summary>
 // Owns the channel registry and produces the per-tick JSON payload.
-//
-// Responsibilities:
-//   - Hold an ordered list of ISnapshotChannel implementations.
-//   - On BuildPayload(), iterate channels and let each populate its slot on
-//     a fresh SnapshotPayload.
-//
-// Adding a new perception channel = create a class implementing
-// ISnapshotChannel + register it here. AgentNetworkManager does NOT change.
-// PeriodicMind does NOT change.
-//
 // Channels can read the blackboard but must not mutate it.
-
+/// </summary>
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -38,6 +29,10 @@ public class SnapshotManager : MonoBehaviour
     [Tooltip("Prefer zones with a complete NavMesh path, but still send nearby candidates so the backend can explore and Unity can validate execution.")]
     public bool requireNavMeshPathForReachableZones = true;
 
+    [Header("Route Safety")]
+    [Tooltip("Fallback safety checks used when describing nearby routes to the LLM. If a MalbersAnimalAdapter is found, its Navigation Safety config is used instead.")]
+    public NavigationSafetyConfig navigationSafety = new NavigationSafetyConfig();
+
     [Header("Debug")]
     public bool logPayload = false;
 
@@ -63,14 +58,14 @@ public class SnapshotManager : MonoBehaviour
         Register(new SpatialChannel(
             maxReachableZones,
             reachableZoneRadius,
-            requireNavMeshPathForReachableZones
+            requireNavMeshPathForReachableZones,
+            navigationSafety
         ));
         Register(new FeelingsChannel(maxSmellStrings, maxSoundStrings, maxSignalStrings));
     }
 
     /// <summary>
-    /// Public registration hook so future physical-world channels
-    /// can be added from other call sites without editing this class.
+    /// Public registration hook for adding channels
     /// </summary>
     public void Register(ISnapshotChannel channel)
     {

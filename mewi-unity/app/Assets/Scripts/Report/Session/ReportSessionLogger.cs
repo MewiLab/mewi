@@ -45,12 +45,28 @@ public class ReportSessionLogger : MonoBehaviour
     [SerializeField, Min(0.01f)] float waitDistanceJitterMeters = 0.08f;
     [SerializeField, Min(0.1f)] float waitMinSeconds = 2.0f;
 
+    [Header("Derived Cat State")]
+    [Tooltip("Automatically log each bound cat's action + trust by polling its blackboard, so cat events don't need manual Record calls.")]
+    [SerializeField] bool logCatStateChanges = true;
+    [Tooltip("Seconds between cat-state samples.")]
+    [SerializeField, Min(0.05f)] float catSampleInterval = 0.5f;
+    [Tooltip("Minimum trust change (0-100 scale) that triggers a cat event when the action has not changed.")]
+    [SerializeField, Range(1, 100)] int catTrustChangeThreshold = 1;
+
     [Header("Session")]
     [SerializeField] bool startSessionOnStart = true;
     [SerializeField] bool saveLocalOnSessionEnd = true;
     [SerializeField] bool sendToBackendOnSessionEnd = false;
     [SerializeField] string sessionIdPrefix = "unity-session";
     [SerializeField] ReportSessionSender sender;
+    [Tooltip("Optional local outbox. When assigned, saved JSON goes to {user}/pending and can be sent manually.")]
+    [SerializeField] ReportSessionFileOutbox fileOutbox;
+
+    [Header("In-Game Send")]
+    [Tooltip("Show an on-screen button during play to send the current (still running) session without quitting.")]
+    [SerializeField] bool showInGameSendButton = true;
+    [Tooltip("Optional hotkey that also sends the current session while playing.")]
+    [SerializeField] KeyCode sendCurrentSessionKey = KeyCode.F9;
 
     [Header("Export")]
     [Tooltip("Optional absolute export folder. Empty uses Application.persistentDataPath/mewi_report_sessions.")]
@@ -76,6 +92,15 @@ public class ReportSessionLogger : MonoBehaviour
     string _lastNearestCatId = "";
     string _lastDerivedAction = "";
 
+    float _lastCatSampleAt = -1f;
+    readonly Dictionary<string, CatStateSample> _catState = new Dictionary<string, CatStateSample>();
+
+    struct CatStateSample
+    {
+        public string action;
+        public int trust;
+    }
+
     void Awake()
     {
         ResolveActorDefaults();
@@ -89,10 +114,32 @@ public class ReportSessionLogger : MonoBehaviour
 
     void Update()
     {
-        if (!_sessionActive || !deriveProximityActions)
+        if (sendCurrentSessionKey != KeyCode.None && Input.GetKeyDown(sendCurrentSessionKey))
+            SendCurrentSession();
+
+        if (!_sessionActive)
             return;
 
-        SampleHumanProximity();
+        if (deriveProximityActions)
+            SampleHumanProximity();
+
+        if (logCatStateChanges)
+            SampleCatState();
+    }
+
+    void OnGUI()
+    {
+        if (!showInGameSendButton)
+            return;
+
+        const float w = 220f, h = 34f, pad = 10f;
+        var rect = new Rect(pad, pad, w, h);
+        int events = _sessionActive ? _events.Count : 0;
+        string label = _sessionActive
+            ? $"Send report now ({events} events)"
+            : "Send last report";
+        if (GUI.Button(rect, label))
+            SendCurrentSession();
     }
 
     void OnApplicationQuit()
@@ -123,6 +170,9 @@ public class ReportSessionLogger : MonoBehaviour
         _stationarySince = -1f;
         _lastNearestCatId = "";
         _lastDerivedAction = "";
+
+        _lastCatSampleAt = -1f;
+        _catState.Clear();
     }
 
     [ContextMenu("Report/End Session")]
@@ -152,11 +202,52 @@ public class ReportSessionLogger : MonoBehaviour
         _events.Clear();
         _encounters.Clear();
 
+        string savedPath = "";
         if (exportAfterEnd)
-            SaveToJsonFile(_lastPayload);
+            savedPath = SaveToJsonFile(_lastPayload);
 
-        if (sendToBackendOnSessionEnd && !_isQuitting && sender != null)
-            sender.Send(_lastPayload);
+        if (sendToBackendOnSessionEnd && !_isQuitting)
+        {
+            if (fileOutbox != null && !string.IsNullOrEmpty(savedPath))
+                fileOutbox.SendFile(savedPath);
+            else if (sender != null)
+                sender.Send(_lastPayload);
+        }
+    }
+
+    /// <summary>
+    /// Save and send the current session WITHOUT ending it, so a report can be
+    /// delivered mid-game. The session keeps running and accumulating events;
+    /// later flushes (and the final EndSession) reuse the same session_id, so the
+    /// backend simply overwrites with the newest snapshot.
+    /// </summary>
+    [ContextMenu("Report/Send Current Session (in-game)")]
+    public void SendCurrentSession()
+    {
+        ReportSessionPayload payload = BuildPayload();
+        if (payload == null || payload.session == null)
+        {
+            Debug.LogWarning("[ReportSessionLogger] no session to send yet.");
+            return;
+        }
+
+        if (fileOutbox != null)
+        {
+            string path = fileOutbox.SavePending(payload);
+            fileOutbox.SendFile(path);
+            Debug.Log($"[ReportSessionLogger] sent current session {payload.session.session_id} " +
+                      $"({payload.session.events.Length} events) via outbox.");
+        }
+        else if (sender != null)
+        {
+            sender.Send(payload);
+            Debug.Log($"[ReportSessionLogger] sent current session {payload.session.session_id} " +
+                      $"({payload.session.events.Length} events) directly.");
+        }
+        else
+        {
+            Debug.LogWarning("[ReportSessionLogger] no sender or outbox assigned; cannot send.");
+        }
     }
 
     public void RecordHumanAction(string action)
@@ -306,6 +397,9 @@ public class ReportSessionLogger : MonoBehaviour
             return "";
         }
 
+        if (fileOutbox != null)
+            return fileOutbox.SavePending(payload);
+
         string dir = string.IsNullOrWhiteSpace(exportDirectory)
             ? Path.Combine(Application.persistentDataPath, "mewi_report_sessions", SafePathSegment(payload.user_id))
             : exportDirectory.Trim();
@@ -412,6 +506,37 @@ public class ReportSessionLogger : MonoBehaviour
         _lastNearestCatId = nearest.catId;
         _lastDistance = distance;
         _lastSampleAt = now;
+    }
+
+    void SampleCatState()
+    {
+        if (_lastCatSampleAt >= 0f && Time.time - _lastCatSampleAt < catSampleInterval)
+            return;
+        _lastCatSampleAt = Time.time;
+
+        for (int i = 0; i < reportCats.Count; i++)
+        {
+            ReportCatBinding cat = reportCats[i];
+            if (cat == null || cat.blackboard == null || string.IsNullOrWhiteSpace(cat.catId))
+                continue;
+
+            string action = ReportActionClassifier.ToSnakeCase(cat.blackboard.ResolveActiveIntent().Intent);
+            if (string.IsNullOrEmpty(action))
+                continue;
+            int trust = TrustScore(cat.blackboard);
+            string key = cat.catId.Trim().ToLowerInvariant();
+
+            bool seen = _catState.TryGetValue(key, out CatStateSample last);
+            bool actionChanged = !seen || !string.Equals(last.action, action, StringComparison.OrdinalIgnoreCase);
+            bool trustChanged = !seen || Mathf.Abs(trust - last.trust) >= catTrustChangeThreshold;
+            if (!actionChanged && !trustChanged)
+                continue;
+
+            int trustBefore = seen ? last.trust : trust;
+            string trigger = actionChanged ? "action_changed" : "trust_changed";
+            RecordCatAction(cat, action, trustBefore, trust, trigger, null, BuildMeta("cat_state_sampler", trigger));
+            _catState[key] = new CatStateSample { action = action, trust = trust };
+        }
     }
 
     void RecordDerivedHumanProximityAction(string action, ReportCatBinding targetCat, float distance, float speedMps)
@@ -625,5 +750,7 @@ public class ReportSessionLogger : MonoBehaviour
             humanBlackboard = humanActor.GetComponent<CreatureBlackboard>();
         if (sender == null)
             sender = GetComponent<ReportSessionSender>();
+        if (fileOutbox == null)
+            fileOutbox = GetComponent<ReportSessionFileOutbox>();
     }
 }

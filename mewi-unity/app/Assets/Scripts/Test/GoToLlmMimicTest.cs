@@ -69,7 +69,7 @@ public class GoToLlmMimicTest : MonoBehaviour
     [SerializeField] string lastQueued = "";
     [SerializeField] string lastStatus = "";
 
-    PeriodicMind _periodicMind;
+    MindTicker _periodicMind;
     CreatureController _controller;
     float _nextSendAt;
     bool _periodicMindWasEnabled;
@@ -295,9 +295,9 @@ public class GoToLlmMimicTest : MonoBehaviour
                 ?? GetComponentInChildren<CreatureController>();
 
         if (_periodicMind == null)
-            _periodicMind = GetComponent<PeriodicMind>()
-                ?? GetComponentInParent<PeriodicMind>()
-                ?? GetComponentInChildren<PeriodicMind>();
+            _periodicMind = GetComponent<MindTicker>()
+                ?? GetComponentInParent<MindTicker>()
+                ?? GetComponentInChildren<MindTicker>();
     }
 
     void DisablePeriodicMind()
@@ -305,13 +305,13 @@ public class GoToLlmMimicTest : MonoBehaviour
         if (_periodicMind == null) return;
         if (_periodicMindChanged)
         {
-            _periodicMind.StopThinking();
+            _periodicMind.StopTicking();
             _periodicMind.enabled = false;
             return;
         }
 
         _periodicMindWasEnabled = _periodicMind.enabled;
-        _periodicMind.StopThinking();
+        _periodicMind.StopTicking();
         _periodicMind.enabled = false;
         _periodicMindChanged = true;
     }
@@ -323,7 +323,7 @@ public class GoToLlmMimicTest : MonoBehaviour
 
         _periodicMind.enabled = _periodicMindWasEnabled;
         if (_periodicMindWasEnabled)
-            _periodicMind.StartThinking();
+            _periodicMind.StartTicking();
         _periodicMindChanged = false;
     }
 

@@ -13,49 +13,26 @@ import CatSwitcher   from '../../../components/CatSwitcher.astro';
 import TrustChart    from '../../../components/TrustChart.astro';
 import RadarChart    from '../../../components/RadarChart.astro';
 
-import { readdir, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { loadReportRoutes } from '../../../utils/reportRoutes';
 
 // ── static path generation ────────────────────────────────────────────────────
 export async function getStaticPaths() {
-  const dataDir = path.join(process.cwd(), 'src', 'data');
-  let files: string[] = [];
-  try {
-    files = await readdir(dataDir);
-  } catch {
-    // no data dir yet — return empty so build doesn't fail
-    return [];
-  }
-
-  const paths: { params: { userId: string }; props: { dataFileId: string } }[] = [];
-  for (const f of files
-    .filter(f => f.startsWith('report_') && f.endsWith('.json'))
-    .sort()) {
-    const dataFileId = f.replace('report_', '').replace('.json', '');
-    const aliases = new Set<string>([dataFileId]);
-
-    try {
-      const raw = await readFile(path.join(dataDir, f), 'utf-8');
-      const report = JSON.parse(raw);
-      const user = report.user ?? {};
-      [report.user_id, user.report_slug, user.handle, user.display_name]
-        .filter(Boolean)
-        .forEach((alias: string) => aliases.add(alias));
-    } catch {
-      // If a report is malformed, keep the file-id route so the page can 404 normally.
-    }
-
-    aliases.forEach(routeUserId => {
-      paths.push({ params: { userId: routeUserId }, props: { dataFileId } });
-    });
-  }
-
-  return paths;
+  const routes = await loadReportRoutes();
+  return routes.map(route => ({
+    params: { userId: route.routeId },
+    props: {
+      dataFileId: route.dataFileId,
+      displayName: route.displayName,
+    },
+  }));
 }
 
 // ── data loading ──────────────────────────────────────────────────────────────
 const { userId } = Astro.params;
 const dataFileId = Astro.props.dataFileId ?? userId;
+const routeDisplayName = Astro.props.displayName as string | undefined;
 const dataPath = path.join(process.cwd(), 'src', 'data', `report_${dataFileId}.json`);
 let report: Record<string, any> = {};
 
@@ -69,7 +46,7 @@ try {
 // ── derived values ────────────────────────────────────────────────────────────
 const { meta, summary, cats, radar, attention_pct, multi_cat_encounters, attachment_profile, timeline } = report;
 const user = report.user ?? {};
-const displayUserName = user.display_name ?? user.handle ?? userId;
+const displayUserName = routeDisplayName ?? user.display_name ?? user.handle ?? userId;
 const sessionCount: number = meta.sessions;
 const catMap = cats as Record<string, any>;
 

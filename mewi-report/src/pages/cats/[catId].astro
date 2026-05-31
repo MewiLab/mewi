@@ -1,0 +1,198 @@
+---
+import Base from '../../layouts/Base.astro';
+import { catProfiles, catProfileById } from '../../utils/cats';
+
+export function getStaticPaths() {
+  return catProfiles.map(cat => ({
+    params: { catId: cat.id },
+    props: { cat },
+  }));
+}
+
+const { catId } = Astro.params;
+const cat = Astro.props.cat ?? catProfileById[String(catId)];
+
+if (!cat) {
+  return Astro.redirect('/404');
+}
+
+const currentIndex = catProfiles.findIndex(item => item.id === cat.id);
+const prevCat = catProfiles[(currentIndex - 1 + catProfiles.length) % catProfiles.length];
+const nextCat = catProfiles[(currentIndex + 1) % catProfiles.length];
+---
+
+<Base title={`Mewi · ${cat.name}`} wide>
+  <Fragment slot="nav-links">
+    <a href="#profile">Profile</a>
+    <a href="#behavior">Behavior</a>
+    <a href="#relations">Relations</a>
+  </Fragment>
+
+  <article class="cat-page" style={`--cat-accent:${cat.accent}`}>
+    <header class="cat-hero" id="profile">
+      <div class="hero-mark serif">{cat.name.slice(0, 1)}</div>
+      <div class="hero-copy">
+        <div class="label">{cat.mbti} · {cat.role}</div>
+        <h1 class="serif">{cat.name}</h1>
+        <p>{cat.summary}</p>
+      </div>
+    </header>
+
+    <section class="quote-band">
+      <p class="serif">"{cat.quote}"</p>
+      <span>{cat.coat}</span>
+    </section>
+
+    <section class="profile-grid" id="behavior">
+      <div class="profile-cell large">
+        <div class="label">Behavior</div>
+        <p>{cat.behavior}</p>
+      </div>
+      <div class="profile-cell">
+        <div class="label">Territory</div>
+        <p>{cat.place}</p>
+      </div>
+      <div class="profile-cell">
+        <div class="label">Motif</div>
+        <p>{cat.motif}</p>
+      </div>
+      <div class="profile-cell large" id="relations">
+        <div class="label">Social Shape</div>
+        <p>{cat.social}</p>
+      </div>
+    </section>
+
+    <section class="traits">
+      {cat.temperament.map(trait => (
+        <span>{trait}</span>
+      ))}
+    </section>
+
+    <nav class="cat-neighbors" aria-label="Adjacent cats">
+      <a href={`/cats/${prevCat.id}`}>← {prevCat.name}</a>
+      <a href="/">All cats</a>
+      <a href={`/cats/${nextCat.id}`}>{nextCat.name} →</a>
+    </nav>
+  </article>
+</Base>
+
+<style>
+.cat-page {
+  padding: 4rem 0 3rem;
+}
+.cat-hero {
+  display: grid;
+  grid-template-columns: minmax(180px, 320px) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: end;
+  min-height: 42vh;
+  border-bottom: 0.5px solid var(--border);
+  padding-bottom: 2rem;
+}
+.hero-mark {
+  color: var(--cat-accent);
+  font-size: clamp(9rem, 23vw, 20rem);
+  line-height: .72;
+}
+.hero-copy h1 {
+  color: var(--ink);
+  font-size: clamp(3rem, 8vw, 7rem);
+  line-height: .9;
+  font-weight: 400;
+  margin: .65rem 0 .9rem;
+}
+.hero-copy p {
+  color: var(--ink2);
+  max-width: 520px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.quote-band {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  align-items: end;
+  border-bottom: 0.5px solid var(--border);
+  padding: 1.2rem 0;
+}
+.quote-band p {
+  color: var(--ink);
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  line-height: 1.25;
+}
+.quote-band span {
+  color: var(--ink3);
+  font-size: 11px;
+  text-align: right;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 1rem;
+}
+.profile-cell {
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 1rem;
+  min-height: 168px;
+}
+.profile-cell.large {
+  grid-column: span 2;
+}
+.profile-cell .label {
+  color: var(--cat-accent);
+  margin-bottom: .8rem;
+}
+.profile-cell p {
+  color: var(--ink2);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 1rem 0;
+}
+.traits span {
+  border: 0.5px solid var(--border);
+  border-radius: 999px;
+  padding: .35rem .65rem;
+  color: var(--ink2);
+  font-size: 11px;
+  background: var(--surface);
+}
+.cat-neighbors {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.cat-neighbors a {
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: .75rem;
+  color: var(--ink2);
+  font-size: 11px;
+  text-align: center;
+  background: var(--surface);
+}
+.cat-neighbors a:hover {
+  border-color: var(--border-md);
+  background: color-mix(in srgb, var(--surface) 90%, var(--cat-accent));
+  color: var(--ink);
+}
+
+@media (max-width: 760px) {
+  .cat-page { padding-top: 2rem; }
+  .cat-hero { grid-template-columns: 1fr; min-height: auto; }
+  .hero-mark { font-size: clamp(7rem, 35vw, 12rem); }
+  .quote-band { align-items: flex-start; flex-direction: column; }
+  .quote-band span { text-align: left; }
+  .profile-grid { grid-template-columns: 1fr; }
+  .profile-cell.large { grid-column: auto; }
+  .cat-neighbors { grid-template-columns: 1fr; }
+}
+</style>

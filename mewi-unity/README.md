@@ -16,12 +16,16 @@ creature prefab or a session manager object. Assign:
   that cat's `CreatureBlackboard`.
 
 `ReportSessionLogger` writes one immutable `mewi.report.raw.v1` session JSON
-separately from the live LLM `SnapshotPayload`. By default it saves local debug
-files under `Application.persistentDataPath/mewi_report_sessions/{userId}/`.
+separately from the live LLM `SnapshotPayload`.
 
-For the production path, add `ReportSessionSender`, assign the same
-`BackendConfig` used by the LLM bridge, and enable `Send To Backend On Session
-End` on the logger. Unity then sends:
+For local testing, add `ReportSessionFileOutbox` beside the logger. Saved files
+are organized under
+`Application.persistentDataPath/mewi_report_sessions/{userId}/{pending|sent|failed}/`.
+Use the `ReportSessionFileOutbox` inspector buttons in Play Mode to send the
+latest pending file or all pending files manually.
+
+Add `ReportSessionSender` and assign the same `BackendConfig` used by the LLM
+bridge. Manual outbox sends call:
 
 ```http
 POST /api/v1/report/session

@@ -1,5 +1,3 @@
-// HealthChannel.cs — writes body drives.
-
 using UnityEngine;
 
 public sealed class HealthChannel : ISnapshotChannel

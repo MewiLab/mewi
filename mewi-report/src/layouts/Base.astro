@@ -2,8 +2,14 @@
 // src/layouts/Base.astro
 export interface Props {
   title?: string;
+  wide?: boolean;
 }
-const { title = 'Mewi · Report' } = Astro.props;
+const { title = 'Mewi · Report', wide = false } = Astro.props;
+const hasPageLinks = Astro.slots.has('nav-links');
+
+const pathname = Astro.url?.pathname ?? '';
+const isActive = (href: string) =>
+  href === '/' ? pathname === '/' : pathname.startsWith(href);
 ---
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -15,43 +21,53 @@ const { title = 'Mewi · Report' } = Astro.props;
 </head>
 <body>
 
-  <nav class="nav">
-    <a class="nav-logo" href="/">mewi<span class="nav-dot">.</span></a>
+  <header class="topbar" aria-label="Mewi navigation">
+    <div class="topbar-inner">
+      <a class="brand serif" href="/">mewi<span class="brand-dot">.</span></a>
 
-    <div class="nav-links">
-      <slot name="nav-links" />
+      <nav class="top-links" aria-label="Primary">
+        <a href="/" class:list={[{ 'is-active': isActive('/') }]}>Main</a>
+        <a href="/intro" class:list={[{ 'is-active': isActive('/intro') }]}>Intro</a>
+        <a href="/user/report" class:list={[{ 'is-active': isActive('/user/report') }]}>Reports</a>
+      </nav>
+
+      <div class="top-right">
+        {hasPageLinks && (
+          <div class="top-subnav" aria-label="On this page">
+            <slot name="nav-links" />
+          </div>
+        )}
+
+        <button
+          class="theme-toggle"
+          id="theme-toggle"
+          aria-label="Toggle colour theme"
+          title="Toggle colour theme"
+        >
+          <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <line x1="12" y1="2"  x2="12" y2="5"/>
+            <line x1="12" y1="19" x2="12" y2="22"/>
+            <line x1="2"  y1="12" x2="5"  y2="12"/>
+            <line x1="19" y1="12" x2="22" y2="12"/>
+            <line x1="4.22"  y1="4.22"  x2="6.34"  y2="6.34"/>
+            <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/>
+            <line x1="19.78" y1="4.22"  x2="17.66" y2="6.34"/>
+            <line x1="6.34"  y1="17.66" x2="4.22"  y2="19.78"/>
+          </svg>
+          <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+          </svg>
+        </button>
+      </div>
     </div>
+  </header>
 
-    <button
-      class="theme-toggle"
-      id="theme-toggle"
-      aria-label="Toggle colour theme"
-      title="Toggle colour theme"
-    >
-      <!-- sun (light mode icon) -->
-      <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-           aria-hidden="true">
-        <circle cx="12" cy="12" r="4"/>
-        <line x1="12" y1="2"  x2="12" y2="5"/>
-        <line x1="12" y1="19" x2="12" y2="22"/>
-        <line x1="2"  y1="12" x2="5"  y2="12"/>
-        <line x1="19" y1="12" x2="22" y2="12"/>
-        <line x1="4.22"  y1="4.22"  x2="6.34"  y2="6.34"/>
-        <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/>
-        <line x1="19.78" y1="4.22"  x2="17.66" y2="6.34"/>
-        <line x1="6.34"  y1="17.66" x2="4.22"  y2="19.78"/>
-      </svg>
-      <!-- moon (dark mode icon) -->
-      <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-           aria-hidden="true">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
-      </svg>
-    </button>
-  </nav>
-
-  <main class="main">
+  <main class={wide ? 'main main-wide' : 'main'}>
     <slot />
   </main>
 
@@ -59,46 +75,112 @@ const { title = 'Mewi · Report' } = Astro.props;
 </html>
 
 <style>
-/* nav */
-.nav {
-  position: sticky; top: 0; z-index: 50;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: .65rem 2rem;
-  background: var(--bg);
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 70;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
   border-bottom: 0.5px solid var(--border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
-
-.nav-logo {
-  font-family: var(--font-serif);
-  font-size: 1.05rem;
+.topbar-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  height: 56px;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+.brand {
+  font-size: 1.2rem;
   color: var(--ink);
+  letter-spacing: .01em;
 }
-.nav-dot { color: var(--accent-mewi); }
+.brand-dot { color: var(--accent-mewi); }
 
-.nav-links {
-  display: flex; gap: 1.5rem;
+.top-links {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
 }
-
-/* theme toggle — minimal icon swap */
-.theme-toggle {
-  background: none;
-  border: 0.5px solid var(--border-md);
-  border-radius: var(--radius-sm);
-  padding: 5px 6px;
+.top-links a {
+  position: relative;
+  padding: .4rem .7rem;
+  border-radius: 999px;
   color: var(--ink3);
-  display: flex; align-items: center;
-  transition: color var(--transition), border-color var(--transition);
+  font-size: 12px;
+  letter-spacing: .02em;
+  transition: color var(--transition), background var(--transition);
 }
-.theme-toggle:hover { color: var(--ink); border-color: var(--ink3); }
+.top-links a:hover { color: var(--ink); }
+.top-links a.is-active {
+  color: var(--ink);
+  background: var(--bg2);
+}
 
-/* show sun in light mode, moon in dark mode */
-[data-theme="light"] .icon-moon { display: none; }
-[data-theme="dark"]  .icon-sun  { display: none; }
+.top-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.top-subnav {
+  display: flex;
+  align-items: center;
+  gap: .15rem;
+  padding-right: .75rem;
+  border-right: 0.5px solid var(--border);
+}
+.top-subnav :global(a) {
+  padding: .35rem .55rem;
+  border-radius: 999px;
+  color: var(--ink3);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  transition: color var(--transition), background var(--transition);
+}
+.top-subnav :global(a:hover) {
+  color: var(--ink);
+  background: var(--bg2);
+}
+
+.theme-toggle {
+  background: transparent;
+  border: 0.5px solid var(--border);
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink3);
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.theme-toggle:hover {
+  background: var(--bg2);
+  color: var(--ink);
+  border-color: var(--border-md);
+}
+
+:global([data-theme="light"]) .icon-moon { display: none; }
+:global([data-theme="dark"])  .icon-sun  { display: none; }
 
 .main {
   max-width: 780px;
   margin: 0 auto;
-  padding: 2.5rem 1.5rem 5rem;
+  padding: 2rem 1.5rem 5rem;
+}
+.main-wide {
+  max-width: 1180px;
+}
+
+@media (max-width: 680px) {
+  .topbar-inner { gap: 1rem; padding: 0 1rem; }
+  .top-subnav { display: none; }
+  .top-links a { padding: .4rem .55rem; }
 }
 </style>
 

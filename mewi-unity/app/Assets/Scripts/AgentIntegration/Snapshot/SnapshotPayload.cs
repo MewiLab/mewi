@@ -1,14 +1,3 @@
-// SnapshotPayload.cs
-//
-// The full snapshot embedded in the /api/v1/agent/ws/{creature_id} tick envelope.
-//
-// Each channel owns one slot of this payload. Adding a channel means adding a
-// field here AND a class under Snapshot/Channels/.
-//
-// Note on optional zone properties: JsonUtility always emits all declared
-// fields. ZoneEntry.confinement and ZoneEntry.surface will appear as "" when
-// not set. Python treats empty string as absent: `zone.get('confinement') or None`.
-
 using System;
 
 [Serializable]
@@ -25,6 +14,7 @@ public class SnapshotPayload
     public EntityData[]   entities;
     public SpatialData    spatial_context;
     public PlaceContextData place_context;
+    public NavigationContextData navigation_context;
     public FeelingsData   feelings;
 }
 
@@ -79,6 +69,22 @@ public class PlaceContextData
     public string current_zone_id;
     public string[] active_zone_ids;
     public string[] reachable_zone_ids;
+}
+
+[Serializable]
+public class NavigationContextData
+{
+    public ZoneRouteEntry[] zone_routes;
+}
+
+[Serializable]
+public class ZoneRouteEntry
+{
+    public string id;
+    public string status;      // "safe" | "risky" | "blocked"
+    public string reason;      // empty when safe
+    public float distance;
+    public float path_length;
 }
 
 [Serializable]

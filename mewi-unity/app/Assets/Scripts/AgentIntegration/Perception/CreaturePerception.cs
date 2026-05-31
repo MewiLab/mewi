@@ -31,6 +31,7 @@ public class CreaturePerception : MonoBehaviour
     [Header("Feeling Scan")]
     [Tooltip("Layers carrying FeelingEmitter colliders. Empty defaults to SemanticProp + SemanticZone.")]
     public LayerMask feelingLayer;
+    [SerializeField, Min(0)] int maxTraceFeelingEvents = 4;
     readonly Collider[] _feelingBuffer = new Collider[64];
 
     // State for approach speed estimation for MULTIPLE creatures simultaneously
@@ -157,6 +158,7 @@ public class CreaturePerception : MonoBehaviour
 
         ScanSmartObjects();
         ScanFeelings();
+        ScanPresenceTraces();
     }
 
     void ScanSmartObjects()
@@ -225,6 +227,15 @@ public class CreaturePerception : MonoBehaviour
         int max = _config != null && _config.maxFeelingEvents > 0 ? _config.maxFeelingEvents : 16;
         for (int i = 0; i < found.Count && i < max; i++)
             _board.feelingEvents.Add(found[i]);
+    }
+
+    void ScanPresenceTraces()
+    {
+        PresenceTraceRegistry.AppendFeelingEvents(
+            _board.activeZones,
+            _board.CreatureId,
+            _board.feelingEvents,
+            maxTraceFeelingEvents);
     }
 
     bool IsInSight(Vector3 toTarget, float dist)

@@ -1,9 +1,8 @@
-// FeelingsChannel.cs
-//
+/// </summary>
 // Cat-perspective felt-world channel: smell, sound, contact texture,
 // temperature, moisture, vibration, taste, comfort, and danger.
 // Reads CreatureBlackboard.feelingEvents and writes compact strings for the LLM.
-
+/// </summary>
 using System.Collections.Generic;
 using UnityEngine;
 

@@ -57,6 +57,12 @@ public class AgentNetworkManager : MonoBehaviour
         public string      requestId;
         public string      reasoning;
         public LLMIntent[] steps;
+
+        // High-level slow-mind directive (EXPLORE, SEEK_FOOD, …). Carried
+        // alongside steps so the directive-FSM path can use it while the legacy
+        // plan-step path keeps using steps. Empty when the backend sent no intent.
+        public string      directiveIntent;
+        public string      directiveTarget;
     }
 
     [Serializable] class ActionPayload
@@ -73,6 +79,14 @@ public class AgentNetworkManager : MonoBehaviour
         public string reason = "";
     }
 
+    [Serializable] class IntentDecisionPayload
+    {
+        public string intent = "";
+        public string target_id = "";
+        public string target = "";
+        public string reasoning = "";
+    }
+
     [Serializable] class AgentPlanResponse
     {
         public string        job_id      = "";
@@ -80,6 +94,7 @@ public class AgentNetworkManager : MonoBehaviour
         public string        request_id  = "";
         public string        status      = "";
         public int           tick;
+        public IntentDecisionPayload intent;
         public ActionPayload action;
         public PlanStepPayload[] actions;
         public PlanStepPayload[] plan_steps;
@@ -360,7 +375,8 @@ public class AgentNetworkManager : MonoBehaviour
             (job.actions != null && job.actions.Length > 0) ||
             (job.plan_steps != null && job.plan_steps.Length > 0);
         bool hasAction = job.action != null && !string.IsNullOrWhiteSpace(job.action.action);
-        if (status != "done" || (!hasPlan && !hasAction))
+        bool hasIntent = job.intent != null && !string.IsNullOrWhiteSpace(job.intent.intent);
+        if (status != "done" || (!hasPlan && !hasAction && !hasIntent))
         {
             if (logTraffic) Debug.Log($"[AgentNetworkManager] job {job.job_id} ended status={job.status} (no plan)");
             return;
@@ -419,15 +435,38 @@ public class AgentNetworkManager : MonoBehaviour
             if (fallback != null) steps.Add(fallback);
         }
 
-        if (steps.Count == 0)
+        // The slow-mind directive, kept intact (NOT lower-cased) for the
+        // directive-FSM path. PeriodicMind decides whether to use it.
+        string directiveIntent = "";
+        string directiveTarget = "";
+        if (job.intent != null && !string.IsNullOrWhiteSpace(job.intent.intent))
+        {
+            directiveIntent = job.intent.intent.Trim();
+            directiveTarget = !string.IsNullOrWhiteSpace(job.intent.target_id)
+                ? job.intent.target_id
+                : (job.intent.target ?? "");
+        }
+
+        if (steps.Count == 0 && !string.IsNullOrWhiteSpace(directiveIntent))
+        {
+            string reason = !string.IsNullOrWhiteSpace(job.intent.reasoning)
+                ? job.intent.reasoning
+                : job.reasoning;
+            LLMIntent directive = ParseStep(directiveIntent, directiveTarget, reason);
+            if (directive != null) steps.Add(directive);
+        }
+
+        if (steps.Count == 0 && string.IsNullOrWhiteSpace(directiveIntent))
             return;
 
         _latestPlan = new LLMPlan
         {
-            jobId     = job.job_id ?? "",
-            requestId = job.request_id ?? "",
-            reasoning = job.reasoning ?? "",
-            steps     = steps.ToArray(),
+            jobId           = job.job_id ?? "",
+            requestId       = job.request_id ?? "",
+            reasoning       = job.reasoning ?? "",
+            steps           = steps.ToArray(),
+            directiveIntent = directiveIntent,
+            directiveTarget = directiveTarget,
         };
     }
 
@@ -489,6 +528,9 @@ public class AgentNetworkManager : MonoBehaviour
             string target = string.IsNullOrWhiteSpace(job.action.target) ? "" : $"->{job.action.target}";
             return $"{job.action.action}{target}";
         }
+
+        if (job.intent != null && !string.IsNullOrWhiteSpace(job.intent.intent))
+            return job.intent.intent;
 
         return "(none)";
     }

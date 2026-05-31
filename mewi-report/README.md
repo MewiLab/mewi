@@ -35,11 +35,10 @@ mewi-report/
 │   │   └── sessions/{userId}/{sessionId}.json
 │   ├── report_overrides/  ← optional curated demo values, not Unity raw data
 │   ├── user_info.json     ← display names / handles for report users
-│   ├── processed_data/    ← pipeline output (report_{userId}.json)
+│   ├── processed_data/    ← report_{userId}.json (written by the backend)
 │   ├── charts/output/     ← matplotlib PNGs, per user
 │   └── scripts/
-│       ├── process.py     ← raw → processed_data
-│       └── visualize.py   ← processed_data → chart PNGs
+│       └── visualize.py   ← processed_data → chart PNGs (render-side only)
 │
 ├── src/
 │   ├── data/              ← processed JSONs copied here for Astro to read
@@ -89,25 +88,31 @@ Each file is immutable raw data for one completed session:
 }
 ```
 
-The processor groups session files by `user_id`. Legacy aggregate files in
-`pipeline/raw_data/*.json` still work during migration, but new data should use
-the per-session layout.
+Processing is owned by the **mewi-backend** service (ADR-014). The backend
+groups session files by `user_id`, derives `processed_data/report_{userId}.json`,
+and copies it into `src/data/` automatically when Unity posts a session to
+`POST /api/v1/report/session`. This site is render-only — it does not run the
+processor.
 
-User-facing names live in `pipeline/user_info.json`. Keep `user_id` stable for internal files,
-and set `display_name` / `handle` for what appears in the report UI.
+User-facing names live in `pipeline/user_info.json` (read by the backend
+processor). Keep `user_id` stable for internal files, and set `display_name` /
+`handle` for what appears in the report UI.
 
-### 3. Run the pipeline
+### 3. Render charts (optional)
+
+Processed data is produced by the backend. Charts (matplotlib PNGs) are still
+rendered here:
 
 ```bash
-# Process raw data → processed_data/ and src/data/
-uv run pipeline/scripts/process.py
-
 # Generate chart PNGs → pipeline/charts/output/{userId}/
 uv run pipeline/scripts/visualize.py
 
-# Or run both at once:
-npm run pipeline
+# npm alias for the same:
+npm run charts
 ```
+
+> To regenerate processed data, run the backend ingestion (or call
+> `app.services.report.process_report` directly in mewi-backend).
 
 ### 4. Develop locally
 
@@ -115,6 +120,20 @@ npm run pipeline
 npm run dev
 # → http://localhost:4321/user/report/{handle}
 ```
+
+### 4b. View with Docker
+
+```bash
+docker compose up --build
+# → http://localhost:4321
+```
+
+The viewer container bind-mounts `pipeline/processed_data/` into `src/data/`.
+When the backend writes new `report_{userId}.json` files there, refresh the
+index page to see the new reports without rebuilding the image.
+If multiple reports share the same handle, the site keeps all of them visible
+by assigning indexed routes such as `/user/report/vanillaSky00_1/` and
+`/user/report/vanillaSky00_2/`.
 
 ### 5. Build and deploy
 
@@ -157,9 +176,13 @@ User preference is persisted to `localStorage` under key `mewi-theme`.
 
 1. Drop one or more `pipeline/raw_data/sessions/new_user/{session_id}.json` files.
 2. Add `"new_user"` to `pipeline/user_info.json` with a `display_name` and optional `handle`.
-3. Run `uv run pipeline/scripts/process.py`.
+3. Let the backend process it (it runs on ingest), or invoke
+   `app.services.report.process_report` in mewi-backend to write
+   `src/data/report_new_user.json`.
 4. Rebuild the site — Astro picks up the new `src/data/report_new_user.json` automatically.
-5. The new report is available at `/user/report/{handle}` and `/user/report/new_user`.
+5. The new report is available from the index page. If its handle is unique,
+   the route is `/user/report/{handle}`; duplicate handles are suffixed with
+   `_1`, `_2`, and so on.
 
 ---
 
@@ -174,4 +197,5 @@ Each cat has a MBTI-inspired persona that shapes how trust signals are derived:
 | Yuzu | ENTP      | Provocation-driven, tests reactions    |
 | Haru | INFJ      | Reads mood, presence over contact      |
 
-Persona metadata is encoded in `process.py`.
+Persona metadata is encoded in the backend processor
+(`mewi-backend/app/services/report/processor.py`, `CAT_META`).
