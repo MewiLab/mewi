@@ -490,4 +490,4 @@ frontend/app/[Uu]ser[Ss]ettings/
 *.csproj
 *.sln
 *.slnx
-.note
+.developing-note
