@@ -146,7 +146,9 @@ resulting list one micro-action at a time. Providers do not call
 `MalbersAnimalAdapter`, do not mutate backend state, and do not complete goals.
 
 ## Unity Goal FSM
+```mermaid
 
+```
 ```mermaid
 stateDiagram-v2
     [*] --> Idle
