@@ -1,8 +1,12 @@
 """mem0-backed :class:`~app.agent.memory.memory_store.MemoryStore`.
 
-Graph + vector memory: mem0 extracts salient facts from each turn, stores
-relations in Neo4j and vectors in pgvector (Supabase), and serves
-semantic + graph recall.
+Semantic/vector memory: mem0 extracts salient facts from each turn, stores
+vectors in pgvector (Supabase), and serves semantic recall.
+
+Neo4j settings are accepted by app config, but the installed ``mem0ai`` package
+must expose a ``graph_store`` config field before this adapter can pass them
+through. ``mem0ai==2.0.4`` does not, so the adapter validates and drops that
+block with a warning instead of silently relying on ignored config.
 
 ``mem0`` is an *optional* dependency (extra: ``graph-memory``) and is imported
 lazily, so the app runs without it until graph memory is enabled.
@@ -11,6 +15,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import tempfile
 from typing import Any
 
 from app.agent.memory.memory_models import TurnMemoryWrite
@@ -30,14 +36,19 @@ class Mem0MemoryStore:
 
         Imports mem0 lazily; raises a clear error if the extra isn't installed.
         """
+        _ensure_mem0_dir()
         try:
             from mem0 import Memory  # type: ignore
+            from mem0.configs.base import MemoryConfig  # type: ignore
         except ImportError as exc:  # pragma: no cover - depends on optional extra
             raise RuntimeError(
                 "Graph memory is enabled but 'mem0ai' is not installed. "
                 "Install the extra: uv sync --extra graph-memory"
             ) from exc
-        return cls(Memory.from_config(_build_config(llm, embedding, memory)))
+
+        config = _build_config(llm, embedding, memory)
+        config = _validate_config_for_installed_mem0(config, MemoryConfig)
+        return cls(Memory.from_config(config))
 
     async def record_turn(self, write: TurnMemoryWrite) -> None:
         await asyncio.to_thread(self._add, write)
@@ -75,8 +86,9 @@ class Mem0MemoryStore:
 def _build_config(llm, embedding, memory) -> dict[str, Any]:
     """Assemble a mem0 config dict from app settings.
 
-    NOTE: shape follows mem0's documented config; verify against the installed
-    mem0 version before enabling in production.
+    The shape is intentionally isolated here because mem0 config keys drift
+    between releases. ``_validate_config_for_installed_mem0`` checks this dict
+    against the installed ``MemoryConfig`` before the app starts mem0.
     """
     config: dict[str, Any] = {
         "llm": {
@@ -95,18 +107,44 @@ def _build_config(llm, embedding, memory) -> dict[str, Any]:
                 **({"openai_base_url": embedding.base_url} if embedding.base_url else {}),
             },
         },
-        "graph_store": {
+    }
+    if memory.neo4j_url and memory.neo4j_password:
+        config["graph_store"] = {
             "provider": "neo4j",
             "config": {
                 "url": memory.neo4j_url,
                 "username": memory.neo4j_username,
                 "password": memory.neo4j_password,
             },
-        },
-    }
+        }
     if memory.pgvector_dsn:
         config["vector_store"] = {
             "provider": "pgvector",
-            "config": {"connection_string": memory.pgvector_dsn},
+            "config": {
+                "connection_string": memory.pgvector_dsn,
+                "collection_name": "mewi_memories",
+            },
         }
     return config
+
+
+def _validate_config_for_installed_mem0(config: dict[str, Any], memory_config_cls) -> dict[str, Any]:
+    """Return only config keys accepted by the installed mem0 ``MemoryConfig``."""
+    fields = set(getattr(memory_config_cls, "model_fields", {}).keys())
+    accepted = dict(config)
+    if "graph_store" in accepted and "graph_store" not in fields:
+        logger.warning(
+            "Installed mem0 MemoryConfig has no graph_store field; Neo4j memory "
+            "settings will not be used by mem0. Semantic pgvector recall remains enabled."
+        )
+        accepted.pop("graph_store")
+
+    # Let pydantic validate provider-specific config before Memory.from_config
+    # opens network/database connections.
+    memory_config_cls(**accepted)
+    return accepted
+
+
+def _ensure_mem0_dir() -> None:
+    """Keep mem0 telemetry/history files in a writable local temp directory."""
+    os.environ.setdefault("MEM0_DIR", os.path.join(tempfile.gettempdir(), "mewi-mem0"))

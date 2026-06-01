@@ -8,8 +8,8 @@ from app.agent.arbitration import (
 from app.agent.creature_runtime import CreatureRuntime, CreatureRuntimeState
 from app.agent.mind.affordances import IntentAffordances, build_intent_affordances
 from app.agent.mind.context import format_previous_action_result
+from app.agent.mind.context_builder import build_structured_context
 from app.agent.prompts import format_intent_selection_prompt_parts
-from app.services.perception.semantic_service import SemanticService
 
 
 __all__ = ["build_intent_selection_prompt_parts"]
@@ -20,7 +20,10 @@ def build_intent_selection_prompt_parts(
     runtime: CreatureRuntime,
 ) -> tuple[str, str, IntentAffordances]:
     raw = state.get("raw_payload", {})
-    semantic_context = SemanticService().build_prompt_context(raw)
+    structured = state.get("structured_context") if isinstance(state.get("structured_context"), dict) else {}
+    if not structured:
+        structured = build_structured_context(state)
+    semantic_context = dict(structured.get("semantic_context") or {})
     _inject_arbitration_focus(
         semantic_context,
         memory_context=state.get("memory_context"),
@@ -43,7 +46,10 @@ def build_intent_selection_prompt_parts(
         world_view=state.get("world_view"),
         social_context=state.get("social_context"),
         persona=state.get("persona") or runtime.persona,
-        previous_action_result=format_previous_action_result(raw.get("action_result")),
+        previous_action_result=(
+            structured.get("previous_action_result")
+            or format_previous_action_result(raw.get("action_result"))
+        ),
         intent_affordances=affordances,
     )
     return static_text, dynamic_text, affordances

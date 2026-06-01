@@ -152,6 +152,24 @@ class LangSmithSettings(BaseSettings):
     endpoint: str = "https://api.smith.langchain.com"
 
 
+class MemorySettings(BaseSettings):
+    """Optional durable graph/vector memory settings."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="MEMORY_",
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+        str_strip_whitespace=True,
+    )
+
+    graph_enabled: bool = False
+    neo4j_url: str = ""
+    neo4j_username: str = "neo4j"
+    neo4j_password: str = ""
+    pgvector_dsn: str = ""
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
@@ -197,6 +215,7 @@ class Settings(BaseSettings):
     llm: LLMSettings = Field(default_factory=LLMSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     langsmith: LangSmithSettings = Field(default_factory=LangSmithSettings)
+    memory: MemorySettings = Field(default_factory=MemorySettings)
     
     # Auth
     API_SECRET_TOKEN: str = "dev-secret-change-me"

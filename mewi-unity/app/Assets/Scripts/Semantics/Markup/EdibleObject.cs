@@ -8,7 +8,7 @@ using UnityEngine.Serialization;
 ///
 /// Behavior:
 ///   - Has its own trigger collider, sized like a mouth-contact volume.
-///   - While a cat's collider is inside the trigger AND CreatureWorker has
+///   - While a cat's collider is inside the trigger AND CreatureMotorWorker has
 ///     declared an eat intent for this exact food id AND the cat is inside the
 ///     bite radius AND the per-cat cooldown has elapsed AND portions remain,
 ///     the EdibleObject:
@@ -45,7 +45,7 @@ public class EdibleObject : MonoBehaviour
     [SerializeField] FeelingEmitter feelingEmitter;
 
     [Header("Validation")]
-    [Tooltip("Only bite when CreatureWorker has declared an active eat intent for this exact food id.")]
+    [Tooltip("Only bite when CreatureMotorWorker has declared an active eat intent for this exact food id.")]
     [SerializeField] bool requireDeclaredEatIntent = true;
 
     [Tooltip("Cat must be within this radius of the bite center. This prevents huge trigger volumes from eating at a distance.")]
@@ -119,11 +119,10 @@ public class EdibleObject : MonoBehaviour
 
         if (requireDeclaredEatIntent && !GoalEventBus.HasDeclaration(catId, "eat", foodId))
         {
-            LogRejection(other, foodId, $"no_declaration:{catId}",
-                () => $"{catId} is inside trigger but no GoalEventBus declaration for (eat, '{foodId}'). " +
-                      "Check: did Slow/Fast Mind emit eat with target_id='" + foodId + "'? " +
-                      "If the LLM uses a different id, set foodIdOverride on this EdibleObject or " +
-                      "rename SmartObject.Label to match the id the LLM sees.");
+            if (TryBuildDeclarationMismatchMessage(other, blackboard, foodId, out string message))
+            {
+                LogRejection(other, foodId, $"no_declaration:{catId}", () => message);
+            }
             return;
         }
 
@@ -209,6 +208,55 @@ public class EdibleObject : MonoBehaviour
         if (other == null) return null;
         return other.GetComponentInParent<CreatureBlackboard>();
     }
+
+    static bool TryBuildDeclarationMismatchMessage(
+        Collider other,
+        CreatureBlackboard blackboard,
+        string foodId,
+        out string message)
+    {
+        message = "";
+        if (blackboard == null)
+            return false;
+
+        CreatureMotorWorker worker = null;
+        if (other != null)
+            worker = other.GetComponentInParent<CreatureMotorWorker>();
+        if (worker == null)
+            worker = blackboard.GetComponent<CreatureMotorWorker>()
+                ?? blackboard.GetComponentInParent<CreatureMotorWorker>()
+                ?? blackboard.GetComponentInChildren<CreatureMotorWorker>();
+
+        if (worker == null || !worker.TryGetActiveIntent(out IntentMessage active))
+            return false;
+
+        string activeIntent = Clean(active.Intent).ToLowerInvariant();
+        if (activeIntent != "eat")
+            return false;
+
+        string activeTarget = Clean(active.TargetKey);
+        if (string.IsNullOrEmpty(activeTarget))
+        {
+            message = $"{blackboard.CreatureId} is actively eating but the eat micro-action has no target. " +
+                      $"Expected target_id='{foodId}'.";
+            return true;
+        }
+
+        if (!string.Equals(activeTarget, foodId, System.StringComparison.OrdinalIgnoreCase))
+        {
+            message = $"{blackboard.CreatureId} is actively eating target_id='{activeTarget}', " +
+                      $"but this EdibleObject uses foodId='{foodId}'. " +
+                      "Make the backend target, SmartObject.Label, and foodIdOverride use the same stable id.";
+            return true;
+        }
+
+        message = $"{blackboard.CreatureId} is actively eating '{foodId}' but GoalEventBus has no matching declaration. " +
+                  "Check CreatureMotorWorker declaration timing.";
+        return true;
+    }
+
+    static string Clean(string value)
+        => string.IsNullOrWhiteSpace(value) ? "" : value.Trim();
 
     void ResolveReferences()
     {

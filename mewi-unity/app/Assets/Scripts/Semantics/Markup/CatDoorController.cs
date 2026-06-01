@@ -57,7 +57,7 @@ public class CatDoorController : MonoBehaviour
 
     [Header("Creature Lookup")]
     [SerializeField] Transform explicitCreature;
-    [SerializeField] bool findCreatureWorkers = true;
+    [SerializeField] bool findCreatureMotorWorkers = true;
     [SerializeField] float creatureScanIntervalSeconds = 0.25f;
     [SerializeField] string requiredCreatureTag = "";
 
@@ -244,7 +244,7 @@ public class CatDoorController : MonoBehaviour
             return true;
         }
 
-        if (!findCreatureWorkers)
+        if (!findCreatureMotorWorkers)
             return false;
 
         RefreshCreatureCache();
@@ -269,10 +269,10 @@ public class CatDoorController : MonoBehaviour
         _nextCreatureScanAt = Time.time + creatureScanIntervalSeconds;
         _creatures.Clear();
 
-        CreatureWorker[] workers = FindObjectsByType<CreatureWorker>(FindObjectsSortMode.None);
+        CreatureMotorWorker[] workers = FindObjectsByType<CreatureMotorWorker>(FindObjectsSortMode.None);
         for (int i = 0; i < workers.Length; i++)
         {
-            CreatureWorker worker = workers[i];
+            CreatureMotorWorker worker = workers[i];
             if (worker != null && worker.isActiveAndEnabled)
                 _creatures.Add(worker.transform);
         }

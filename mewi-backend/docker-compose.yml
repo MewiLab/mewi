@@ -1,6 +1,8 @@
 # Two modes:
-#   Local dev:  `make dev`  → starts Redis here, app runs natively
-#   Deploy test: `make docker-up` → builds image + runs everything
+#   Local dev:        `make dev`          -> Redis here, app runs natively
+#   Local graph dev:  `make dev-graph`    -> Redis + Neo4j here, app runs natively
+#   Docker core:      `make docker-up-core` -> app + Redis in Docker
+#   Docker full:      `make docker-up`    -> app + Redis + Neo4j in Docker
 name: mewi
 
 services:
@@ -19,6 +21,27 @@ services:
       timeout: 3s
       retries: 5
 
+  neo4j:
+    image: neo4j:5-community
+    container_name: mewi_neo4j
+    restart: unless-stopped
+    profiles:
+      - graph-memory
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      MEMORY_NEO4J_PASSWORD: ${MEMORY_NEO4J_PASSWORD:-mewi-neo4j-dev}
+      NEO4J_AUTH: neo4j/${MEMORY_NEO4J_PASSWORD:-mewi-neo4j-dev}
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p \"$${MEMORY_NEO4J_PASSWORD}\" 'RETURN 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   mewi_agent_runtime:
     build:
       context: .
@@ -32,6 +55,11 @@ services:
     environment:
       MEWI_REPORT_ROOT: /mewi-report
       MEWI_REPORT_ATTACHMENT_MODE: agent
+      MEMORY_GRAPH_ENABLED: ${MEMORY_GRAPH_ENABLED:-false}
+      MEMORY_NEO4J_URL: ${MEMORY_NEO4J_URL:-}
+      MEMORY_NEO4J_USERNAME: ${MEMORY_NEO4J_USERNAME:-neo4j}
+      MEMORY_NEO4J_PASSWORD: ${MEMORY_NEO4J_PASSWORD:-}
+      MEMORY_PGVECTOR_DSN: ${MEMORY_PGVECTOR_DSN:-}
     volumes:
       - ../mewi-report:/mewi-report
     depends_on:
@@ -39,3 +67,5 @@ services:
         condition: service_healthy
 volumes:
   redis_data:
+  neo4j_data:
+  neo4j_logs:

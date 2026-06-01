@@ -12,12 +12,13 @@ from app.agent.arbitration import (
 )
 from app.agent.creature_runtime import CreatureRuntime, CreatureRuntimeState
 from app.agent.intent_effects import execute_intent_effects as run_intent_effects
+from app.agent.memory.memory_consolidate import build_turn_memory_write
 from app.agent.memory.retrieval import build_langgraph_memory_state
 from app.agent.mind.affordances import build_intent_affordances
 from app.agent.mind.context_builder import build_structured_context
 from app.agent.mind.intent_arbitrator import select_intent_from_proposals
 from app.agent.schemas.perception_schema import PerceptionError
-from app.services.memory.place_memory_service import PlaceMemoryService
+from app.agent.memory.place_memory_service import PlaceMemoryService
 from app.social.service import SocialService
 from app.world.state import WorldState
 
@@ -58,6 +59,11 @@ def make_retrieve_memory(
         semantic_context = structured.get("semantic_context") or {}
 
         memory_context = _runtime(state).remember(last_n=5).to_prompt_context()
+        longterm = await _runtime(state).memory.recall_longterm(
+            _recall_query(structured, raw), creature_id=creature_id, limit=5
+        )
+        if longterm:
+            memory_context = {**memory_context, "longterm": longterm}
         place_memory_context = await _retrieve_place_memory(place_memory, creature_id, raw)
         world_view = await _retrieve_world_view(world, creature_id, raw)
         social_context, dialogue = await _retrieve_relationship_context(social, creature_id)
@@ -216,16 +222,49 @@ def _selection_summary(decision: dict[str, Any] | None, proposals: list[dict[str
     return f"Selected {intent}{suffix}."
 
 
+async def persist_memory(state: CreatureRuntimeState) -> dict[str, Any]:
+    """Node 7: write this turn to memory — hot STM now, durable store in the
+    background — reviving the persistence the agent needs to learn over time."""
+    runtime = _runtime(state)
+    write = build_turn_memory_write(state)
+    runtime.memory.persist_turn(write)
+    return {"memory_write": write.to_prompt_context()}
+
+
+def _recall_query(structured: dict[str, Any], raw: dict[str, Any]) -> str:
+    """A short query for long-term recall: where the cat is + who's relevant."""
+    parts: list[str] = []
+    place_context = raw.get("place_context") if isinstance(raw.get("place_context"), dict) else {}
+    current_zone = _clean_query_part(place_context.get("current_zone_id"))
+    if current_zone:
+        parts.append(current_zone)
+    else:
+        location = _clean_query_part((raw.get("self") or {}).get("location"))
+        if location:
+            parts.append(location)
+    targets = (structured.get("semantic_context") or {}).get("relevant_targets") or []
+    parts.extend(str(t).strip() for t in targets[:3] if str(t).strip())
+    return " ".join(parts) or "recent activity"
+
+
+def _clean_query_part(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        return " ".join(
+            str(value.get(key)).strip()
+            for key in ("x", "y", "z")
+            if value.get(key) is not None and str(value.get(key)).strip()
+        )
+    return str(value).strip()
+
+
 def build_behavior_graph(
     llm,
     place_memory: PlaceMemoryService | None = None,
-    memory_service: Any | None = None,
     world: WorldState | None = None,
     social: SocialService | None = None,
-    consolidate_memory: bool = True,
 ) -> StateGraph:
-    del memory_service, consolidate_memory
-
     graph = StateGraph(CreatureRuntimeState)
     graph.add_node("context_builder", context_builder)
     graph.add_node("retrieve_memory", make_retrieve_memory(
@@ -237,11 +276,13 @@ def build_behavior_graph(
     graph.add_node("select_intent", select_intent)
     graph.add_node("execute_intent_effects", make_execute_intent_effects(social))
     graph.add_node("collect_response", collect_response)
+    graph.add_node("persist_memory", persist_memory)
     graph.set_entry_point("context_builder")
     graph.add_edge("context_builder", "retrieve_memory")
     graph.add_edge("retrieve_memory", "call_domain_intents")
     graph.add_edge("call_domain_intents", "select_intent")
     graph.add_edge("select_intent", "execute_intent_effects")
     graph.add_edge("execute_intent_effects", "collect_response")
-    graph.add_edge("collect_response", END)
+    graph.add_edge("collect_response", "persist_memory")
+    graph.add_edge("persist_memory", END)
     return graph

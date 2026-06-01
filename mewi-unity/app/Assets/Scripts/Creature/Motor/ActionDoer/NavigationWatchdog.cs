@@ -13,7 +13,7 @@ public enum NavigationRecoveryAction
 
 /// <summary>
 /// Why a navigation command finished. Surfaced through the adapter so
-/// <see cref="CreatureWorker"/> can attach it to the plan step report.
+/// <see cref="CreatureMotorWorker"/> can attach it to the plan step report.
 /// </summary>
 public enum NavigationCompletionReason
 {

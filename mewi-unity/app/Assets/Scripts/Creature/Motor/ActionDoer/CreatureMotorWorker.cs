@@ -4,12 +4,12 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// The mind-plan worker. Each tick:
+/// The micro-action worker. Each tick:
 ///   1. If the body is busy with the previous command, do nothing.
-///   2. Otherwise peek the next intent from the blackboard plan.
+///   2. Otherwise peek the next micro-action from the blackboard queue.
 ///   3. Translate it to a <see cref="MotorCommand"/> and hand it to
 ///      <see cref="MalbersAnimalAdapter.Apply"/>.
-///   4. Pop the intent only after dispatch succeeds or a rejection is recorded.
+///   4. Pop the micro-action only after dispatch succeeds or a rejection is recorded.
 ///
 /// Reports are accumulated as a nested per-plan result for the next websocket
 /// tick; no HTTP callback is needed for runtime ordering.
@@ -17,16 +17,19 @@ using UnityEngine.AI;
 /// nothing else in the project should reference it.
 /// </summary>
 [RequireComponent(typeof(MalbersAnimalAdapter))]
-public class CreatureWorker : MonoBehaviour
+public class CreatureMotorWorker : MonoBehaviour
 {
     CreatureBlackboard   _board;
     MalbersAnimalAdapter _adapter;
 
     [SerializeField] NamedTargetRegistry _targetRegistry;
-    [SerializeField] CatBehaviorFSM      _behaviorFSM;
 
     [Header("Debug")]
     [SerializeField] bool logWorkerDispatch = true;
+
+    [Header("World confirmation")]
+    [Tooltip("Minimum time to keep go_to/eat declarations alive before treating missing world confirmation as failure.")]
+    [SerializeField, Min(0f)] float validatableConfirmationGraceSeconds = 0.2f;
 
     static readonly HashSet<string> _loggedMissingTargetKeys =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -43,6 +46,19 @@ public class CreatureWorker : MonoBehaviour
     bool _warnedUninitialized;
 
     public bool IsBusy => _adapter != null && _adapter.IsBusy;
+    public bool IsExecutingIntent => _hasActiveIntent || IsBusy;
+    public bool TryGetActiveIntent(out IntentMessage intent)
+    {
+        if (_hasActiveIntent)
+        {
+            intent = _activeIntent;
+            return true;
+        }
+
+        intent = default;
+        return false;
+    }
+
     public string DebugState
     {
         get
@@ -60,7 +76,7 @@ public class CreatureWorker : MonoBehaviour
 
         if (_adapter == null)
         {
-            Debug.LogError("[CreatureWorker] Missing MalbersAnimalAdapter on the same GameObject.");
+            Debug.LogError("[CreatureMotorWorker] Missing MalbersAnimalAdapter on the same GameObject.");
             return;
         }
 
@@ -69,9 +85,6 @@ public class CreatureWorker : MonoBehaviour
         if (_targetRegistry == null)
             _targetRegistry = FindFirstObjectByType<NamedTargetRegistry>();
 
-        if (_behaviorFSM == null) _behaviorFSM = GetComponent<CatBehaviorFSM>();
-        if (_behaviorFSM == null) _behaviorFSM = GetComponentInChildren<CatBehaviorFSM>();
-        if (_behaviorFSM == null) _behaviorFSM = GetComponentInParent<CatBehaviorFSM>();
     }
 
     public void Tick()
@@ -80,7 +93,7 @@ public class CreatureWorker : MonoBehaviour
         {
             if (!_warnedUninitialized)
             {
-                Debug.LogWarning("[CreatureWorker] Tick skipped before Init completed; attach CreatureController or call Init(board).");
+                Debug.LogWarning("[CreatureMotorWorker] Tick skipped before Init completed; attach CreatureController or call Init(board).");
                 _warnedUninitialized = true;
             }
             return;
@@ -89,9 +102,8 @@ public class CreatureWorker : MonoBehaviour
         if (_adapter.IsBusy) return;
         CompleteActiveIntentIfReady();
 
-        if (!_board.TryPeekMindIntent(out IntentMessage intent))
+        if (!_board.TryPeekMicroAction(out IntentMessage intent))
         {
-            ServiceDirective();
             CompletePlanIfReady();
             return;
         }
@@ -103,9 +115,9 @@ public class CreatureWorker : MonoBehaviour
         {
             _pendingPostCurrentIntents.Clear();
             if (logWorkerDispatch)
-                Debug.LogWarning($"[CreatureWorker] rejected {DescribeIntent(intent)}: {rejectedReason}");
+                Debug.LogWarning($"[CreatureMotorWorker] rejected {DescribeIntent(intent)}: {rejectedReason}");
             RecordStep(intent, "rejected", rejectedReason, Time.time, Time.time);
-            _board.TryPopMindIntent(out _);
+            _board.TryPopMicroAction(out _);
             CompletePlanIfReady();
             return;
         }
@@ -114,15 +126,15 @@ public class CreatureWorker : MonoBehaviour
         {
             _pendingPostCurrentIntents.Clear();
             if (logWorkerDispatch)
-                Debug.LogWarning($"[CreatureWorker] adapter refused {DescribeIntent(intent)} as {cmd.Kind}");
+                Debug.LogWarning($"[CreatureMotorWorker] adapter refused {DescribeIntent(intent)} as {cmd.Kind}");
             RecordStep(intent, "rejected", "adapter_refused", Time.time, Time.time);
-            _board.TryPopMindIntent(out _);
+            _board.TryPopMicroAction(out _);
             CompletePlanIfReady();
             return;
         }
 
         if (logWorkerDispatch)
-            Debug.Log($"[CreatureWorker] dispatched {DescribeIntent(intent)} as {cmd.Kind}");
+            Debug.Log($"[CreatureMotorWorker] dispatched {DescribeIntent(intent)} as {cmd.Kind}");
 
         _activeIntent = intent;
         _activeStartedAt = Time.time;
@@ -130,11 +142,11 @@ public class CreatureWorker : MonoBehaviour
 
         if (_pendingPostCurrentIntents.Count > 0)
         {
-            _board.InsertMindIntentsAfterCurrent(_pendingPostCurrentIntents);
+            _board.InsertMicroActionsAfterCurrent(_pendingPostCurrentIntents);
             _pendingPostCurrentIntents.Clear();
         }
 
-        _board.TryPopMindIntent(out _);
+        _board.TryPopMicroAction(out _);
 
         if (IsValidatableIntent(intent.Intent))
         {
@@ -176,7 +188,7 @@ public class CreatureWorker : MonoBehaviour
                     if (logWorkerDispatch)
                     {
                         Debug.LogWarning(
-                            "[CreatureWorker] go_to arrived without a target or destination; " +
+                            "[CreatureMotorWorker] go_to arrived without a target or destination; " +
                             "falling back to wander. For directed movement, send a visible target id.");
                     }
                     cmd = MotorCommand.Wander();
@@ -230,7 +242,6 @@ public class CreatureWorker : MonoBehaviour
             case "scratch":
             case "look_around":
             case "nod_head":
-            case "eat":
             case "drink":
             case "sit":
             case "lie":
@@ -245,6 +256,22 @@ public class CreatureWorker : MonoBehaviour
                     return false;
                 }
                 cmd = MotorCommand.Action(intent.Intent, abilityIndex);
+                return true;
+
+            case "eat":
+                if (string.IsNullOrWhiteSpace(intent.TargetKey))
+                {
+                    rejectedReason = "missing_eat_target";
+                    return false;
+                }
+                if (!TryResolveTarget(intent.TargetKey, out _, out rejectedReason))
+                    return false;
+                if (!_adapter.TryGetAbilityIndex(intent.Intent, out int eatAbilityIndex))
+                {
+                    rejectedReason = $"unmapped_action:{intent.Intent}";
+                    return false;
+                }
+                cmd = MotorCommand.Action(intent.Intent, eatAbilityIndex);
                 return true;
 
             case "climb_ladder":
@@ -400,13 +427,13 @@ public class CreatureWorker : MonoBehaviour
                 out string anchorReason))
             {
                 if (logWorkerDispatch && anchorPoint != null)
-                    Debug.Log($"[CreatureWorker] resolved {target.name} via cat anchor {anchorPoint.DisplayName} reason={anchorReason}");
+                    Debug.Log($"[CreatureMotorWorker] resolved {target.name} via cat anchor {anchorPoint.DisplayName} reason={anchorReason}");
                 navigationPoint = anchorPoint;
                 return anchorPosition;
             }
 
             if (logWorkerDispatch)
-                Debug.LogWarning($"[CreatureWorker] no usable cat anchor for {target.name}: {anchorReason}; falling back to object position.");
+                Debug.LogWarning($"[CreatureMotorWorker] no usable cat anchor for {target.name}: {anchorReason}; falling back to object position.");
         }
 
         SmartObject smartObject = target.GetComponent<SmartObject>()
@@ -449,7 +476,7 @@ public class CreatureWorker : MonoBehaviour
         if (!autoClimb.TryGetClimbTarget(out Transform climbTarget, out string climbKey))
         {
             if (logWorkerDispatch)
-                Debug.LogWarning($"[CreatureWorker] auto climb point {navigationPoint.DisplayName} has no climb target.");
+                Debug.LogWarning($"[CreatureMotorWorker] auto climb point {navigationPoint.DisplayName} has no climb target.");
             return;
         }
 
@@ -477,7 +504,7 @@ public class CreatureWorker : MonoBehaviour
         }
 
         if (logWorkerDispatch)
-            Debug.Log($"[CreatureWorker] queued auto climb followups from {navigationPoint.DisplayName}.");
+            Debug.Log($"[CreatureMotorWorker] queued auto climb followups from {navigationPoint.DisplayName}.");
     }
 
     static string BuildAutoCommandId(IntentMessage sourceIntent, string suffix)
@@ -505,6 +532,10 @@ public class CreatureWorker : MonoBehaviour
         if (!_hasActiveIntent || (_adapter != null && _adapter.IsBusy))
             return;
 
+        bool requiresWorldConfirmation = IsValidatableIntent(_activeIntent.Intent);
+        if (requiresWorldConfirmation && Time.time - _activeStartedAt < validatableConfirmationGraceSeconds)
+            return;
+
         string adapterReason = "";
         NavigationCompletionReason navReason = NavigationCompletionReason.None;
         if (_adapter != null)
@@ -517,7 +548,7 @@ public class CreatureWorker : MonoBehaviour
 
         string status;
         string reason;
-        if (IsValidatableIntent(_activeIntent.Intent))
+        if (requiresWorldConfirmation)
         {
             bool confirmed = GoalEventBus.TryConsume(
                 CreatureIdForBus(),
@@ -610,7 +641,7 @@ public class CreatureWorker : MonoBehaviour
         }
 
         if (logWorkerDispatch)
-            Debug.Log($"[CreatureWorker] recovery teleport for go_to target={intent.TargetKey} reason={warpReason}");
+            Debug.Log($"[CreatureMotorWorker] recovery teleport for go_to target={intent.TargetKey} reason={warpReason}");
 
         GoalEventBus.Confirm(
             CreatureIdForBus(),
@@ -651,16 +682,16 @@ public class CreatureWorker : MonoBehaviour
     void CompletePlanIfReady()
     {
         if (_hasActiveIntent || (_adapter != null && _adapter.IsBusy)) return;
-        if (_board != null && _board.HasMindPlan) return;
-        // In FSM mode the action queue empties between every micro-action, so
-        // queue-drain is not the report boundary. PeriodicMind pulls a report on
+        if (_board != null && _board.HasMicroActionPlan) return;
+        // In graph-worker mode the action queue empties between every micro-action, so
+        // queue-drain is not the report boundary. SnapshotTicker pulls a report on
         // its heartbeat via FlushReport(); don't flush a half-finished batch here.
-        if (_board != null && _board.DirectiveModeEnabled) return;
+        if (_board != null && _board.IntentWorkerEnabled) return;
         FlushPlan();
     }
 
     /// <summary>
-    /// Heartbeat flush: PeriodicMind calls this once per mind tick so the steps
+    /// Heartbeat flush: SnapshotTicker calls this once per mind tick so the steps
     /// the cat has executed since the last tick are reported back to the LLM.
     /// </summary>
     public void FlushReport() => FlushPlan();
@@ -687,26 +718,12 @@ public class CreatureWorker : MonoBehaviour
         _planId = "";
     }
 
-    /// <summary>
-    /// Worker-as-orchestrator step, run when the action queue is empty. Asks the
-    /// FSM for the next single action (scored from the blackboard's weight buffer
-    /// and live needs) and queues it, so the cat is always doing something. The
-    /// report is flushed separately on PeriodicMind's heartbeat via FlushReport().
-    /// </summary>
-    void ServiceDirective()
-    {
-        if (_board == null || _behaviorFSM == null) return;
-        if (!_board.DirectiveModeEnabled) return;
-
-        if (_behaviorFSM.TryNextAction(_board, out IntentMessage micro))
-            _board.EnqueueMindMicroAction(micro);
-    }
-
     void RecordStep(IntentMessage intent, string status, string reason, float startedAt, float endedAt)
     {
         if (intent.Source == LayerSource.Neutral)
             return;
 
+        _board?.RecordMicroActionOutcome(intent, status, reason);
         _currentPlanSteps.Add(new PlanStepExecutionReport
         {
             commandId = intent.CommandId ?? "",
@@ -770,6 +787,6 @@ public class CreatureWorker : MonoBehaviour
 
         string knownText = known.Count > 0 ? string.Join(", ", known) : "(none registered)";
         string creatureId = _board != null ? _board.CreatureId : name;
-        Debug.LogError($"[CreatureWorker] Unknown target '{normalized}' for creature '{creatureId}'. Known target keys: {knownText}");
+        Debug.LogError($"[CreatureMotorWorker] Unknown target '{normalized}' for creature '{creatureId}'. Known target keys: {knownText}");
     }
 }

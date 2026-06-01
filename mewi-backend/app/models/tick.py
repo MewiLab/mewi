@@ -1,9 +1,9 @@
 """Models for the Unity agent websocket tick envelope."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class Location(BaseModel):
@@ -96,3 +96,72 @@ class TickPayload(BaseModel):
     place_context: PlaceContext      = Field(default_factory=PlaceContext)
     feelings:   FeelingsData         = Field(default_factory=FeelingsData)
     action_result: dict[str, Any] | None = None
+
+
+class AgentWsRegisterMessage(BaseModel):
+    """Shared websocket registration from one Unity app connection."""
+
+    model_config = ConfigDict(extra="allow")
+
+    type: Literal["register"] = "register"
+    creature_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("creature_ids", mode="before")
+    @classmethod
+    def _coerce_creature_ids(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, (list, tuple, set)):
+            return [str(item) for item in value]
+        return []
+
+    @field_validator("creature_ids")
+    @classmethod
+    def _clean_creature_ids(cls, value: list[str]) -> list[str]:
+        seen: set[str] = set()
+        cleaned: list[str] = []
+        for item in value:
+            text = str(item or "").strip()
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            cleaned.append(text)
+        return cleaned
+
+
+class AgentWsTickEnvelope(BaseModel):
+    """One per-cat tick carried over the shared app websocket."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    type: Literal["tick"] = "tick"
+    agent_id: str = ""
+    creature_id: str = ""
+    request_id: str = Field("", alias="requestId")
+    report: dict[str, Any] | None = None
+    snapshot: dict[str, Any]
+
+    @model_validator(mode="after")
+    def _fill_ids_from_snapshot(self) -> "AgentWsTickEnvelope":
+        if not self.creature_id:
+            self.creature_id = self.agent_id
+        if not self.creature_id and isinstance(self.snapshot, dict):
+            self.creature_id = str(self.snapshot.get("agent_id") or "").strip()
+        if not self.agent_id:
+            self.agent_id = self.creature_id
+        if not self.request_id and isinstance(self.snapshot, dict):
+            self.request_id = str(
+                self.snapshot.get("requestId") or self.snapshot.get("request_id") or ""
+            )
+        self.creature_id = self.creature_id.strip()
+        self.agent_id = self.agent_id.strip()
+        self.request_id = self.request_id.strip()
+        return self
+
+
+class AgentWsRegisteredResponse(BaseModel):
+    type: Literal["registered"] = "registered"
+    status: Literal["ok"] = "ok"
+    creature_ids: list[str] = Field(default_factory=list)

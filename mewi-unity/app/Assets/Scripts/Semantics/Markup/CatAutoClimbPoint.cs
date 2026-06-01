@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Attach this to a bottom climb point. When go_to resolves to this point,
-/// CreatureWorker queues a simple Climb command, then optionally queues a go_to
+/// CreatureMotorWorker queues a simple Climb command, then optionally queues a go_to
 /// to the authored exit point.
 /// </summary>
 [RequireComponent(typeof(CatNavigationPoint))]

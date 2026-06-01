@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.agent.schemas.place_memory_schema import PlaceMemoryEntry, PlaceMemoryOverlay
-from app.services.memory.place_memory_service import PlaceMemoryService
+from app.agent.memory.place_memory_service import PlaceMemoryService
 
 
 class FakePlaceStore:

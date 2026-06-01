@@ -29,7 +29,7 @@ CONTEXT as the cleaned source of current mood, health, and place facts.
 Return exactly one JSON object, with no markdown and no extra text.
 {
   "intent": "<SEEK_FOOD | REST | SAFETY | IDLE>",
-  "target_id": null,
+  "target_id": "<exact id from AVAILABLE INTENT AFFORDANCES, or null if none fits>",
   "mood": "brief embodied mood",
   "style": "short physical style hint",
   "reasoning": "one sentence explaining the need pressure"

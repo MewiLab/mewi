@@ -2,10 +2,10 @@ using UnityEngine;
 
 /// <summary>
 /// The cat's slow-changing internal state.
-/// Written by PeriodicMind, read by Tactical layer to bias behavior selection.
+/// Written by mind/feeling systems, read by the graph layer to bias behavior selection.
 /// All values 0–1.
 /// 
-/// PeriodicMind mutates MoodModel by reference — but only if it's a class. You access _board.mood and modify fields directly. 
+/// Runtime systems mutate MoodModel by reference. You access _board.mood and modify fields directly. 
 /// If MoodModel is a struct, you're modifying a copy and nothing persists. Make sure MoodModel and HealthModel are classes, not structs.
 /// </summary>
 [System.Serializable]

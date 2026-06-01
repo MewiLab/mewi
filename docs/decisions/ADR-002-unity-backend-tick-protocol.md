@@ -1,6 +1,7 @@
 # ADR-002: Unity ↔ Backend Tick Protocol (Async Job + Poll)
 
-- **Status:** Superseded by ADR-004 for the Unity runtime
+- **Status:** Superseded by ADR-004 for the Unity runtime; Redis key layout
+  refined by [ADR-023](ADR-023-shared-unity-agent-websocket.md)
 - **Date:** 2026-05-18
 - **Scope:** `mewi-backend/app/api/routes/agent_router.py`, `mewi-backend/app/services/agent_tick/tick_service.py`, `mewi-backend/app/workers/agent_tick_worker.py`
 
@@ -22,6 +23,10 @@ LLM is down.
 ## Decision
 
 Use a **submit-then-poll** pattern backed by a Redis-resident job queue.
+
+> 2026-06-01 implementation note: the runtime now reaches this queue through
+> the shared websocket in ADR-023, not the HTTP polling endpoints below. The
+> current Redis schema is `agent_tick.v2`.
 
 1. Unity `POST`s a tick payload to `/api/v1/agent/tick/{creature_id}`.
    The endpoint enqueues the job in Redis and returns **202 Accepted** with a
@@ -48,24 +53,26 @@ sequenceDiagram
 
     U->>R: POST /agent/tick/{creature_id}<br/>X-API-Key, TickPayload
     R->>S: submit_tick(creature_id, payload)
-    S->>Q: SET agent:job:{job_id} = {status: queued}
-    S->>Q: RPUSH agent:jobs {job}
+    S->>Q: SET agent:tick:inflight:{creature_id} NX
+    S->>Q: SET agent:tick:job:{job_id} = {status: queued}
+    S->>Q: RPUSH agent:tick:queue {job}
     S-->>R: {job_id, queue_depth, status: queued}
     R-->>U: 202 Accepted {job_id}
 
     Note over W,Q: Background loop started in lifespan
-    W->>Q: BLPOP agent:jobs (timeout=5s)
+    W->>Q: BLPOP agent:tick:queue (timeout=5s)
     Q-->>W: {job, payload}
     W->>S: mark_processing(job_id) → status=processing
     W->>G: graph.ainvoke(runtime.state_for_tick(...))
     G-->>W: {chosen_action, action_result, reasoning, tick}
     W->>S: publish_result(job_id, result)
-    S->>Q: SET agent:job:{job_id} = {status: done, ...}
+    S->>Q: SET agent:tick:job:{job_id} = {status: done, ...}
+    S->>Q: DEL agent:tick:inflight:{creature_id}
 
     loop Poll until terminal
         U->>R: GET /agent/tick/jobs/{job_id}
         R->>S: get_job(job_id)
-        S->>Q: GET agent:job:{job_id}
+        S->>Q: GET agent:tick:job:{job_id}
         Q-->>S: job row
         S-->>R: job row
         R-->>U: TickJobResponse<br/>status ∈ {queued, processing, done, error}
@@ -84,12 +91,15 @@ TTL'd by `agent_status_ttl` (default 300 s) so the store self-cleans.
 
 ## Redis key layout
 
-| Key                              | Type   | Purpose                                       |
-|----------------------------------|--------|-----------------------------------------------|
-| `agent:jobs`                     | LIST   | FIFO job queue consumed by the worker (BLPOP) |
-| `agent:job:{job_id}`             | STRING | JSON job row (input + status + result)        |
-| `agent:status:{creature_id}`     | STRING | Deprecated; no longer written by the websocket runtime |
-| `agent:latest_job:{creature_id}` | STRING | Deprecated; no longer written by the websocket runtime |
+| Key | Type | Purpose |
+|---|---|---|
+| `agent:tick:queue` | LIST | FIFO job queue consumed by the worker with `BLPOP`. |
+| `agent:tick:job:{job_id}` | STRING JSON | `agent_tick.v2` job row with input, status, result, and route ids. |
+| `agent:tick:inflight:{creature_id}` | STRING JSON | Same-cat overlap reservation released by the matching terminal job. |
+| `agent:jobs` | LIST | Legacy ADR-002 key; no longer written by runtime code. |
+| `agent:job:{job_id}` | STRING | Legacy ADR-002 key; no longer written by runtime code. |
+| `agent:status:{creature_id}` | STRING | Deprecated; no longer written by the websocket runtime. |
+| `agent:latest_job:{creature_id}` | STRING | Deprecated; no longer written by the websocket runtime. |
 
 ## Consequences
 

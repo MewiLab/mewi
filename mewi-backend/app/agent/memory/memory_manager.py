@@ -57,6 +57,9 @@ class MemoryManager:
         self._consolidating: set[str] = set()
         self._consolidation_tasks: set[asyncio.Task] = set()
 
+        # Background durable-write tasks (kept referenced so they aren't GC'd)
+        self._store_tasks: set[asyncio.Task] = set()
+
     # ─── Write API ───────────────────────────────────────────────────────
 
     def record(self, summary: PerceptionSummary) -> None:
@@ -207,15 +210,29 @@ class MemoryManager:
 
     # ─── Durable store (the manager's one persistence tool) ───────────────
 
-    async def persist_turn(self, write: TurnMemoryWrite) -> None:
-        """Record the turn in hot memory, then to the durable store if attached.
+    def persist_turn(self, write: TurnMemoryWrite) -> None:
+        """Record the turn in hot memory now; persist to the durable store in
+        the background so the tick never waits on Supabase / mem0 extraction.
 
         This is the single write seam: the behavior graph calls it once per
-        tick. With no store it is just the in-process write.
+        tick. With no store attached it is just the in-process write.
         """
         self.record_turn_memory(write)
-        if self._store is not None:
+        if self._store is None:
+            return
+        try:
+            task = asyncio.create_task(self._safe_store_write(write))
+        except RuntimeError:
+            logger.warning("Durable memory write skipped: no running event loop")
+            return
+        self._store_tasks.add(task)
+        task.add_done_callback(self._store_tasks.discard)
+
+    async def _safe_store_write(self, write: TurnMemoryWrite) -> None:
+        try:
             await self._store.record_turn(write)
+        except Exception:
+            logger.warning("Durable memory write failed", exc_info=True)
 
     async def recall_longterm(
         self,

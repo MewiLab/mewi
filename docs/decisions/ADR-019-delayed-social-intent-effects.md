@@ -1,4 +1,4 @@
-# ADR-011: Delayed Social Intent Effects
+# ADR-019: Delayed Social Intent Effects
 
 Status: Accepted
 

@@ -45,6 +45,13 @@ fully built) · `Superseded` (replaced — kept for history).
 | [016](ADR-016-agent-behavioral-optimization-toolkit.md) | Agent Behavioral-Optimization Toolkit | Proposed (not yet wired) | Opt-in helpers (CoT, query-expansion, multi-intent, plan-diversity, life-balance) to widen behaviour. |
 | [017](ADR-017-mem0-style-memory-add-retrieve-graph.md) | Mem0-Style Memory (ADD/Retrieve/Graph) | Proposed | Append-only writes; hybrid recall (recent + pgvector); property-graph edges in Postgres — no new infra. |
 | [018](ADR-018-proposal-arbiter-tick-graph.md) | Proposal–Arbiter Tick Graph | Proposed | Reshape the linear graph into propose→select→plan; wires the 016 toolkit + 017 memory; same two LLM calls. |
+| [019](ADR-019-delayed-social-intent-effects.md) | Delayed Social Intent Effects | Accepted | Selected social intent can affect backend social state without deciding the receiver's reaction. |
+| [020](ADR-020-memory-layer-simplification.md) | Thin Agent Memory Layers | Accepted | MemoryManager owns meaning; repositories/stores do IO only. |
+| [021](ADR-021-directive-driven-motor-fsm.md) | Directive-Driven Motor FSM | Superseded by [022](ADR-022-dispatcher-intent-motor-workers.md) | First Unity directive wiring; replaced by explicit dispatcher + intent/motor workers split. |
+| [022](ADR-022-dispatcher-intent-motor-workers.md) | Dispatcher + Intent/Motor Workers | Accepted | Network transport, message dispatch, snapshot heartbeat, graph policy, and body execution are separate. |
+| [023](ADR-023-shared-unity-agent-websocket.md) | Shared Unity Agent WebSocket | Accepted | One Unity websocket carries many per-cat ticks, routed by `creature_id + requestId`. |
+| [024](ADR-024-backend-makefile-and-graph-db-workflow.md) | Backend Makefile + Graph DB Workflow | Accepted | Backend Make targets for full Docker stack, Redis, Neo4j graph memory, testing, and app URLs. |
+| [025](ADR-025-world-authored-interaction-fsm.md) | World-Authored Interaction FSM | Proposed | Scene objects own local interaction recipes; the graph coordinates and the motor executes. |
 
 ## How the decisions relate
 
@@ -53,14 +60,23 @@ flowchart TD
     subgraph Transport["Transport & runtime"]
         A002[002 HTTP poll]
         A004[004 WebSocket tick]
+        A023[023 Shared Unity websocket]
         A003[003 Agent runtime]
         A002 -. superseded by .-> A004
+        A004 -. transport refined by .-> A023
     end
 
     subgraph Body["Unity body"]
         A005[005 Movement watchdog]
         A008[008 Goal Event Bus]
+        A021[021 Directive motor FSM]
+        A022[022 Dispatcher + intent/motor workers]
+        A025[025 World-authored interaction FSM]
         A005 --> A008
+        A021 -. superseded by .-> A022
+        A022 --> A023
+        A022 --> A025
+        A008 --> A025
     end
 
     subgraph Mind["Mind, memory & behaviour"]
@@ -70,6 +86,7 @@ flowchart TD
         A016[016 Optimization toolkit]
         A017[017 Mem0-style memory]
         A018[018 Proposal–arbiter graph]
+        A020[020 Thin memory layers]
         A003 --> A006
         A006 --> A015
         A006 --> A009
@@ -80,12 +97,15 @@ flowchart TD
         A017 --> A016
         A016 --> A018
         A017 --> A018
+        A017 --> A020
     end
 
     subgraph World["World & social"]
         A010[010 Backend-owned world]
         A011[011 Tick graph + social]
+        A019[019 Delayed social effects]
         A010 --> A011
+        A011 --> A019
     end
 
     subgraph Report["Player report"]
@@ -99,6 +119,10 @@ flowchart TD
         A007[007 Attachment pipeline]
     end
 
+    subgraph DevOps["Local dev & ops"]
+        A024[024 Backend Makefile + graph DB]
+    end
+
     A004 --> A006
     A005 --> A010
     A008 --> A010
@@ -106,9 +130,16 @@ flowchart TD
     A006 --> A010
     A011 --> A016
     A011 --> A018
+    A018 --> A019
+    A018 --> A021
+    A004 --> A022
+    A021 --> A022
+    A017 --> A024
+    A023 --> A024
+    A023 --> A025
 
     classDef sup fill:#E5E5E5,stroke:#999,color:#555
-    class A002 sup
+    class A002,A021 sup
 ```
 
 Read top-to-bottom by theme:

@@ -9,24 +9,63 @@ using UnityEngine;
 /// </summary>
 public class CreatureBlackboard : MonoBehaviour
 {
+    /// <summary>Backend-authored high-level intent. Graph workers consume these.</summary>
+    [Serializable]
+    public struct MindDirective
+    {
+        public string Intent;
+        public string FocusTarget;
+        public string Reason;
+
+        public bool IsValid => !string.IsNullOrWhiteSpace(Intent);
+
+        public static MindDirective Create(string intent, string focusTarget = "", string reason = "")
+        {
+            return new MindDirective
+            {
+                Intent = string.IsNullOrWhiteSpace(intent) ? "" : intent.Trim().ToUpperInvariant(),
+                FocusTarget = focusTarget ?? "",
+                Reason = reason ?? "",
+            };
+        }
+    }
+
     [Header("Identity")]
     [SerializeField] string creatureId = "";
 
-    [Header("Intent queue (read-only in Inspector)")]
-    [SerializeField] string _debugMindSlot  = "—";
-    [SerializeField] string _debugMindQueue = "—";
+    [Header("Intent queues (read-only in Inspector)")]
+    [SerializeField] string _debugIntentQueue = "—";
+    [SerializeField] string _debugMicroActionSlot  = "—";
+    [SerializeField] string _debugMicroActionQueue = "—";
 
-    readonly Queue<IntentMessage> _mindQueue = new Queue<IntentMessage>();
+    readonly Queue<MindDirective> _intentQueue = new Queue<MindDirective>();
+    readonly Queue<IntentMessage> _microActionQueue = new Queue<IntentMessage>();
     readonly Queue<PlanExecutionReport> _completedPlanReports = new Queue<PlanExecutionReport>();
 
-    /// <summary>Latest behavior weights read by CatBehaviorFSM.</summary>
+    /// <summary>Latest behavior weights read by CatBehaviorGraph (scoring fallback).</summary>
     public CatBehaviorWeights MindWeights { get; private set; } = new CatBehaviorWeights();
 
-    /// <summary>Optional target key the FSM should bias toward.</summary>
+    /// <summary>Graph worker's active high-level intent (e.g. "SOCIALIZE", "EXPLORE").
+    /// CatBehaviorGraph maps this to a behavior node; empty falls back to scoring.</summary>
+    public string MindDirectiveIntent { get; private set; } = "";
+
+    /// <summary>Target id the active directive points at; the graph biases actions toward it.</summary>
     public string MindFocusTarget { get; private set; } = "";
 
-    /// <summary>True when empty-queue decisions come from the behavior FSM.</summary>
-    public bool DirectiveModeEnabled { get; private set; }
+    /// <summary>True when the intent worker may refill the micro-action queue.</summary>
+    public bool IntentWorkerEnabled { get; private set; }
+
+    public bool HasActiveMindDirective => !string.IsNullOrWhiteSpace(MindDirectiveIntent);
+    public string LastMicroActionIntent { get; private set; } = "";
+    public string LastMicroActionTarget { get; private set; } = "";
+    public string LastMicroActionStatus { get; private set; } = "";
+    public string LastMicroActionReason { get; private set; } = "";
+    public bool LastMicroActionFailed =>
+        string.Equals(LastMicroActionStatus, "failed", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(LastMicroActionStatus, "rejected", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Compatibility alias for older call sites and docs.</summary>
+    public bool DirectiveModeEnabled => IntentWorkerEnabled;
 
     // -------------------------------------------------------------------------
     // Perception State
@@ -70,36 +109,68 @@ public class CreatureBlackboard : MonoBehaviour
     }
 
     // -------------------------------------------------------------------------
-    // Mind Action Queue
+    // High-Level Intent Queue
     // -------------------------------------------------------------------------
 
-    public IntentMessage? MindIntent
+    public int QueuedIntentCount => _intentQueue.Count;
+    public bool HasPendingDirective => _intentQueue.Count > 0;
+
+    /// <summary>Append one backend-authored high-level intent for the intent worker.</summary>
+    public void EnqueueMindDirective(string intent, string focusTarget = "", string reason = "")
+        => EnqueueMindDirective(MindDirective.Create(intent, focusTarget, reason));
+
+    public void EnqueueMindDirective(MindDirective directive)
+    {
+        if (!directive.IsValid)
+            return;
+        _intentQueue.Enqueue(directive);
+    }
+
+    public bool TryPopMindDirective(out MindDirective directive)
+    {
+        if (_intentQueue.Count == 0)
+        {
+            directive = default;
+            return false;
+        }
+
+        directive = _intentQueue.Dequeue();
+        return true;
+    }
+
+    public void ClearMindDirectives() => _intentQueue.Clear();
+
+    // -------------------------------------------------------------------------
+    // Micro-Action Queue
+    // -------------------------------------------------------------------------
+
+    public IntentMessage? MicroAction
     {
         get
         {
-            return TryPeekMindIntent(out var head) ? head : (IntentMessage?)null;
+            return TryPeekMicroAction(out var head) ? head : (IntentMessage?)null;
         }
     }
 
-    public int  QueuedMindIntentCount => PendingMindIntentCount();
-    public bool HasMindPlan           => TryPeekMindIntent(out _);
+    public int  QueuedMicroActionCount => PendingMicroActionCount();
+    public bool HasMicroActionPlan     => TryPeekMicroAction(out _);
 
-    /// <summary>Replace the queue with one explicit action.</summary>
-    public void SetMindIntent(
+    /// <summary>Replace the micro-action queue with one explicit body action.</summary>
+    public void SetMicroAction(
         string intent,
         Vector3 directionHint = default,
         string commandId = "",
         string requestId = "",
         string targetKey = "")
     {
-        _mindQueue.Clear();
-        _mindQueue.Enqueue(IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint, commandId, requestId, targetKey));
+        _microActionQueue.Clear();
+        _microActionQueue.Enqueue(IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint, commandId, requestId, targetKey));
     }
 
-    /// <summary>Replace all queued mind actions with a backend-authored plan.</summary>
-    public void ReplaceMindPlan(IEnumerable<IntentMessage> intents)
+    /// <summary>Replace all queued micro-actions with a backend-authored legacy plan.</summary>
+    public void ReplaceMicroActionPlan(IEnumerable<IntentMessage> intents)
     {
-        _mindQueue.Clear();
+        _microActionQueue.Clear();
 
         if (intents != null)
         {
@@ -107,13 +178,13 @@ public class CreatureBlackboard : MonoBehaviour
             {
                 if (string.IsNullOrWhiteSpace(intent.Intent))
                     continue;
-                _mindQueue.Enqueue(intent);
+                _microActionQueue.Enqueue(intent);
             }
         }
     }
 
     /// <summary>Insert local follow-up actions immediately after the active action.</summary>
-    public void InsertMindIntentsAfterCurrent(IEnumerable<IntentMessage> intents)
+    public void InsertMicroActionsAfterCurrent(IEnumerable<IntentMessage> intents)
     {
         if (intents == null)
             return;
@@ -129,90 +200,161 @@ public class CreatureBlackboard : MonoBehaviour
         if (pending.Count == 0)
             return;
 
-        IntentMessage[] existing = _mindQueue.ToArray();
-        _mindQueue.Clear();
+        IntentMessage[] existing = _microActionQueue.ToArray();
+        _microActionQueue.Clear();
 
         if (existing.Length == 0)
         {
             for (int i = 0; i < pending.Count; i++)
-                _mindQueue.Enqueue(pending[i]);
+                _microActionQueue.Enqueue(pending[i]);
             return;
         }
 
-        _mindQueue.Enqueue(existing[0]);
+        _microActionQueue.Enqueue(existing[0]);
         for (int i = 0; i < pending.Count; i++)
-            _mindQueue.Enqueue(pending[i]);
+            _microActionQueue.Enqueue(pending[i]);
         for (int i = 1; i < existing.Length; i++)
-            _mindQueue.Enqueue(existing[i]);
+            _microActionQueue.Enqueue(existing[i]);
     }
 
-    public void ClearMindPlan()
+    public void ClearMicroActionPlan()
     {
-        _mindQueue.Clear();
+        _microActionQueue.Clear();
         followTarget = null;
     }
 
     /// <summary>Peek the active action without removing it.</summary>
-    public bool TryPeekMindIntent(out IntentMessage head)
+    public bool TryPeekMicroAction(out IntentMessage head)
     {
-        TrimInactiveMindIntents();
-        if (_mindQueue.Count == 0)
+        TrimInactiveMicroActions();
+        if (_microActionQueue.Count == 0)
         {
             head = default;
             return false;
         }
 
-        head = _mindQueue.Peek();
+        head = _microActionQueue.Peek();
         return true;
     }
 
     /// <summary>Peek the active action, or return idle when the queue is empty.</summary>
-    public IntentMessage ResolveActiveIntent()
+    public IntentMessage ResolveActiveMicroAction()
     {
-        return TryPeekMindIntent(out var head)
+        return TryPeekMicroAction(out var head)
             ? head
             : IntentMessage.Create("idle", LayerSource.Mind);
     }
 
     /// <summary>Remove and return the active action.</summary>
-    public bool TryPopMindIntent(out IntentMessage popped)
+    public bool TryPopMicroAction(out IntentMessage popped)
     {
-        TrimInactiveMindIntents();
+        TrimInactiveMicroActions();
 
-        if (_mindQueue.Count == 0)
+        if (_microActionQueue.Count == 0)
         {
             popped = default;
             followTarget = null;
             return false;
         }
 
-        popped = _mindQueue.Dequeue();
-        if (_mindQueue.Count == 0)
+        popped = _microActionQueue.Dequeue();
+        if (_microActionQueue.Count == 0)
             followTarget = null;
         return true;
     }
 
-    /// <summary>Append one FSM-generated micro-action to the action queue.</summary>
-    public void EnqueueMindMicroAction(IntentMessage intent)
+    /// <summary>Append one graph-generated micro-action to the action queue.</summary>
+    public void EnqueueMicroAction(IntentMessage intent)
     {
         if (string.IsNullOrWhiteSpace(intent.Intent))
             return;
-        _mindQueue.Enqueue(intent);
+        _microActionQueue.Enqueue(intent);
     }
 
+    public IntentMessage? MindIntent => MicroAction;
+    public int  QueuedMindIntentCount => QueuedMicroActionCount;
+    public bool HasMindPlan           => HasMicroActionPlan;
+
+    public void SetMindIntent(
+        string intent,
+        Vector3 directionHint = default,
+        string commandId = "",
+        string requestId = "",
+        string targetKey = "")
+        => SetMicroAction(intent, directionHint, commandId, requestId, targetKey);
+
+    public void ReplaceMindPlan(IEnumerable<IntentMessage> intents)
+        => ReplaceMicroActionPlan(intents);
+
+    public void InsertMindIntentsAfterCurrent(IEnumerable<IntentMessage> intents)
+        => InsertMicroActionsAfterCurrent(intents);
+
+    public void ClearMindPlan() => ClearMicroActionPlan();
+
+    public bool TryPeekMindIntent(out IntentMessage head)
+        => TryPeekMicroAction(out head);
+
+    public IntentMessage ResolveActiveIntent()
+        => ResolveActiveMicroAction();
+
+    public bool TryPopMindIntent(out IntentMessage popped)
+        => TryPopMicroAction(out popped);
+
+    public void EnqueueMindMicroAction(IntentMessage intent)
+        => EnqueueMicroAction(intent);
+
     // -------------------------------------------------------------------------
-    // FSM Controls
+    // Graph Controls
     // -------------------------------------------------------------------------
 
-    /// <summary>Switch empty-queue behavior to CatBehaviorFSM for this play session.</summary>
-    public void EnableDirectiveMode() => DirectiveModeEnabled = true;
+    /// <summary>Allow the intent worker to refill the micro-action queue.</summary>
+    public void EnableIntentWorker() => IntentWorkerEnabled = true;
 
-    /// <summary>Replace behavior weights and optional focus target for CatBehaviorFSM.</summary>
-    public void SetMindWeights(CatBehaviorWeights weights, string focusTarget = "")
+    /// <summary>Compatibility alias for older code paths.</summary>
+    public void EnableDirectiveMode() => EnableIntentWorker();
+
+    /// <summary>
+    /// Apply the active high-level intent and target. The graph reads the intent
+    /// to pick a node and the target to aim its actions.
+    /// </summary>
+    public void SetMindDirective(string intent, string focusTarget = "")
+        => SetMindDirective(MindDirective.Create(intent, focusTarget));
+
+    public void SetMindDirective(MindDirective directive)
+    {
+        MindDirectiveIntent = directive.IsValid ? directive.Intent : "";
+        MindFocusTarget = directive.FocusTarget ?? "";
+        ClearLastMicroActionOutcome();
+    }
+
+    public void ClearActiveMindDirective()
+    {
+        MindDirectiveIntent = "";
+        MindFocusTarget = "";
+        ClearLastMicroActionOutcome();
+    }
+
+    public void RecordMicroActionOutcome(IntentMessage intent, string status, string reason)
+    {
+        LastMicroActionIntent = intent.Intent ?? "";
+        LastMicroActionTarget = intent.TargetKey ?? "";
+        LastMicroActionStatus = status ?? "";
+        LastMicroActionReason = reason ?? "";
+    }
+
+    public void ClearLastMicroActionOutcome()
+    {
+        LastMicroActionIntent = "";
+        LastMicroActionTarget = "";
+        LastMicroActionStatus = "";
+        LastMicroActionReason = "";
+    }
+
+    /// <summary>Replace the graph scoring weights used when no directive is active.</summary>
+    public void SetMindWeights(CatBehaviorWeights weights)
     {
         if (weights != null)
             MindWeights = weights;
-        MindFocusTarget = focusTarget ?? "";
     }
 
     // -------------------------------------------------------------------------
@@ -250,28 +392,29 @@ public class CreatureBlackboard : MonoBehaviour
     /// <summary>Refresh Inspector-only queue labels.</summary>
     public void UpdateDebugDisplay()
     {
-        int queued = QueuedMindIntentCount;
-        _debugMindSlot  = TryPeekMindIntent(out var head) ? head.ToString() : "—";
-        _debugMindQueue = queued > 0 ? $"{queued} queued" : "empty";
+        int queued = QueuedMicroActionCount;
+        _debugIntentQueue = _intentQueue.Count > 0 ? $"{_intentQueue.Count} queued" : "empty";
+        _debugMicroActionSlot  = TryPeekMicroAction(out var head) ? head.ToString() : "—";
+        _debugMicroActionQueue = queued > 0 ? $"{queued} queued" : "empty";
     }
 
     // -------------------------------------------------------------------------
     // Queue Helpers
     // -------------------------------------------------------------------------
 
-    void TrimInactiveMindIntents()
+    void TrimInactiveMicroActions()
     {
-        while (_mindQueue.Count > 0 && !_mindQueue.Peek().IsActive)
-            _mindQueue.Dequeue();
+        while (_microActionQueue.Count > 0 && !_microActionQueue.Peek().IsActive)
+            _microActionQueue.Dequeue();
 
-        if (_mindQueue.Count == 0)
+        if (_microActionQueue.Count == 0)
             followTarget = null;
     }
 
-    int PendingMindIntentCount()
+    int PendingMicroActionCount()
     {
-        TrimInactiveMindIntents();
-        return Mathf.Max(0, _mindQueue.Count - 1);
+        TrimInactiveMicroActions();
+        return Mathf.Max(0, _microActionQueue.Count - 1);
     }
 
     // -------------------------------------------------------------------------

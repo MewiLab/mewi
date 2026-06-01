@@ -1,4 +1,7 @@
 from app.models.tick import (
+    AgentWsRegisteredResponse,
+    AgentWsRegisterMessage,
+    AgentWsTickEnvelope,
     EntitySnapshot,
     FeelingsData,
     HealthState,
@@ -23,6 +26,9 @@ from app.models.report import (
 
 __all__ = [
     "EntitySnapshot",
+    "AgentWsRegisteredResponse",
+    "AgentWsRegisterMessage",
+    "AgentWsTickEnvelope",
     "FeelingsData",
     "HealthState",
     "Location",

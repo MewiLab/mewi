@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// One Unity-validated reachable action candidate.
-/// This is descriptive only; CreatureWorker remains the only executor.
+/// This is descriptive only; CreatureMotorWorker remains the only executor.
 /// </summary>
 [Serializable]
 public class ReachableAffordance

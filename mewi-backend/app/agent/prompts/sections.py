@@ -182,7 +182,7 @@ def render_block(header: str, lines: Any) -> str:
     return f"\n# {header}\n{rendered}\n"
 
 
-# Per-line prefixes used by app/services/place_memory_service._build_prompt_lines.
+# Per-line prefixes used by app/agent/memory/place_memory_service._build_prompt_lines.
 # Kept here so the prompt layer can split that paragraph into typed blocks
 # without re-parsing zone overlays.
 _FRONTIER_LINE_PREFIXES = (

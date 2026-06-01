@@ -27,7 +27,7 @@ facts, and MEMORY STATE for spatial history and recent patterns.
 Return exactly one JSON object, with no markdown and no extra text.
 {
   "intent": "<EXPLORE | INVESTIGATE | IDLE>",
-  "target_id": null,
+  "target_id": "<exact id from AVAILABLE INTENT AFFORDANCES, or null if none fits>",
   "mood": "brief embodied mood",
   "style": "short physical style hint",
   "reasoning": "one sentence explaining the curiosity/place pull"

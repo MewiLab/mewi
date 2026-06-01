@@ -6973,7 +6973,6 @@ GameObject:
   - component: {fileID: 8602972619974021291}
   - component: {fileID: 4387388462843205079}
   - component: {fileID: 3157331721438340705}
-  - component: {fileID: 5419262434959881956}
   - component: {fileID: 9211875305647559421}
   - component: {fileID: 5707635063778154765}
   - component: {fileID: 7070654865051873952}
@@ -17363,28 +17362,12 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6f9baafdfb6be4b6aa3ab425424e3981, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PeriodicMind
-  _bridge: {fileID: 5419262434959881956}
+  m_EditorClassIdentifier: Assembly-CSharp::SnapshotTicker
+  _hub: {fileID: 0}
   _snapshotManager: {fileID: 7070654865051873952}
-  _worker: {fileID: 9211875305647559421}
+  _motorWorker: {fileID: 9211875305647559421}
   _neutralIntentSource: {fileID: 0}
-  mode: 1
-  postPlanSettleSeconds: 1
-  logLLMTicks: 1
---- !u!114 &5419262434959881956
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1781590317693673213}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 64b3e013daf4d403baeb80a882a8da9e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AgentNetworkManager
-  config: {fileID: 11400000, guid: 703c0e6361d5c4171a89fa3471f43a4f, type: 2}
-  logTraffic: 1
+  logTicks: 1
 --- !u!114 &9211875305647559421
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17396,7 +17379,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4a22ec0d8f27346d397e3bb45c5b2b98, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CreatureWorker
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureMotorWorker
   _targetRegistry: {fileID: 0}
   logWorkerDispatch: 1
 --- !u!114 &5707635063778154765

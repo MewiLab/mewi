@@ -118,6 +118,12 @@ def _processed_snapshot_lines(structured: dict[str, Any]) -> list[str]:
         if reachable:
             lines.append(f"reachable places: {', '.join(reachable[:8])}")
 
+    navigation = structured.get("navigation")
+    if isinstance(navigation, dict):
+        route_statuses = _reachable_route_statuses(navigation.get("zone_routes"))
+        if route_statuses:
+            lines.append(f"reachable route status: {', '.join(route_statuses[:8])}")
+
     body = structured.get("body")
     if isinstance(body, dict):
         mood = _compact_mapping(body.get("mood"))
@@ -195,6 +201,23 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [text for item in value if (text := clean_text(item))]
+
+
+def _reachable_route_statuses(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    out: list[str] = []
+    for route in value:
+        if not isinstance(route, dict):
+            continue
+        route_id = clean_text(route.get("id"))
+        if not route_id:
+            continue
+        status = clean_text(route.get("status")).lower()
+        if status == "blocked":
+            continue
+        out.append(f"{route_id} ({status})" if status else route_id)
+    return out
 
 
 def _compact_mapping(value: Any) -> str:

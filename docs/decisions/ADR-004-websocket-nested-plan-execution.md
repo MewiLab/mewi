@@ -1,8 +1,9 @@
 # ADR-004: WebSocket Nested Plan Execution Contract
 
-- **Status:** Accepted
+- **Status:** Accepted for the nested tick envelope; per-creature websocket
+  transport superseded by [ADR-023](ADR-023-shared-unity-agent-websocket.md)
 - **Date:** 2026-05-20
-- **Scope:** Unity agent bridge, creature motor worker, backend `/agent/ws/{creature_id}` loop
+- **Scope:** Unity agent bridge, creature motor worker, nested tick envelope
 
 ## Context
 
@@ -73,8 +74,9 @@ can observe them in an order different from the order each cat actually lived.
 
 ## Decision
 
-Use the per-creature WebSocket as the only runtime control channel. Each cat
-keeps one WebSocket connection. Unity sends a nested `tick` envelope that
+Use a WebSocket as the only runtime control channel. ADR-023 later changed this
+from one socket per cat to one shared Unity app socket; this ADR still owns the
+nested `tick` envelope shape. Unity sends a nested `tick` envelope that
 contains:
 
 - `snapshot`: the full fresh Unity snapshot payload, not a delta;
@@ -229,8 +231,8 @@ stateDiagram-v2
 
 - Unity remains the cadence authority: it sends the next planning tick only
   after its local plan is terminal.
-- Per-cat ordering is simple: one WebSocket connection gives ordered messages
-  for that creature.
+- Per-cat ordering is explicit: ADR-023 routes by `(creature_id, request_id)`
+  and allows only one in-flight request per cat.
 - The backend receives failed/rejected steps before the next plan prompt, so
   the LLM can avoid repeating impossible actions.
 - HTTP action reporting is removed from the runtime loop. It can still exist
@@ -238,5 +240,5 @@ stateDiagram-v2
 - The old HTTP submit/poll agent runtime endpoints are removed from
   `agent_router.py`; Redis jobs remain an internal worker mechanism behind the
   WebSocket.
-- The backend remains tolerant of legacy raw snapshot websocket messages
-  during transition.
+- The backend websocket accepts typed `register` and `tick` envelopes; legacy
+  raw snapshot websocket messages are no longer part of the runtime contract.

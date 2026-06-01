@@ -6,7 +6,7 @@ from langchain_core.messages import AIMessage
 from app.agent.behavior_graph import build_behavior_graph
 from app.agent.creature_runtime import CreatureRuntime
 from app.agent.schemas.place_memory_schema import PlaceMemoryEntry, PlaceMemoryOverlay
-from app.services.memory.place_memory_service import PlaceMemoryService
+from app.agent.memory.place_memory_service import PlaceMemoryService
 
 
 class FakeLLM:

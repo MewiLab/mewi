@@ -199,16 +199,30 @@ def _format_affordances(value: Any) -> str:
 
     target_lines: list[str] = []
     for target in targets or []:
+        if hasattr(target, "to_prompt_line"):
+            line = str(target.to_prompt_line()).strip()
+            if line:
+                target_lines.append(f"  - {line}")
+            continue
+
         if isinstance(target, dict):
             target_id = str(target.get("id") or target.get("target_id") or "").strip()
             supports = target.get("supports") or []
+            tags = target.get("tags") or []
+            path_status = str(target.get("path_status") or target.get("status") or "").strip().lower()
+            path_length = target.get("path_length")
         else:
             target_id = str(getattr(target, "id", "") or "").strip()
             supports = getattr(target, "supports", ()) or []
+            tags = getattr(target, "tags", ()) or []
+            path_status = str(getattr(target, "path_status", "") or "").strip().lower()
+            path_length = getattr(target, "path_length", None)
         if not target_id:
             continue
         support_text = ", ".join(str(item) for item in supports) or "any listed intent"
-        target_lines.append(f"  - {target_id}: supports {support_text}")
+        tag_text = f"; tags {', '.join(str(item) for item in tags[:4])}" if tags else ""
+        path_text = _format_path_status(path_status, path_length)
+        target_lines.append(f"  - {target_id}: supports {support_text}{tag_text}{path_text}")
 
     if target_lines:
         lines.append("targets:")
@@ -216,6 +230,14 @@ def _format_affordances(value: Any) -> str:
     else:
         lines.append("targets: none reported")
     return "\n".join(lines)
+
+
+def _format_path_status(status: str, path_length: Any) -> str:
+    if not status:
+        return ""
+    if isinstance(path_length, (int, float)):
+        return f"; path {status}, {float(path_length):.1f}m"
+    return f"; path {status}"
 
 
 def _legacy_semantic_context(

@@ -5,19 +5,19 @@ using System.Collections.Generic;
 /// Single-process publish/subscribe bus for "the cat declared an intent →
 /// the world confirms it actually happened" handshakes.
 ///
-/// Used to replace CreatureWorker's hardcoded "completed" status with honest
+/// Used to replace CreatureMotorWorker's hardcoded "completed" status with honest
 /// world-driven feedback. See ADR-008.
 ///
 /// Contract:
-///   - <see cref="Declare"/>: CreatureWorker announces a validatable intent at
+///   - <see cref="Declare"/>: CreatureMotorWorker announces a validatable intent at
 ///     dispatch time. Declares are not strictly required — they exist for
 ///     diagnostics and possible future timeout policy; <see cref="TryConsume"/>
 ///     does not depend on a prior Declare.
 ///   - <see cref="Confirm"/>: the relevant world entity (EdibleObject for eat,
-///     CreatureWorker itself for go_to arrival, …) records a successful
+///     CreatureMotorWorker itself for go_to arrival, …) records a successful
 ///     completion. Subsequent confirms for the same (creature, action, target)
 ///     overwrite the previous one.
-///   - <see cref="TryConsume"/>: CreatureWorker reads at completion time. A
+///   - <see cref="TryConsume"/>: CreatureMotorWorker reads at completion time. A
 ///     confirm older than the intent's start time is treated as stale and
 ///     discarded. A successful consume removes the entry so the next intent
 ///     of the same shape starts clean.

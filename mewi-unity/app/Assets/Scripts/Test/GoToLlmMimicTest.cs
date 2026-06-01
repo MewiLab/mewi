@@ -26,16 +26,16 @@ public class GoToLlmMimicTest : MonoBehaviour
 
     [Header("Creature")]
     [SerializeField] CreatureBlackboard blackboard;
-    [SerializeField] CreatureWorker worker;
+    [SerializeField] CreatureMotorWorker motorWorker;
 
-    [Tooltip("Call CreatureWorker.Init if this test starts before the normal controller path.")]
-    [SerializeField] bool initializeWorker = true;
+    [Tooltip("Call CreatureMotorWorker.Init if this test starts before the normal controller path.")]
+    [SerializeField] bool initializeMotorWorker = true;
 
-    [Tooltip("Tick the worker from this test. Keep this on for focused movement tests.")]
-    [SerializeField] bool tickWorkerFromTest = true;
+    [Tooltip("Tick the motor worker from this test. Keep this on for focused movement tests.")]
+    [SerializeField] bool tickMotorWorkerFromTest = true;
 
-    [Tooltip("Disable PeriodicMind while this test is running so backend/LLM plans do not compete with it.")]
-    [SerializeField] bool disablePeriodicMindWhileRunning = true;
+    [Tooltip("Disable SnapshotTicker while this test is running so backend/LLM plans do not compete with it.")]
+    [SerializeField] bool disableSnapshotTickerWhileRunning = true;
 
     [Tooltip("Clear any existing LLM/simulated mind plan when the test starts.")]
     [SerializeField] bool clearExistingPlanOnStart = true;
@@ -49,7 +49,7 @@ public class GoToLlmMimicTest : MonoBehaviour
     [SerializeField] bool runOnStart = true;
     [SerializeField] bool loop = true;
     [SerializeField] float sendIntervalSeconds = 2f;
-    [SerializeField] bool waitUntilWorkerIdle = true;
+    [SerializeField] bool waitUntilMotorWorkerIdle = true;
     [SerializeField] int maxSends = -1;
 
     [Header("Command Ids")]
@@ -69,11 +69,11 @@ public class GoToLlmMimicTest : MonoBehaviour
     [SerializeField] string lastQueued = "";
     [SerializeField] string lastStatus = "";
 
-    MindTicker _periodicMind;
+    SnapshotTicker _snapshotTicker;
     CreatureController _controller;
     float _nextSendAt;
-    bool _periodicMindWasEnabled;
-    bool _periodicMindChanged;
+    bool _snapshotTickerWasEnabled;
+    bool _snapshotTickerChanged;
 
     void Awake()
     {
@@ -83,8 +83,8 @@ public class GoToLlmMimicTest : MonoBehaviour
     void Start()
     {
         ResolveReferences();
-        if (initializeWorker && worker != null && blackboard != null)
-            worker.Init(blackboard);
+        if (initializeMotorWorker && motorWorker != null && blackboard != null)
+            motorWorker.Init(blackboard);
 
         if (runOnStart)
             StartLoop();
@@ -92,18 +92,18 @@ public class GoToLlmMimicTest : MonoBehaviour
 
     void OnDisable()
     {
-        RestorePeriodicMind();
+        RestoreSnapshotTicker();
     }
 
     void Update()
     {
         HandleHotkeys();
 
-        if (isRunning && disablePeriodicMindWhileRunning)
-            DisablePeriodicMind();
+        if (isRunning && disableSnapshotTickerWhileRunning)
+            DisableSnapshotTicker();
 
-        if (tickWorkerFromTest && worker != null)
-            worker.Tick();
+        if (tickMotorWorkerFromTest && motorWorker != null)
+            motorWorker.Tick();
 
         blackboard?.UpdateDebugDisplay();
 
@@ -114,13 +114,13 @@ public class GoToLlmMimicTest : MonoBehaviour
             return;
         }
 
-        if (waitUntilWorkerIdle && worker != null && worker.IsBusy)
+        if (waitUntilMotorWorkerIdle && motorWorker != null && motorWorker.IsBusy)
         {
-            lastStatus = "waiting:worker_busy";
+            lastStatus = "waiting:motor_worker_busy";
             return;
         }
 
-        if (blackboard != null && blackboard.HasMindPlan)
+        if (blackboard != null && blackboard.HasMicroActionPlan)
         {
             lastStatus = "waiting:mind_plan_active";
             return;
@@ -152,14 +152,14 @@ public class GoToLlmMimicTest : MonoBehaviour
             return;
         }
 
-        if (disablePeriodicMindWhileRunning)
-            DisablePeriodicMind();
+        if (disableSnapshotTickerWhileRunning)
+            DisableSnapshotTicker();
 
         if (clearExistingPlanOnStart)
-            blackboard.ClearMindPlan();
+            blackboard.ClearMicroActionPlan();
 
-        if (worker == null)
-            Debug.LogWarning("[GoToLlmMimicTest] No CreatureWorker found; go_to intents will queue but nothing will move.");
+        if (motorWorker == null)
+            Debug.LogWarning("[GoToLlmMimicTest] No CreatureMotorWorker found; go_to intents will queue but nothing will move.");
 
         isRunning = true;
         _nextSendAt = Time.time;
@@ -171,7 +171,7 @@ public class GoToLlmMimicTest : MonoBehaviour
     {
         isRunning = false;
         lastStatus = "stopped";
-        RestorePeriodicMind();
+        RestoreSnapshotTicker();
     }
 
     [ContextMenu("Send Next GoTo Now")]
@@ -181,10 +181,10 @@ public class GoToLlmMimicTest : MonoBehaviour
         SendNextGoTo();
     }
 
-    [ContextMenu("Clear Mind Plan")]
-    public void ClearMindPlan()
+    [ContextMenu("Clear Micro Actions")]
+    public void ClearMicroActions()
     {
-        blackboard?.ClearMindPlan();
+        blackboard?.ClearMicroActionPlan();
         lastStatus = "cleared";
     }
 
@@ -216,7 +216,7 @@ public class GoToLlmMimicTest : MonoBehaviour
         sendsIssued++;
         string requestId = $"{requestIdPrefix}-{sendsIssued:000}";
         string commandId = $"{commandIdPrefix}-{slotIndex:00}-{sendsIssued:000}";
-        blackboard.SetMindIntent("go_to", destination, commandId, requestId, targetKey);
+        blackboard.SetMicroAction("go_to", destination, commandId, requestId, targetKey);
 
         lastQueued = string.IsNullOrWhiteSpace(targetKey)
             ? $"go_to {destination.ToString("F2")}"
@@ -284,47 +284,47 @@ public class GoToLlmMimicTest : MonoBehaviour
                 ?? GetComponentInParent<CreatureBlackboard>()
                 ?? GetComponentInChildren<CreatureBlackboard>();
 
-        if (worker == null)
-            worker = GetComponent<CreatureWorker>()
-                ?? GetComponentInParent<CreatureWorker>()
-                ?? GetComponentInChildren<CreatureWorker>();
+        if (motorWorker == null)
+            motorWorker = GetComponent<CreatureMotorWorker>()
+                ?? GetComponentInParent<CreatureMotorWorker>()
+                ?? GetComponentInChildren<CreatureMotorWorker>();
 
         if (_controller == null)
             _controller = GetComponent<CreatureController>()
                 ?? GetComponentInParent<CreatureController>()
                 ?? GetComponentInChildren<CreatureController>();
 
-        if (_periodicMind == null)
-            _periodicMind = GetComponent<MindTicker>()
-                ?? GetComponentInParent<MindTicker>()
-                ?? GetComponentInChildren<MindTicker>();
+        if (_snapshotTicker == null)
+            _snapshotTicker = GetComponent<SnapshotTicker>()
+                ?? GetComponentInParent<SnapshotTicker>()
+                ?? GetComponentInChildren<SnapshotTicker>();
     }
 
-    void DisablePeriodicMind()
+    void DisableSnapshotTicker()
     {
-        if (_periodicMind == null) return;
-        if (_periodicMindChanged)
+        if (_snapshotTicker == null) return;
+        if (_snapshotTickerChanged)
         {
-            _periodicMind.StopTicking();
-            _periodicMind.enabled = false;
+            _snapshotTicker.StopTicking();
+            _snapshotTicker.enabled = false;
             return;
         }
 
-        _periodicMindWasEnabled = _periodicMind.enabled;
-        _periodicMind.StopTicking();
-        _periodicMind.enabled = false;
-        _periodicMindChanged = true;
+        _snapshotTickerWasEnabled = _snapshotTicker.enabled;
+        _snapshotTicker.StopTicking();
+        _snapshotTicker.enabled = false;
+        _snapshotTickerChanged = true;
     }
 
-    void RestorePeriodicMind()
+    void RestoreSnapshotTicker()
     {
-        if (_periodicMind == null) return;
-        if (!_periodicMindChanged) return;
+        if (_snapshotTicker == null) return;
+        if (!_snapshotTickerChanged) return;
 
-        _periodicMind.enabled = _periodicMindWasEnabled;
-        if (_periodicMindWasEnabled)
-            _periodicMind.StartTicking();
-        _periodicMindChanged = false;
+        _snapshotTicker.enabled = _snapshotTickerWasEnabled;
+        if (_snapshotTickerWasEnabled)
+            _snapshotTicker.StartTicking();
+        _snapshotTickerChanged = false;
     }
 
     void HandleHotkeys()
@@ -339,7 +339,7 @@ public class GoToLlmMimicTest : MonoBehaviour
         }
 
         if (clearPlanKey != KeyCode.None && Input.GetKeyDown(clearPlanKey))
-            ClearMindPlan();
+            ClearMicroActions();
     }
 
     void OnDrawGizmosSelected()

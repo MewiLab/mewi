@@ -140,28 +140,17 @@ Test for agent grpah
 Every fixture builds from the bottom up:
   mock client → action manager → creature agent
 """
-from app.agent.schemas.perception_schema import (
-    Vector3,
-    EntityObservation,
-    CreatureSnapshot,
-    EnvironmentSnapshot,
-    PerceptionSummary,
-    ThreatLevel,
-)
-from app.agent.schemas.action_schema import ActionSchema
 from app.agent.perception import SnapshotManager
 from app.agent.memory import MemoryManager
-from app.agent.action import ActionManager
-from app.agent.creature_agent import CreatureAgent
-
-from tests.mock_unity_client import MockUnityClient
 
 
 # ─── Unity client ────────────────────────────────────────────────────────────
 
 @pytest.fixture
-def mock_client() -> MockUnityClient:
+def mock_client():
     """A fresh mock client with default actions registered."""
+    from tests.mock_unity_client import MockUnityClient
+
     client = MockUnityClient()
     client.add_action("Sprint", "toggle", "Hold to run faster")
     client.add_action("Jump", "press", "Jump or climb surface")
@@ -182,14 +171,18 @@ def memory() -> MemoryManager:
 
 
 @pytest.fixture
-def body(mock_client) -> ActionManager:
+def body(mock_client):
+    from app.agent.action import ActionManager
+
     return ActionManager(client=mock_client)
 
 
 # ─── Agent ───────────────────────────────────────────────────────────────────
 
 @pytest.fixture
-def agent(eye, memory, body) -> CreatureAgent:
+def agent(eye, memory, body):
+    from app.agent.creature_agent import CreatureAgent
+
     return CreatureAgent(eye=eye, memory=memory, body=body)
 
 

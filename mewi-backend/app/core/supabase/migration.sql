@@ -8,13 +8,10 @@
 -- actually expects.
 --
 -- Mapping (table → repository):
---   agent_memory_raw_events       app/repositories/memory_repo.py
---   agent_short_term_memories     app/repositories/memory_repo.py
+--   agent_memory_raw_events       app/repositories/supabase_memory_store.py
+--   agent_short_term_memories     app/repositories/supabase_memory_store.py
 --   agent_place_memories          app/repositories/place_memory_repo.py
 --   agent_place_memory_state      app/repositories/place_memory_repo.py
---   attachment_raw_events         app/repositories/attachment_repo.py
---   attachment_session_features   app/repositories/attachment_repo.py
---   attachment_results            app/repositories/attachment_repo.py
 --
 -- This file is idempotent (CREATE TABLE IF NOT EXISTS) and safe to re-run.
 -- It does NOT drop the legacy tables from existing databases — drop them
@@ -25,6 +22,9 @@
 -- ============================================================================
 -- Agent Cat Memory
 -- ============================================================================
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS agent_memory_raw_events (
   id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -97,61 +97,6 @@ CREATE TABLE IF NOT EXISTS agent_place_memory_state (
 
 
 -- ============================================================================
--- Attachment Research Pipeline
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS attachment_raw_events (
-  id                 uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  session_id         uuid NOT NULL,
-  cat_id             text NOT NULL,
-  cat_assigned_type  text NOT NULL,
-  event              text NOT NULL,
-  t                  float NOT NULL,
-  distance           float,
-  meta               jsonb DEFAULT '{}',
-  created_at         timestamptz DEFAULT now() NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_attachment_raw_session
-  ON attachment_raw_events(session_id, cat_id, t);
-
-
-CREATE TABLE IF NOT EXISTS attachment_session_features (
-  id                         uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  session_id                 uuid NOT NULL,
-  cat_id                     text NOT NULL,
-  cat_assigned_type          text NOT NULL,
-  reapproach_latency_mean    float DEFAULT 0.0,
-  pursuit_ratio              float DEFAULT 0.0,
-  time_near_ratio            float DEFAULT 0.0,
-  reunion_response           float DEFAULT 0.0,
-  withdrawal_tolerance       float DEFAULT 0.0,
-  n_events                   integer DEFAULT 0,
-  created_at                 timestamptz DEFAULT now() NOT NULL,
-  UNIQUE(session_id, cat_id)
-);
-
-
-CREATE TABLE IF NOT EXISTS attachment_results (
-  id                          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  session_id                  uuid NOT NULL,
-  cat_id                      text NOT NULL,
-  cat_assigned_type           text NOT NULL,
-  player_attachment_estimate  text NOT NULL,
-  scores                      jsonb DEFAULT '{}',
-  confidence                  text DEFAULT 'low',
-  n_events                    integer DEFAULT 0,
-  features                    jsonb DEFAULT '{}',
-  rule_trace                  jsonb DEFAULT '[]',
-  created_at                  timestamptz DEFAULT now() NOT NULL,
-  UNIQUE(session_id, cat_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_attachment_results_session
-  ON attachment_results(session_id, cat_id);
-
-
--- ============================================================================
 -- Utility: Python RPC tunnel
 --   Used by app/core/supabase/schema_manager.py to apply migrations from code.
 -- ============================================================================
@@ -182,5 +127,8 @@ $$;
 --   DROP TABLE IF EXISTS micrologs CASCADE;
 --   DROP TABLE IF EXISTS memory_summaries CASCADE;
 --   DROP TABLE IF EXISTS agent_tick_history CASCADE;  -- code-defined but unused
---   DROP EXTENSION IF EXISTS vector;                  -- only used by dropped tables
+--   DROP TABLE IF EXISTS attachment_raw_events CASCADE;
+--   DROP TABLE IF EXISTS attachment_session_features CASCADE;
+--   DROP TABLE IF EXISTS attachment_results CASCADE;
+--   DROP EXTENSION IF EXISTS vector;                  -- do not drop if graph memory uses pgvector
 -- ============================================================================

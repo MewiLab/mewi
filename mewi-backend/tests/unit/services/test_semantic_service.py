@@ -336,3 +336,13 @@ class TestPromptContext:
         assert context["social_cues"] == []
         # No recent eating in this snapshot.
         assert context["whats_changed"] == []
+
+    def test_prompt_context_reads_clean_affordance_targets(self, svc):
+        context = svc.build_prompt_context({
+            "agent_id": "miso",
+            "self": {"location": "Harbor", "current_action": "idle"},
+            "targets": [{"id": "fish", "tags": ["food.fish"]}],
+        })
+
+        assert any("fish" in line for line in context["food_nearby"])
+        assert context["social_cues"] == []

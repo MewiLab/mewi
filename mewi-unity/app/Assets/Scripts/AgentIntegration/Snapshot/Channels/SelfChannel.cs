@@ -13,7 +13,7 @@ public sealed class SelfChannel : ISnapshotChannel
         payload.self = new SelfData
         {
             location       = ResolveLocation(board),
-            current_action = board.ResolveActiveIntent().Intent,
+            current_action = board.ResolveActiveMicroAction().Intent,
         };
     }
 

@@ -9,6 +9,7 @@ channel based, so this service keeps each channel formatter small and explicit.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
@@ -566,6 +567,7 @@ class SemanticService:
         agent_id = self._clean_text(snapshot.get("agent_id")).lower()
 
         groups: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+        self._collect_contract_target_groups(snapshot, groups)
         for entity in self._as_dicts(snapshot.get("entities")):
             if self._is_self_entity(entity, agent_id):
                 continue
@@ -603,6 +605,63 @@ class SemanticService:
             "social_cues": social[:MAX_OBSERVATIONS],
             "objects_nearby": other[:MAX_OBSERVATIONS],
         }
+
+    def _collect_contract_target_groups(
+        self,
+        snapshot: Snapshot,
+        groups: dict[tuple[str, str, str, str], dict[str, Any]],
+    ) -> None:
+        source = self._affordance_source(snapshot)
+        for item in self._as_dicts(source.get("targets")):
+            target_id = self._clean_text(item.get("id") or item.get("target_id") or item.get("target"))
+            if not target_id:
+                continue
+            tags = self._as_text_list(item.get("tags"))
+            label = self._target_label_from_contract(target_id, tags)
+            bucket = self._contract_target_bucket(target_id, tags, item)
+            key = (bucket, label, "", "")
+            group = groups.setdefault(key, {
+                "bucket": bucket,
+                "label": label,
+                "direction": "",
+                "nearness": "",
+                "ids": [],
+            })
+            if target_id not in group["ids"]:
+                group["ids"].append(target_id)
+
+    def _affordance_source(self, snapshot: Snapshot) -> dict[str, Any]:
+        for key in ("intent_affordances", "affordances", "affordance", "available_affordances"):
+            value = snapshot.get(key)
+            if isinstance(value, dict):
+                return value
+        return snapshot
+
+    def _target_label_from_contract(self, target_id: str, tags: list[str]) -> str:
+        labels = [self._tag_label(tag) for tag in tags]
+        labels = [label for label in labels if label]
+        if labels:
+            return self._natural_join(labels[:2])
+        return self._display_name(target_id)
+
+    def _contract_target_bucket(
+        self,
+        target_id: str,
+        tags: list[str],
+        item: dict[str, Any],
+    ) -> str:
+        supports = " ".join(self._as_text_list(item.get("supports"))).lower()
+        action = self._clean_text(item.get("action")).lower()
+        text = " ".join([target_id, action, supports, *tags]).lower()
+        if "seek_food" in supports or self._contains_any(text, FOOD_TERMS):
+            return "food"
+        if (
+            "socialize" in supports
+            or "seek_player" in supports
+            or self._contains_any(text, SOCIAL_TERMS)
+        ):
+            return "social"
+        return "other"
 
     def _entity_bucket(self, entity: dict[str, Any], label: str) -> str:
         tag_text = " ".join(self._as_text_list(entity.get("tags"))).lower()
@@ -706,6 +765,7 @@ class SemanticService:
     def _semantic_targets(self, snapshot: Snapshot) -> list[str]:
         groups: dict[tuple[str, str, str], dict[str, Any]] = {}
         agent_id = self._clean_text(snapshot.get("agent_id")).lower()
+        self._collect_contract_relevant_groups(snapshot, groups)
 
         for entity in self._as_dicts(snapshot.get("entities")):
             if self._is_self_entity(entity, agent_id):
@@ -738,6 +798,23 @@ class SemanticService:
                 lines.append(f"{count_prefix}.")
 
         return lines[:MAX_OBSERVATIONS]
+
+    def _collect_contract_relevant_groups(
+        self,
+        snapshot: Snapshot,
+        groups: dict[tuple[str, str, str], dict[str, Any]],
+    ) -> None:
+        source = self._affordance_source(snapshot)
+        for item in self._as_dicts(source.get("targets")):
+            target_id = self._clean_text(item.get("id") or item.get("target_id") or item.get("target"))
+            if not target_id:
+                continue
+            tags = self._as_text_list(item.get("tags"))
+            label = self._target_label_from_contract(target_id, tags)
+            key = (label, "", "")
+            group = groups.setdefault(key, {"label": label, "direction": "", "nearness": "", "ids": []})
+            if target_id not in group["ids"]:
+                group["ids"].append(target_id)
 
     def _is_self_entity(self, entity: dict[str, Any], agent_id: str) -> bool:
         entity_id = self._clean_text(entity.get("id")).lower()
@@ -841,7 +918,10 @@ class SemanticService:
 
     @staticmethod
     def _contains_any(text: str, terms: set[str]) -> bool:
-        return any(term in text for term in terms)
+        return any(
+            re.search(rf"(^|[._\-\s]){re.escape(term)}($|[._\-\s])", text)
+            for term in terms
+        )
 
     def _display_name(self, value: Any) -> str:
         text = self._clean_text(value)

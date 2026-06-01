@@ -4,7 +4,7 @@ using UnityEngine.Networking;
 
 // ScriptableObject holding all connection parameters for the Mewi backend.
 // Create separate assets per environment (BackendConfig_Dev, BackendConfig_Prod)
-// and swap the reference on AgentNetworkManager in the Inspector.
+// and swap the reference on AgentNetworkHub in the Inspector.
 // Unity only ever needs to know one URL — the base. Routes live in ApiRoutes.cs.
 [CreateAssetMenu(fileName = "BackendConfig_Dev", menuName = "Mewi/Backend Config")]
 public class BackendConfig : ScriptableObject

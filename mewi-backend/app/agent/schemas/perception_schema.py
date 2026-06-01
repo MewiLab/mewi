@@ -1,9 +1,9 @@
 """
 schemas/perception.py — Data types for the perception pipeline.
 
-These are pure data containers.  SnapshotManager (the logic) lives in
-perception.py.  This file has no business logic, no imports from other
-agent modules.
+These are pure data containers. SnapshotManager (the logic) lives in
+app.agent.snapshot.manager. This file has no business logic, no imports from
+other agent modules.
 """
 
 from dataclasses import dataclass, field

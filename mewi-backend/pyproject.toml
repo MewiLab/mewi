@@ -26,11 +26,12 @@ dependencies = [
 report-agent = [
     "claude-agent-sdk>=0.1.0",
 ]
-# Graph + vector memory (app/repositories/mem0_memory_store.py). Optional:
-# the app runs without it until MEMORY_GRAPH_ENABLED=true.
+# Graph/vector memory plumbing (app/repositories/mem0_memory_store.py).
+# Optional: the app runs without it until MEMORY_GRAPH_ENABLED=true.
 graph-memory = [
     "mem0ai>=0.1.0",
     "neo4j>=5.0.0",
+    "psycopg[pool]>=3.0.0",
 ]
 
 [dependency-groups]

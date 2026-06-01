@@ -22,9 +22,6 @@ class CompositeMemoryStore:
     def __init__(self, *stores: MemoryStore | None):
         self._stores: list[MemoryStore] = [s for s in stores if s is not None]
 
-    def __bool__(self) -> bool:
-        return bool(self._stores)
-
     async def record_turn(self, write: TurnMemoryWrite) -> None:
         results = await asyncio.gather(
             *(store.record_turn(write) for store in self._stores),

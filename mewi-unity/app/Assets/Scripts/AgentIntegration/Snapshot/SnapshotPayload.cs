@@ -15,6 +15,8 @@ public class SnapshotPayload
     public SpatialData    spatial_context;
     public PlaceContextData place_context;
     public NavigationContextData navigation_context;
+    public string[]       available_intents;
+    public AffordanceTargetData[] targets;
     public FeelingsData   feelings;
 }
 
@@ -85,6 +87,19 @@ public class ZoneRouteEntry
     public string reason;      // empty when safe
     public float distance;
     public float path_length;
+}
+
+[Serializable]
+public class AffordanceTargetData
+{
+    public string id;
+    public string[] supports;
+    public string[] tags;
+    public float distance;
+    public string status;
+    public string path_status;
+    public float path_length;
+    public string reason;
 }
 
 [Serializable]

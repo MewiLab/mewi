@@ -1,9 +1,12 @@
 import operator
-from typing import Annotated, Any, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, TypedDict
 
 from app.agent.action_registry import ActionRegistry, ActionResult
 from app.agent.memory import MemoryManager, MemoryRecall
-from app.agent.perception import SnapshotManager
+
+if TYPE_CHECKING:
+    from app.agent.memory.memory_store import MemoryStore
+from app.agent.snapshot import SnapshotManager
 from app.agent.prompt_loader import PersonaManager
 from app.agent.schemas.perception_schema import PerceptionError, PerceptionSummary
 from app.agent.schemas.place_memory_schema import PlaceMemoryContextDict
@@ -20,9 +23,11 @@ class CreatureRuntime:
         persona: str = "",
         persona_manager: PersonaManager | None = None,
         creature_id: str = "",
+        *,
+        store: "MemoryStore | None" = None,
     ):
         self.eye = eye or SnapshotManager()
-        self.memory = memory or MemoryManager()
+        self.memory = memory or MemoryManager(store=store)
         self.actions = actions or ActionRegistry()
         self.creature_id = creature_id
         if persona_manager is not None:

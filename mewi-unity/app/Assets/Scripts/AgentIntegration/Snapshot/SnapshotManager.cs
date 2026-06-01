@@ -33,6 +33,10 @@ public class SnapshotManager : MonoBehaviour
     [Tooltip("Fallback safety checks used when describing nearby routes to the LLM. If a MalbersAnimalAdapter is found, its Navigation Safety config is used instead.")]
     public NavigationSafetyConfig navigationSafety = new NavigationSafetyConfig();
 
+    [Header("Affordance Contract")]
+    [Tooltip("Max clean intent targets sent to the backend.")]
+    public int maxAffordanceTargets = 16;
+
     [Header("Debug")]
     public bool logPayload = false;
 
@@ -62,6 +66,7 @@ public class SnapshotManager : MonoBehaviour
             navigationSafety
         ));
         Register(new FeelingsChannel(maxSmellStrings, maxSoundStrings, maxSignalStrings));
+        Register(new AffordancesChannel(maxAffordanceTargets));
     }
 
     /// <summary>
@@ -88,7 +93,7 @@ public class SnapshotManager : MonoBehaviour
         {
             agent_id  = _board.CreatureId,
             requestId = requestId,
-            commandId = _board.MindIntent.HasValue ? _board.MindIntent.Value.CommandId : "",
+            commandId = _board.MicroAction.HasValue ? _board.MicroAction.Value.CommandId : "",
             time      = Time.time,
         };
 

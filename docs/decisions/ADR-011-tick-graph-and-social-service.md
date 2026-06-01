@@ -2,6 +2,8 @@
 
 - **Status:** Accepted
 - **Date:** 2026-05-23
+- **Updated:** 2026-06-01 to align Redis key names with
+  [ADR-023](ADR-023-shared-unity-agent-websocket.md)
 - **Scope:** `mewi-backend/app/agent/behavior_graph.py`, `mewi-backend/app/agent/creature_runtime.py`,
   `mewi-backend/app/services/agent_tick/tick_service.py`, `mewi-backend/app/workers/agent_tick_worker.py`,
   `mewi-backend/app/api/routes/agent_router.py`, `mewi-backend/app/world/**`, `mewi-backend/app/social/**`
@@ -30,18 +32,21 @@ sequenceDiagram
     participant U as Unity (cat A)
     participant R as agent_router (WS)
     participant S as AgentTickService
-    participant Q as Redis (agent:jobs)
+    participant Q as Redis (agent_tick.v2)
     participant W as AgentTickWorker
     participant G as Behavior graph
 
     U->>R: tick envelope (snapshot + previous report)
     R->>S: submit_tick(creature_id, payload)
-    S->>Q: RPUSH agent:jobs {job}
+    S->>Q: SET NX agent:tick:inflight:{creature_id}
+    S->>Q: RPUSH agent:tick:queue {job}
     R->>S: poll get_job(job_id) every 0.25s
-    Q-->>W: BLPOP {job}
+    Q-->>W: BLPOP agent:tick:queue {job}
     W->>G: graph.ainvoke(state_for_tick)
     G-->>W: { plan_steps, dialogue, intent, ... }
     W->>S: publish_result(job_id, result)
+    S->>Q: SET agent:tick:job:{job_id} status=done
+    S->>Q: DEL agent:tick:inflight:{creature_id}
     S-->>R: job row (status=done)
     R-->>U: plan { actions, dialogue, social_context, ... }
 ```

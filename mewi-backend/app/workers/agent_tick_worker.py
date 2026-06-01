@@ -1,12 +1,15 @@
 import asyncio
 import logging
 from contextlib import suppress
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.agent.creature_runtime import CreatureRuntime
 from app.agent.prompt_loader import PersonaManager
 from app.cat_journal.raw_agent_graph import RawCatJournal
 from app.services.agent_tick.tick_service import AgentTickService
+
+if TYPE_CHECKING:
+    from app.agent.memory.memory_store import MemoryStore
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +23,13 @@ class AgentTickWorker:
         graph: Any,
         persona_manager: PersonaManager | None = None,
         raw_journal: RawCatJournal | None = None,
+        memory_store: "MemoryStore | None" = None,
     ):
         self._service = service
         self._graph = graph
         self._persona_manager = persona_manager or PersonaManager()
         self._raw_journal = raw_journal
+        self._memory_store = memory_store
         self._runtimes: dict[str, CreatureRuntime] = {}
         self._running = False
 
@@ -60,6 +65,7 @@ class AgentTickWorker:
                 runtime = CreatureRuntime(
                     persona_manager=self._persona_manager,
                     creature_id=creature_id,
+                    store=self._memory_store,
                 )
                 self._runtimes[creature_id] = runtime
                 logger.info(

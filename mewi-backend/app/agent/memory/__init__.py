@@ -6,11 +6,13 @@ from app.agent.memory.memory_models import (
     SpatialRecord,
     TurnMemoryWrite,
 )
+from app.agent.memory.place_memory_service import PlaceMemoryService
 
 __all__ = [
     "AspectMemory",
     "MemoryManager",
     "MemoryRecall",
+    "PlaceMemoryService",
     "RawMemoryEvent",
     "SpatialRecord",
     "TurnMemoryWrite",

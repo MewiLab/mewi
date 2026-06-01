@@ -520,7 +520,7 @@ public class ReportSessionLogger : MonoBehaviour
             if (cat == null || cat.blackboard == null || string.IsNullOrWhiteSpace(cat.catId))
                 continue;
 
-            string action = ReportActionClassifier.ToSnakeCase(cat.blackboard.ResolveActiveIntent().Intent);
+            string action = ReportActionClassifier.ToSnakeCase(cat.blackboard.ResolveActiveMicroAction().Intent);
             if (string.IsNullOrEmpty(action))
                 continue;
             int trust = TrustScore(cat.blackboard);
