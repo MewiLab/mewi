@@ -38,11 +38,15 @@ public sealed class AgentMessageDispatcher : MonoBehaviour
         if (_hub == null || _board == null)
             return;
 
-        if (_hub.TryConsumeDirective(_board.CreatureId, out string intent, out string target))
+        if (_hub.TryConsumeDirective(_board.CreatureId, out CreatureBlackboard.MindDirective directive))
         {
-            _board.EnqueueMindDirective(intent, target);
+            _board.EnqueueMindDirective(directive);
             if (logDispatch)
-                Debug.Log($"[AgentMessageDispatcher] directive creature={_board.CreatureId} {intent}{(string.IsNullOrEmpty(target) ? "" : $"->{target}")}");
+            {
+                string target = string.IsNullOrEmpty(directive.FocusTarget) ? "" : $"->{directive.FocusTarget}";
+                string mood = string.IsNullOrEmpty(directive.Mood) ? "" : $" mood={directive.Mood}";
+                Debug.Log($"[AgentMessageDispatcher] directive creature={_board.CreatureId} {directive.Intent}{target}{mood}");
+            }
         }
     }
 }

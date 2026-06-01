@@ -17,7 +17,10 @@ public sealed class AgentWebSocketDispatcher : MonoBehaviour
         public string intent = "";
         public string target_id = "";
         public string target = "";
+        public string mood = "";
+        public string style = "";
         public string reasoning = "";
+        public SocialAct social_act;
     }
 
     [Serializable] sealed class AgentPlanResponse
@@ -34,9 +37,7 @@ public sealed class AgentWebSocketDispatcher : MonoBehaviour
 
     sealed class DirectiveMessage
     {
-        public string requestId = "";
-        public string intent = "";
-        public string target = "";
+        public CreatureBlackboard.MindDirective directive;
     }
 
     public void HandleServerMessage(string message, AgentNetworkHub hub, bool logTraffic)
@@ -118,9 +119,16 @@ public sealed class AgentWebSocketDispatcher : MonoBehaviour
 
         _latestDirectiveByCreature[creatureId] = new DirectiveMessage
         {
-            requestId = requestId,
-            intent = response.intent.intent.Trim(),
-            target = target,
+            directive = CreatureBlackboard.MindDirective.Create(
+                response.intent.intent,
+                target,
+                string.IsNullOrWhiteSpace(response.intent.reasoning)
+                    ? response.reasoning
+                    : response.intent.reasoning,
+                response.intent.mood,
+                response.intent.style,
+                response.intent.social_act,
+                requestId),
         };
 
         if (logTraffic)
@@ -132,6 +140,18 @@ public sealed class AgentWebSocketDispatcher : MonoBehaviour
         intent = "";
         target = "";
 
+        if (!TryConsumeDirective(creatureId, out CreatureBlackboard.MindDirective directive))
+            return false;
+
+        intent = directive.Intent ?? "";
+        target = directive.FocusTarget ?? "";
+        return !string.IsNullOrWhiteSpace(intent);
+    }
+
+    public bool TryConsumeDirective(string creatureId, out CreatureBlackboard.MindDirective directive)
+    {
+        directive = default;
+
         string id = Normalize(creatureId);
         if (string.IsNullOrEmpty(id))
             return false;
@@ -140,11 +160,10 @@ public sealed class AgentWebSocketDispatcher : MonoBehaviour
             return false;
 
         _latestDirectiveByCreature.Remove(id);
-        if (message == null || string.IsNullOrWhiteSpace(message.intent))
+        if (message == null || !message.directive.IsValid)
             return false;
 
-        intent = message.intent;
-        target = message.target ?? "";
+        directive = message.directive;
         return true;
     }
 

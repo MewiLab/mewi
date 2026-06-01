@@ -13,19 +13,34 @@ public class CreatureBlackboard : MonoBehaviour
     [Serializable]
     public struct MindDirective
     {
+        public string RequestId;
         public string Intent;
         public string FocusTarget;
+        public string Mood;
+        public string Style;
         public string Reason;
+        public SocialAct SocialAct;
 
         public bool IsValid => !string.IsNullOrWhiteSpace(Intent);
 
-        public static MindDirective Create(string intent, string focusTarget = "", string reason = "")
+        public static MindDirective Create(
+            string intent,
+            string focusTarget = "",
+            string reason = "",
+            string mood = "",
+            string style = "",
+            SocialAct socialAct = default,
+            string requestId = "")
         {
             return new MindDirective
             {
+                RequestId = requestId ?? "",
                 Intent = string.IsNullOrWhiteSpace(intent) ? "" : intent.Trim().ToUpperInvariant(),
                 FocusTarget = focusTarget ?? "",
+                Mood = mood ?? "",
+                Style = style ?? "",
                 Reason = reason ?? "",
+                SocialAct = socialAct,
             };
         }
     }
@@ -51,6 +66,12 @@ public class CreatureBlackboard : MonoBehaviour
 
     /// <summary>Target id the active directive points at; the graph biases actions toward it.</summary>
     public string MindFocusTarget { get; private set; } = "";
+    public string MindDirectiveRequestId { get; private set; } = "";
+    public string MindDirectiveMood { get; private set; } = "";
+    public string MindDirectiveStyle { get; private set; } = "";
+    public string MindDirectiveReason { get; private set; } = "";
+    public SocialAct MindDirectiveSocialAct { get; private set; }
+    public MindDirective ActiveMindDirective { get; private set; }
 
     /// <summary>True when the intent worker may refill the micro-action queue.</summary>
     public bool IntentWorkerEnabled { get; private set; }
@@ -322,15 +343,36 @@ public class CreatureBlackboard : MonoBehaviour
 
     public void SetMindDirective(MindDirective directive)
     {
-        MindDirectiveIntent = directive.IsValid ? directive.Intent : "";
-        MindFocusTarget = directive.FocusTarget ?? "";
+        ActiveMindDirective = directive.IsValid
+            ? MindDirective.Create(
+                directive.Intent,
+                directive.FocusTarget,
+                directive.Reason,
+                directive.Mood,
+                directive.Style,
+                directive.SocialAct,
+                directive.RequestId)
+            : default;
+        MindDirectiveRequestId = ActiveMindDirective.RequestId ?? "";
+        MindDirectiveIntent = ActiveMindDirective.Intent ?? "";
+        MindFocusTarget = ActiveMindDirective.FocusTarget ?? "";
+        MindDirectiveMood = ActiveMindDirective.Mood ?? "";
+        MindDirectiveStyle = ActiveMindDirective.Style ?? "";
+        MindDirectiveReason = ActiveMindDirective.Reason ?? "";
+        MindDirectiveSocialAct = ActiveMindDirective.SocialAct;
         ClearLastMicroActionOutcome();
     }
 
     public void ClearActiveMindDirective()
     {
+        ActiveMindDirective = default;
+        MindDirectiveRequestId = "";
         MindDirectiveIntent = "";
         MindFocusTarget = "";
+        MindDirectiveMood = "";
+        MindDirectiveStyle = "";
+        MindDirectiveReason = "";
+        MindDirectiveSocialAct = default;
         ClearLastMicroActionOutcome();
     }
 

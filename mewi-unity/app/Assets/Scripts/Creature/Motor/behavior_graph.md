@@ -10,6 +10,10 @@ This documents the Unity-side graph stack:
 - `CreatureIntentWorker` consumes high-level `MindDirective`s, owns the active
   goal lifecycle, and asks `CatBehaviorGraph` for the next micro-action only
   when the motor is no longer executing.
+- `InteractionSequenceBuilder` asks resolved targets for object-authored
+  interaction recipes through `IInteractionProvider` / `AuthoredInteractionProvider`,
+  then falls back to existing markup such as `EdibleObject`, `SmartObject`,
+  `ZoneVolume`, and `CatNavigationPoint`.
 - `CreatureMotorWorker` consumes the micro-action queue and applies body commands.
 
 ## Runtime Flow
@@ -30,6 +34,8 @@ flowchart TD
     IntentQueue --> IntentWorker[CreatureIntentWorker]
     IntentWorker -->|SetMindDirective latest| Blackboard[CreatureBlackboard]
     Blackboard -->|MindDirectiveIntent + MindFocusTarget| Graph[CatBehaviorGraph]
+    Graph -->|resolve target| Interaction[InteractionSequenceBuilder]
+    Interaction -->|provider / markup recipe| Graph
     IntentWorker -->|TryNextAction| Graph
     Graph -->|IntentMessage micro-action| MicroQueue[Blackboard MicroActionQueue]
 
@@ -44,13 +50,15 @@ plus a target id chosen from Unity's affordance snapshot. It does not send body
 actions. The dispatcher places that intent on the blackboard's high-level intent
 queue. The intent worker consumes that queue, starts a bounded Unity goal, and
 uses `CatBehaviorGraph` to emit one micro-action only when the micro-action queue
-is empty and `CreatureMotorWorker` is not executing an active command.
+is empty and `CreatureMotorWorker` is not executing an active command. If the
+target has an interaction provider, or existing markup implies one, that finite
+recipe is used before the graph's built-in fallback sequence.
 
 ## Queues
 
 | Queue | Producer | Consumer | Payload |
 | --- | --- | --- | --- |
-| IntentQueue | `AgentMessageDispatcher` | `CreatureIntentWorker` | `MindDirective` (`Intent`, `FocusTarget`) |
+| IntentQueue | `AgentMessageDispatcher` | `CreatureIntentWorker` | `MindDirective` (`Intent`, `FocusTarget`, mood/style/social render hints) |
 | MicroActionQueue | `CreatureIntentWorker` or tests | `CreatureMotorWorker` | `IntentMessage` body actions |
 | ReportQueue | `CreatureMotorWorker` | `SnapshotTicker` | `PlanExecutionReport` |
 
@@ -62,9 +70,12 @@ can execute. A micro-action is the body-level vocabulary handled by
 
 A high-level directive is complete when:
 
-1. the graph has emitted every micro-action for the directive's node/target;
-2. `MicroActionQueue` is empty;
-3. `CreatureMotorWorker` is no longer executing the active micro-action.
+1. the graph/provider reaches a terminal state and returns no next required
+   goal-owned micro-action;
+2. the goal-owned `MicroActionQueue` is empty;
+3. `CreatureMotorWorker` is no longer executing the active goal-owned
+   micro-action;
+4. the previous goal-owned micro-action did not report `failed` or `rejected`.
 
 At that point `CreatureIntentWorker` clears `MindDirectiveIntent` /
 `MindFocusTarget`. The next backend tick can then choose a new high-level intent
@@ -87,14 +98,15 @@ This prevents the graph from keeping the cat busy forever. For example:
 | --- | --- | --- |
 | `EXPLORE` | zone/place id | `go_to(target)` -> `look_around` -> `smell(target)` |
 | `INVESTIGATE` | object/place id | `go_to(target)` -> `smell(target)` -> `look_at(target)` |
-| `SEEK_FOOD` | food id | `go_to(food)` -> `eat(food)` |
+| `SEEK_FOOD` | food id | `go_to(food)` -> `smell(food)` -> `eat(food)` when food markup/provider confirms it is edible |
 | `SOCIALIZE` | cat/player id | `go_to(target)` -> `vocalize(target)` -> `sit` |
 | `REST` | none | `sit`/`lie`/`sleep` -> optional `groom`/`idle` |
 
 ## Graph Pick
 
 When a directive starts, `CatBehaviorGraph.ResetGoal` maps the directive to a
-behavior node and resets that node's phase counter:
+behavior node, tries to build a target-authored interaction sequence, and resets
+that node's phase counter:
 
 | Intent | Node |
 | --- | --- |
@@ -122,9 +134,11 @@ scoring for that one bounded goal:
 ## Action Mapping
 
 `CatBehaviorGraph` does not receive backend plan steps. It translates one
-high-level directive into a small finite sequence of Unity micro-actions. If the
-same node/target remains active, `_phase` advances. If a new directive or target
-arrives, `_phase` resets to `0`.
+high-level directive into a small finite sequence of Unity micro-actions. It
+first asks `InteractionSequenceBuilder` for an explicit provider or markup-based
+recipe. If none exists, the graph falls back to its built-in node sequence. If
+the same node/target remains active, the provider cursor or `_phase` advances.
+If a new directive or target arrives, progress resets to `0`.
 
 Current graph-emitted intent names:
 

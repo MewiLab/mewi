@@ -103,10 +103,10 @@ public class NamedTargetRegistry : MonoBehaviour
                     ? smartObject.perceptionCenter
                     : smartObject.transform;
 
-                Register(smartObject.Label, target);
-                Register(smartObject.gameObject.name, target);
+                Register(smartObject.Label, target, overwrite: false);
+                Register(smartObject.gameObject.name, target, overwrite: false);
                 if (smartObject.transform.parent != null)
-                    Register(smartObject.transform.parent.name, smartObject.transform.parent);
+                    Register(smartObject.transform.parent.name, smartObject.transform.parent, overwrite: false);
             }
         }
 
@@ -116,18 +116,22 @@ public class NamedTargetRegistry : MonoBehaviour
             foreach (var zone in zoneVolumes)
             {
                 if (zone == null) continue;
-                Register(zone.EffectiveZoneId, zone.transform);
-                Register(zone.gameObject.name, zone.transform);
+                Register(zone.EffectiveZoneId, zone.transform, overwrite: false);
+                Register(zone.gameObject.name, zone.transform, overwrite: false);
             }
         }
     }
 
-    void Register(string key, Transform target)
+    void Register(string key, Transform target, bool overwrite = true)
     {
         if (string.IsNullOrWhiteSpace(key) || target == null)
             return;
 
-        _map[key.Trim()] = target;
+        string normalized = key.Trim();
+        if (!overwrite && _map.ContainsKey(normalized))
+            return;
+
+        _map[normalized] = target;
     }
 
     static Vector3 ResolveTargetPosition(Transform target)

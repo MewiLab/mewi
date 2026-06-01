@@ -100,6 +100,7 @@ public sealed class CreatureIntentWorker : MonoBehaviour
         _behaviorGraph = GetComponent<CatBehaviorGraph>();
         if (_behaviorGraph == null) _behaviorGraph = GetComponentInChildren<CatBehaviorGraph>();
         if (_behaviorGraph == null) _behaviorGraph = GetComponentInParent<CatBehaviorGraph>();
+        if (_behaviorGraph == null) _behaviorGraph = gameObject.AddComponent<CatBehaviorGraph>();
     }
 
     void ResolveMotorWorker()

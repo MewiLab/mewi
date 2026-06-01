@@ -1,8 +1,8 @@
 # ADR-025: World-Authored Interaction FSM
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-06-01
-- **Scope:** Unity-side game design and future interaction components under
+- **Scope:** Unity-side game design and interaction components under
   `mewi-unity/app/Assets/Scripts/Semantics/Markup/`,
   `mewi-unity/app/Assets/Scripts/Creature/Motor/ActionFSM/`,
   `mewi-unity/app/Assets/Scripts/Creature/Core/`, and
@@ -102,15 +102,15 @@ Unity should preserve the full selected directive, not only `intent` and
 | `social_act` | Optional render instruction: bark text, tone, expects-reply flag, gesture. |
 | `reasoning` | Debug and observability only. Not required for motor execution. |
 
-`MindDirective` should eventually store these fields. The interaction provider
-receives them in an `InteractionContext`.
+`MindDirective` stores these fields. The interaction provider receives them in
+an `InteractionContext`.
 
-### Proposed Unity API
+### Unity API
 
-The provider should be small and object-local:
+The provider is small and object-local:
 
 ```csharp
-public readonly struct InteractionContext
+public struct InteractionContext
 {
     public CreatureBlackboard Board { get; }
     public string Intent { get; }
@@ -128,8 +128,10 @@ public interface IInteractionProvider
 }
 ```
 
-Implementation can be a base MonoBehaviour such as `InteractionProvider` plus
-small concrete components:
+Initial implementation includes `IInteractionProvider`,
+`InteractionContext`, `InteractionSequenceBuilder`, `InteractionTargetResolver`,
+and a generic `AuthoredInteractionProvider` for designer-authored recipes.
+Dedicated concrete components can still be added as recipes become common:
 
 - `FoodInteractionProvider`
 - `RestSpotInteractionProvider`
@@ -236,13 +238,13 @@ integrate with it. Current markup already answers different questions:
 | `CatNavigationAnchors` / `CatNavigationPoint` | Keep. Add more authored points. | Designer-authored approach, rest, watch, entry, exit, and fallback positions. |
 | `EdibleObject` | Keep for food. | World confirmation and portions for `eat`. |
 | `CatDoorController` / `CatAutoClimbPoint` | Keep for passages. | Local door/climb behavior and follow-up movement. |
-| Future `InteractionProvider` components | Add on top. | Converts a high-level directive + target into a finite micro-action recipe. |
+| `IInteractionProvider` / `AuthoredInteractionProvider` | Add on top. | Converts a high-level directive + target into a finite micro-action recipe. |
 
 Target type should be inferred from components and tags, not from a new
 centralized enum that duplicates the scene markup. A resolver can build a
 `TargetInteractionProfile` by checking the resolved target in this order:
 
-1. Explicit `InteractionProvider` on the target, parent, or child.
+1. Explicit `IInteractionProvider` on the target, parent, or child.
 2. Existing functional component, such as `EdibleObject`, `CatDoorController`,
    or `CatAutoClimbPoint`.
 3. Existing identity component, such as `CreatureBlackboard` for another cat or
@@ -254,7 +256,7 @@ centralized enum that duplicates the scene markup. A resolver can build a
 
 ```mermaid
 flowchart TD
-    Target[Resolved target Transform] --> Explicit{InteractionProvider?}
+    Target[Resolved target Transform] --> Explicit{IInteractionProvider?}
     Explicit -- yes --> Provider[Use explicit provider]
     Explicit -- no --> Functional{Functional component?}
     Functional -- EdibleObject --> Food[Food interaction]
@@ -271,7 +273,7 @@ flowchart TD
 This keeps current scene authoring valuable. Designers should modify existing
 markup when the world data is wrong: mismatched `SmartObject.Label`, missing
 food tags, missing rest navigation point, no scent `FeelingEmitter`, or no
-NavMesh-valid approach point. Designers should add an `InteractionProvider`
+NavMesh-valid approach point. Designers should add an `IInteractionProvider`
 when the object needs a custom recipe beyond what its tags/components imply.
 
 ## Social Rendering
@@ -333,39 +335,170 @@ registration so other cats can `SOCIALIZE` with `player_cat`.
 
 For a world object the LLM can target:
 
-1. Create or select a stable semantic root object.
-   - For imported meshes, prefer an empty child like `SM_Fish_1` or
-     `SO_House_3` under the visible mesh.
-   - Keep the object name or `SmartObject.Label` stable. This must match
-     backend `target_id`.
-2. Add `SmartObject`.
+Preferred prefab shape:
+
+```text
+SM_Fish_1                 // visual/art root
+  Target_SM_Fish_1        // semantic proxy child
+    Nav_Approach          // CatNavigationPoint child
+```
+
+1. Keep the visual prefab root mostly visual.
+   - The root can hold mesh renderers, animation, art hierarchy, and ordinary
+     physics.
+   - Do not require every imported mesh root to carry cat semantics.
+2. Add a semantic proxy child under the visual root.
+   - Preferred names: `Target_<id>`, `Semantic_<id>`, or `SO_<id>`.
+     Example: `Target_SM_Fish_1`.
+   - This child can be an empty GameObject. A visible cube is fine while
+     authoring, but the shipping object should usually hide or remove the
+     `MeshRenderer`.
+   - Put semantic colliders on this proxy child when the mesh collider is too
+     noisy, too large, or controlled by art.
+3. Add `SmartObject` to the semantic proxy child.
    - Set `Label` to the exact target id, such as `SM_Fish_1`.
    - Add tags such as `prop.food`, `food`, `place`, `prop.rest`, `prop.toy`,
      `entity.cat`, or `player`.
-3. Add perception geometry.
+   - `NamedTargetRegistry` treats explicit `SmartObject.Label` entries as the
+     stable target id, so the backend can still say `target_id = "SM_Fish_1"`
+     even if the child object is named `Target_SM_Fish_1`.
+4. Add perception geometry to the proxy child.
    - Add a trigger collider or semantic proxy collider on the layer scanned by
      `CreaturePerception`.
    - The collider is for perception/contact, not necessarily physical blocking.
-4. Add `FeelingEmitter` if the object should smell, sound, feel warm, feel
+5. Add `FeelingEmitter` if the object should smell, sound, feel warm, feel
    dangerous, or create a hint.
    - Use `AlwaysOn` aspects for passive smells.
    - Use `ContactOnly` with `FeelingContactRelay` for touch/taste/comfort.
    - Use `TimedEvent`, `Collision`, `Kick`, or `Fall` with
      `FeelingCollisionRelay` or scripts that call `EmitTrigger(...)`.
-5. Add `CatNavigationAnchors` to the semantic root.
+6. Add `CatNavigationAnchors` to the semantic proxy child.
    - Add empty child transforms with `CatNavigationPoint`.
    - Use `Approach` for normal interaction, `Rest` for rest spots, `Watch` for
      observation points, `Entry`/`Exit` for passages, and `TeleportFallback` only
      as a reliability escape.
    - Place points on or near the NavMesh and rotate them toward the interaction.
-6. Add a type-specific world component.
+7. Add a type-specific world component to the semantic proxy child.
    - Food: add `EdibleObject` and a trigger collider sized for mouth/contact.
      Set `foodIdOverride` when the visual object name differs from
      `SmartObject.Label`.
    - Door/climb: use existing `CatDoorController`, `CatAutoClimbPoint`, and
      related navigation points.
-   - Future interaction recipes: add `FoodInteractionProvider`,
-     `RestSpotInteractionProvider`, `ToyInteractionProvider`, etc.
+   - Custom interaction recipes: add `AuthoredInteractionProvider` now, or a
+     dedicated provider such as `FoodInteractionProvider`,
+     `RestSpotInteractionProvider`, or `ToyInteractionProvider` later.
+
+### Cat Navigation Anchors
+
+`SmartObject.Label` answers "what target did the backend name?"
+`CatNavigationAnchors` answers "where should the cat stand to interact with
+that target?"
+
+Do not rely on the raw target transform for movement. Imported meshes often have
+their pivot inside the model, above the floor, below the floor, at the center of
+a large object, behind a wall, or off the NavMesh. Sending `go_to(SM_Fish_1)` to
+that raw transform can make a valid intent look broken.
+
+`CatNavigationAnchors` lives on the semantic proxy child and owns one or more
+`CatNavigationPoint` children:
+
+```text
+SM_Fish_1
+  Target_SM_Fish_1
+    SmartObject(Label = "SM_Fish_1")
+    CatNavigationAnchors
+    Nav_Approach
+      CatNavigationPoint(kind = Approach)
+```
+
+When `CreatureMotorWorker` executes `go_to(SM_Fish_1)`, target resolution finds
+the semantic target, then `CatNavigationAnchors` chooses a reachable authored
+point instead of blindly walking to the object's pivot.
+
+Use point kinds like this:
+
+| Point kind | Use |
+| --- | --- |
+| `Approach` | Normal prop interaction: food, toy, hint, small object. |
+| `Rest` | Where the cat should lie/sleep/sit for a rest spot. |
+| `Watch` | Good observation position for a place or object. |
+| `Patrol` | Optional roam point for larger places. |
+| `Entry` / `Exit` | Door, passage, climb, or zone transition points. |
+| `TeleportFallback` | Last-resort recovery point only, not a normal path. |
+
+Rule of thumb:
+
+```text
+SmartObject.Label      = what the backend calls it
+CatNavigationAnchors   = how the cat finds a good interaction position
+CatNavigationPoint     = the exact authored stand/rest/watch/entry spot
+```
+
+Small props usually need one `Approach` point. Large places should have multiple
+points such as `Entry`, `Watch`, and `Patrol`. Rest spots should have a `Rest`
+point positioned exactly where the body should settle.
+
+### AuthoredInteractionProvider Usage
+
+Most targets should work from existing markup: `EdibleObject`, `SmartObject`
+tags, `ZoneVolume`, cat/player identity, and `CatNavigationAnchors`.
+Add `AuthoredInteractionProvider` only when the default markup-derived recipe is
+not expressive enough for that object.
+
+Attach `AuthoredInteractionProvider` to the semantic proxy child, next to the
+`SmartObject`. Each recipe has an optional `intent` and a finite list of steps:
+
+```text
+Target_SM_Fish_1
+  AuthoredInteractionProvider
+    Recipe intent = SEEK_FOOD
+      go_to  useDirectiveTarget = true
+      smell  useDirectiveTarget = true
+      eat    useDirectiveTarget = true
+```
+
+Recipe fields:
+
+| Field | Meaning | Common value |
+| --- | --- | --- |
+| `intent` | Backend high-level intent this recipe handles. Empty means fallback for any intent. | `SEEK_FOOD`, `REST`, `EXPLORE`, `INVESTIGATE`, `SOCIALIZE` |
+| `action` | Micro-action string consumed by `CreatureMotorWorker`. | `go_to`, `smell`, `eat`, `look_at`, `sit`, `lie`, `sleep`, `scratch` |
+| `useDirectiveTarget` | Use the backend-selected `target_id` for this step. | `true` for `go_to(target)`, `smell(target)`, `eat(target)` |
+| `targetOverride` | Hardcoded target key for this one step; overrides the directive target. | Empty unless the step aims at a related child/door/exit |
+| `directionHint` | Raw world vector/position hint for actions that need geometry without a named target. | Usually `(0, 0, 0)` |
+
+Examples:
+
+```text
+SEEK_FOOD on Target_SM_Fish_1:
+  go_to  useDirectiveTarget=true
+  smell  useDirectiveTarget=true
+  eat    useDirectiveTarget=true
+
+REST on Target_SunPatch_Rest_1:
+  go_to  useDirectiveTarget=true
+  smell  useDirectiveTarget=true
+  lie    useDirectiveTarget=false
+
+EXPLORE on Target_House_3:
+  go_to       useDirectiveTarget=true
+  look_at     useDirectiveTarget=true
+  go_to       targetOverride=House_3_Entry
+  look_around useDirectiveTarget=false
+```
+
+Use `targetOverride` when a step should aim somewhere other than the object the
+backend selected, such as a door entry, exit anchor, display case, or related
+child object. The override must resolve through `NamedTargetRegistry`,
+`SmartObject.Label`, `ZoneVolume`, or a scene object name.
+
+Use `directionHint` sparingly. If a step has a target key, target resolution
+wins. `directionHint` is useful for raw-position movement or vector actions
+such as `flee`; most object-authored recipes should leave it at zero.
+
+Provider recipes are finite. They should not include neutral idle loops or
+interrupt behavior. A recipe completes when all required steps have been emitted
+and the motor has finished the last goal-owned micro-action.
 
 ### Event Authoring
 
@@ -384,27 +517,31 @@ Rule of thumb: if the event affects whether a micro-action succeeded, use
 
 ### `SM_Fish_1`
 
-- Root: `SM_Fish_1`
-- Components:
+- Visual root: `SM_Fish_1`
+  - Mesh/rendering/art hierarchy only, unless the prefab already has clean
+    gameplay physics.
+- Semantic child: `Target_SM_Fish_1`
+  - Empty GameObject or hidden proxy cube.
   - `SmartObject` with `Label = "SM_Fish_1"` and tags `prop.food`, `food`,
     `food.fish`
   - `FeelingEmitter` with smell/taste aspects
   - `EdibleObject` with `foodIdOverride = "SM_Fish_1"` if needed
   - Trigger collider for bite/contact
   - `CatNavigationAnchors`
-- Children:
+- Children of `Target_SM_Fish_1`:
   - `Nav_Approach` with `CatNavigationPoint(kind=Approach)`
 - Provider recipe:
   - `SEEK_FOOD`: `go_to(SM_Fish_1)` -> `smell(SM_Fish_1)` -> `eat(SM_Fish_1)`
 
 ### `SunPatch_Rest_1`
 
-- Root: `SunPatch_Rest_1`
-- Components:
-  - `SmartObject` with tags `prop.rest`, `comfort`, `warm`
+- Visual root: `SunPatch_Rest_1`
+- Semantic child: `Target_SunPatch_Rest_1`
+  - `SmartObject` with `Label = "SunPatch_Rest_1"` and tags `prop.rest`,
+    `comfort`, `warm`
   - `FeelingEmitter` with comfort/warmth aspect
   - `CatNavigationAnchors`
-- Children:
+- Children of `Target_SunPatch_Rest_1`:
   - `Nav_Rest` with `CatNavigationPoint(kind=Rest)`
 - Provider recipe:
   - `REST`: `go_to(SunPatch_Rest_1)` -> `smell(SunPatch_Rest_1)` -> `lie`
@@ -412,12 +549,15 @@ Rule of thumb: if the event affects whether a micro-action succeeded, use
 
 ### `toy_ball_1`
 
-- Root: `toy_ball_1`
-- Components:
-  - `SmartObject` with tags `prop.toy`, `play`
+- Visual root: `toy_ball_1`
+  - Mesh/rigidbody/art-driven collision if the toy can be kicked.
+- Semantic child: `Target_toy_ball_1`
+  - `SmartObject` with `Label = "toy_ball_1"` and tags `prop.toy`, `play`
   - `FeelingEmitter` with motion/sound aspects
   - `FeelingCollisionRelay` if it can be bumped or kicked
   - `CatNavigationAnchors`
+- Children of `Target_toy_ball_1`:
+  - `Nav_Approach` with `CatNavigationPoint(kind=Approach)`
 - Provider recipe:
   - `INVESTIGATE`: `go_to(toy_ball_1)` -> `smell(toy_ball_1)` -> `scratch`
     or `look_at(toy_ball_1)`
@@ -467,6 +607,8 @@ Rule of thumb: if the event affects whether a micro-action succeeded, use
 - Existing markup remains the source of truth for target identity, perception,
   navigation, and world confirmation; providers are added on top only when the
   target needs custom interaction sequencing.
+- Imported/visual prefabs can keep semantics on a named proxy child such as
+  `Target_SM_Fish_1`; backend ids still resolve through `SmartObject.Label`.
 - A rest spot can be created by adding a `SmartObject`, `FeelingEmitter`,
   `CatNavigationAnchors`, and a `Rest` navigation point.
 - A toy or hint can produce perception events through `FeelingEmitter` without

@@ -51,7 +51,7 @@ fully built) · `Superseded` (replaced — kept for history).
 | [022](ADR-022-dispatcher-intent-motor-workers.md) | Dispatcher + Intent/Motor Workers | Accepted | Network transport, message dispatch, snapshot heartbeat, graph policy, and body execution are separate. |
 | [023](ADR-023-shared-unity-agent-websocket.md) | Shared Unity Agent WebSocket | Accepted | One Unity websocket carries many per-cat ticks, routed by `creature_id + requestId`. |
 | [024](ADR-024-backend-makefile-and-graph-db-workflow.md) | Backend Makefile + Graph DB Workflow | Accepted | Backend Make targets for full Docker stack, Redis, Neo4j graph memory, testing, and app URLs. |
-| [025](ADR-025-world-authored-interaction-fsm.md) | World-Authored Interaction FSM | Proposed | Scene objects own local interaction recipes; the graph coordinates and the motor executes. |
+| [025](ADR-025-world-authored-interaction-fsm.md) | World-Authored Interaction FSM | Accepted | Scene objects own local interaction recipes; the graph coordinates and the motor executes. |
 
 ## How the decisions relate
 

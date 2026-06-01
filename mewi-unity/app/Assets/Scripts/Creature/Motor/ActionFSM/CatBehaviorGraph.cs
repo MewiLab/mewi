@@ -60,17 +60,21 @@ public sealed class CatBehaviorGraph : MonoBehaviour
     [SerializeField] bool logDecisions;
 
     readonly List<ScoredNode> _scores = new List<ScoredNode>(8);
+    readonly List<IntentMessage> _goalActions = new List<IntentMessage>();
     int _phase;
+    int _goalActionIndex;
     int _commandSeq;
     string _goalKey = "";
+    string _goalSource = "";
+    string _goalRequestId = "";
+    bool _usesInteractionSequence;
 
     public CatBehaviorNode CurrentNode => currentNode;
 
     public void ResetGoal(CreatureBlackboard board)
     {
         currentNode = ResolveNode(board);
-        _phase = 0;
-        _goalKey = BuildGoalKey(board, currentNode);
+        ResetGoalState(board, currentNode);
     }
 
     /// <summary>
@@ -85,8 +89,24 @@ public sealed class CatBehaviorGraph : MonoBehaviour
         if (next != currentNode || !string.Equals(goalKey, _goalKey, StringComparison.Ordinal))
         {
             currentNode = next;
-            _phase = 0;
-            _goalKey = goalKey;
+            ResetGoalState(board, next);
+        }
+
+        if (_usesInteractionSequence)
+        {
+            if (_goalActionIndex >= _goalActions.Count)
+            {
+                action = default;
+                return false;
+            }
+
+            action = _goalActions[_goalActionIndex++];
+            if (logDecisions)
+            {
+                string target = string.IsNullOrWhiteSpace(action.TargetKey) ? "" : $"->{action.TargetKey}";
+                Debug.Log($"[CatBehaviorGraph] {_goalSource}#{_goalActionIndex} -> {action.Intent}{target}");
+            }
+            return true;
         }
 
         action = ActionFor(currentNode, board, _phase);
@@ -105,9 +125,44 @@ public sealed class CatBehaviorGraph : MonoBehaviour
 
     static string BuildGoalKey(CreatureBlackboard board, CatBehaviorNode node)
     {
-        string directive = board != null ? board.MindDirectiveIntent : "";
-        string focus = board != null ? board.MindFocusTarget : "";
-        return $"{node}|{directive}|{focus}";
+        if (board == null)
+            return $"{node}|||";
+
+        string directive = board.MindDirectiveIntent ?? "";
+        string focus = board.MindFocusTarget ?? "";
+        string requestId = board.MindDirectiveRequestId ?? "";
+        string mood = board.MindDirectiveMood ?? "";
+        string style = board.MindDirectiveStyle ?? "";
+        return $"{node}|{directive}|{focus}|{requestId}|{mood}|{style}";
+    }
+
+    void ResetGoalState(CreatureBlackboard board, CatBehaviorNode node)
+    {
+        _phase = 0;
+        _goalActionIndex = 0;
+        _goalActions.Clear();
+        _goalKey = BuildGoalKey(board, node);
+        _goalSource = "";
+        _goalRequestId = board != null ? board.MindDirectiveRequestId ?? "" : "";
+        _usesInteractionSequence = false;
+
+        if (board == null || !board.HasActiveMindDirective)
+            return;
+
+        if (InteractionSequenceBuilder.TryBuild(
+                board,
+                board.ActiveMindDirective,
+                _goalActions,
+                out _goalSource))
+        {
+            _usesInteractionSequence = _goalActions.Count > 0;
+            if (logDecisions)
+                Debug.Log($"[CatBehaviorGraph] built {_goalActions.Count} actions from {_goalSource} for {_goalKey}");
+        }
+        else if (logDecisions && !string.IsNullOrWhiteSpace(_goalSource))
+        {
+            Debug.Log($"[CatBehaviorGraph] using fallback graph for {_goalKey} ({_goalSource})");
+        }
     }
 
     // ── node selection: directive first, weighted scoring as fallback ──
@@ -236,7 +291,8 @@ public sealed class CatBehaviorGraph : MonoBehaviour
                 if (hasFocus)
                 {
                     if (phase == 0) return Make("go_to", focus);
-                    if (phase == 1) return Make("eat", focus);
+                    if (phase == 1) return Make("smell", focus);
+                    if (phase == 2) return Make("look_at", focus);
                     return default;
                 }
                 if (phase == 0) return Make("smell");
@@ -295,7 +351,7 @@ public sealed class CatBehaviorGraph : MonoBehaviour
             -1f,
             directionHint,
             $"graph:{_commandSeq++:X6}",
-            "",
+            _goalRequestId,
             targetKey ?? "");
     }
 

@@ -33,7 +33,7 @@ public class CatNavigationAnchors : MonoBehaviour
     [SerializeField] float patrolKindBonus = 1f;
 
     readonly List<CatNavigationPoint> _scratch = new List<CatNavigationPoint>();
-    readonly NavMeshPath _path = new NavMeshPath();
+    NavMeshPath _path;
 
     public IReadOnlyList<CatNavigationPoint> Points
     {
@@ -42,6 +42,11 @@ public class CatNavigationAnchors : MonoBehaviour
             CollectPoints(_scratch);
             return _scratch;
         }
+    }
+
+    void Awake()
+    {
+        EnsurePath();
     }
 
     public bool TryResolveGoToPosition(
@@ -145,14 +150,15 @@ public class CatNavigationAnchors : MonoBehaviour
             float pathLength = Vector3.Distance(requesterPosition, sampledPosition);
             if (requireCompletePath)
             {
-                if (!NavMesh.CalculatePath(startHit.position, sampledPosition, areaMask, _path) ||
-                    _path.status != NavMeshPathStatus.PathComplete)
+                NavMeshPath path = EnsurePath();
+                if (!NavMesh.CalculatePath(startHit.position, sampledPosition, areaMask, path) ||
+                    path.status != NavMeshPathStatus.PathComplete)
                 {
-                    lastReject = $"{point.DisplayName}:path_{_path.status}";
+                    lastReject = $"{point.DisplayName}:path_{path.status}";
                     continue;
                 }
 
-                pathLength = PathLength(_path, requesterPosition, sampledPosition);
+                pathLength = PathLength(path, requesterPosition, sampledPosition);
             }
 
             float score = ScoreKind(point.kind)
@@ -253,6 +259,13 @@ public class CatNavigationAnchors : MonoBehaviour
             case CatNavigationPointKind.Patrol: return patrolKindBonus;
             default: return 0f;
         }
+    }
+
+    NavMeshPath EnsurePath()
+    {
+        if (_path == null)
+            _path = new NavMeshPath();
+        return _path;
     }
 
     static float PathLength(NavMeshPath path, Vector3 fallbackStart, Vector3 fallbackEnd)

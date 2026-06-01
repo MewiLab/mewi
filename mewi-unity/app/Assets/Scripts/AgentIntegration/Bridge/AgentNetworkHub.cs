@@ -168,13 +168,25 @@ public class AgentNetworkHub : MonoBehaviour
         intent = "";
         target = "";
 
+        if (!TryConsumeDirective(creatureId, out CreatureBlackboard.MindDirective directive))
+            return false;
+
+        intent = directive.Intent ?? "";
+        target = directive.FocusTarget ?? "";
+        return !string.IsNullOrWhiteSpace(intent);
+    }
+
+    public bool TryConsumeDirective(string creatureId, out CreatureBlackboard.MindDirective directive)
+    {
+        directive = default;
+
         string id = NormalizeCreatureId(creatureId);
         if (string.IsNullOrEmpty(id))
             return false;
 
         EnsureMessageDispatcher();
         return _messageDispatcher != null &&
-               _messageDispatcher.TryConsumeDirective(id, out intent, out target);
+               _messageDispatcher.TryConsumeDirective(id, out directive);
     }
 
     void Update()
