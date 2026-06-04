@@ -242,6 +242,17 @@ public class CreatureMotorWorker : MonoBehaviour
             case "scratch":
             case "look_around":
             case "nod_head":
+            case "meow":
+            case "stun":
+            case "dig":
+            case "crawl":
+            case "open_chest":
+            case "shake":
+            case "yes":
+            case "no":
+            case "push":
+            case "poop":
+            case "pee":
             case "drink":
             case "sit":
             case "lie":

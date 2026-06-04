@@ -118,22 +118,39 @@ public class MalbersAnimalAdapter : MonoBehaviour
     {
         switch (intent)
         {
-            case "flinch":      abilityIndex = startleAbilityIndex; return abilityIndex > 0;
-            case "scratch":     abilityIndex = scratchAbilityIndex; return abilityIndex > 0;
-            case "look_around": abilityIndex = lookAroundAbilityIndex; return abilityIndex > 0;
-            case "nod_head":    abilityIndex = nodHeadAbilityIndex; return abilityIndex > 0;
+            case "flinch":
+            case "stun":
+            case "startle":     abilityIndex = FirstPositive(startleAbilityIndex, 1); return abilityIndex > 0;
+            case "scratch":     abilityIndex = FirstPositive(scratchAbilityIndex, 10); return abilityIndex > 0;
+            case "dig":         abilityIndex = 10; return true;
+            case "look_around": abilityIndex = FirstPositive(lookAroundAbilityIndex, 19); return abilityIndex > 0;
+            case "nod_head":
+            case "yes":         abilityIndex = FirstPositive(nodHeadAbilityIndex, 107); return abilityIndex > 0;
+            case "no":          abilityIndex = 108; return true;
             case "eat":         abilityIndex = eatAbilityIndex; return abilityIndex > 0;
             case "drink":       abilityIndex = drinkAbilityIndex; return abilityIndex > 0;
             case "sit":         abilityIndex = sitAbilityIndex; return abilityIndex > 0;
             case "lie":         abilityIndex = lieAbilityIndex; return abilityIndex > 0;
             case "sleep":       abilityIndex = sleepAbilityIndex; return abilityIndex > 0;
-            case "groom":       abilityIndex = groomAbilityIndex; return abilityIndex > 0;
+            case "groom":       abilityIndex = FirstPositive(groomAbilityIndex, 29); return abilityIndex > 0;
             case "smell":       abilityIndex = smellAbilityIndex; return abilityIndex > 0;
-            case "alert":       abilityIndex = alertAbilityIndex; return abilityIndex > 0;
-            case "vocalize":    abilityIndex = vocalizeAbilityIndex; return abilityIndex > 0;
+            case "alert":       abilityIndex = FirstPositive(alertAbilityIndex, 19); return abilityIndex > 0;
+            case "vocalize":
+            case "meow":        abilityIndex = FirstPositive(vocalizeAbilityIndex, 20); return abilityIndex > 0;
+            case "crawl":       abilityIndex = 9; return true;
+            case "open_chest":  abilityIndex = 18; return true;
+            case "shake":       abilityIndex = 26; return true;
+            case "push":        abilityIndex = 13; return true;
+            case "poop":        abilityIndex = 24; return true;
+            case "pee":         abilityIndex = 25; return true;
         }
         abilityIndex = 0;
         return abilityIndex > 0;
+    }
+
+    static int FirstPositive(int preferred, int fallback)
+    {
+        return preferred > 0 ? preferred : fallback;
     }
 
     bool _hasActiveNavigationDestination;

@@ -99,8 +99,32 @@ This prevents the graph from keeping the cat busy forever. For example:
 | `EXPLORE` | zone/place id | `go_to(target)` -> `look_around` -> `smell(target)` |
 | `INVESTIGATE` | object/place id | `go_to(target)` -> `smell(target)` -> `look_at(target)` |
 | `SEEK_FOOD` | food id | `go_to(food)` -> `smell(food)` -> `eat(food)` when food markup/provider confirms it is edible |
-| `SOCIALIZE` | cat/player id | `go_to(target)` -> `vocalize(target)` -> `sit` |
+| `SOCIALIZE` | cat/player id | cat-cat or cat-player social motion recipe selected from `social_act.kind`, or a mood/style fallback |
 | `REST` | none | `sit`/`lie`/`sleep` -> optional `groom`/`idle` |
+
+## Social Motion Strings
+
+When the backend chooses `SOCIALIZE` or `SEEK_PLAYER`, it may set
+`social_act.kind` to an authored motion key. Unity chooses the FSM by resolved
+target type, then expands the key into safe body-level micro-actions.
+
+Cat-player motions are handled by `CatPlayerSocialFsm`:
+
+`greet_meow`, `soft_meow`, `answer_meow`, `slow_blink`, `sniff_greeting`,
+`sit_near`, `lie_near`, `groom_near`, `rub_request`, `head_bump`, `tail_up`,
+`play_invite`, `playful_paw`, `happy_yes`, `refuse_no`, `startled_freeze`,
+`cautious_watch`, `alert_watch`, `excited_shake`, `settle_close`.
+
+Cat-cat motions are handled by `CatCatSocialFsm`:
+
+`cat_greet`, `nose_touch`, `mutual_sniff`, `circle_greeting`, `tail_greet`,
+`parallel_sit`, `parallel_lie`, `groom_invite`, `share_space`, `play_bow`,
+`play_paw`, `chase_invite`, `soft_chirp`, `answer_chirp`, `cautious_pause`,
+`boundary_hiss`, `startled_break`, `dominance_stare`, `reconcile_blink`,
+`settle_pair`.
+
+If no key is provided, Unity falls back from `style`, `social_act.tone`, and live
+mood values to pick a reasonable social recipe.
 
 ## Graph Pick
 
@@ -157,6 +181,10 @@ Current graph-emitted intent names:
 - `groom`
 - `flee`
 - `alert`
+
+Additional Malbers Action-mode strings accepted by `CreatureMotorWorker` for
+authored social recipes include `meow`, `stun`, `dig`, `crawl`, `open_chest`,
+`shake`, `yes`, `no`, `push`, `poop`, and `pee`.
 
 `CreatureMotorWorker` remains the only translator from intent strings to
 `MotorCommand`, and `MalbersAnimalAdapter` remains the only body executor.

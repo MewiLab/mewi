@@ -118,10 +118,17 @@ public static class InteractionSequenceBuilder
             return true;
         }
 
-        if (IsCatOrPlayerTarget(context, smart))
+        if (IsCatTarget(context, smart))
         {
-            BuildSocial(context, actions);
-            source = "markup_social";
+            BuildCatCatSocial(context, actions);
+            source = "markup_cat_cat_social";
+            return true;
+        }
+
+        if (IsPlayerTarget(context, smart))
+        {
+            BuildCatPlayerSocial(context, actions);
+            source = "markup_cat_player_social";
             return true;
         }
 
@@ -172,7 +179,23 @@ public static class InteractionSequenceBuilder
         Add(actions, context, "look_at");
     }
 
-    static void BuildSocial(InteractionContext context, List<IntentMessage> actions)
+    static void BuildCatPlayerSocial(InteractionContext context, List<IntentMessage> actions)
+    {
+        if (CatPlayerSocialFsm.TryAppendDefaultSequence(context, actions))
+            return;
+
+        BuildLegacySocial(context, actions);
+    }
+
+    static void BuildCatCatSocial(InteractionContext context, List<IntentMessage> actions)
+    {
+        if (CatCatSocialFsm.TryAppendDefaultSequence(context, actions))
+            return;
+
+        BuildLegacySocial(context, actions);
+    }
+
+    static void BuildLegacySocial(InteractionContext context, List<IntentMessage> actions)
     {
         Add(actions, context, "go_to");
         Add(actions, context, "look_at");
@@ -257,13 +280,18 @@ public static class InteractionSequenceBuilder
             ?? target.GetComponentInChildren<T>();
     }
 
-    static bool IsCatOrPlayerTarget(InteractionContext context, SmartObject smart)
+    static bool IsCatTarget(InteractionContext context, SmartObject smart)
     {
         CreatureBlackboard targetBoard = FindOnTarget<CreatureBlackboard>(context.Target);
         if (targetBoard != null && targetBoard != context.Board)
             return true;
 
-        if (HasTag(smart, "entity.cat") || HasTag(smart, "entity.player") || HasTag(smart, "player"))
+        return HasTag(smart, "entity.cat");
+    }
+
+    static bool IsPlayerTarget(InteractionContext context, SmartObject smart)
+    {
+        if (HasTag(smart, "entity.player") || HasTag(smart, "player"))
             return true;
 
         string name = context.Target != null ? context.Target.root.name : "";
