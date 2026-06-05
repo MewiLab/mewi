@@ -1,13 +1,21 @@
 using UnityEngine;
-using Unity.Cinemachine; 
+using Unity.Cinemachine;
 using MalbersAnimations;
 
 public class MultiCatCameraManager : MonoBehaviour
 {
     [Header("Cats in the Sandbox")]
-    public Transform[] cats; 
+    public Transform[] cats;
+    [SerializeField] Transform activePlayerCat;
+    [Tooltip("Off by default because Malbers MInput/MInputLink should own player input. Enable only for legacy possession/debug switching.")]
+    [SerializeField] bool manageCatMInputStates;
+    [SerializeField] bool disableMInputOnNpcCats = true;
+    [SerializeField] bool handleKeyboardInput = true;
+    [Tooltip("Legacy/debug only. Keep false for ADR-029 report sessions so Tab never changes actorId.")]
+    [SerializeField] bool possessCatWhenFraming = false;
+
     private int currentCatIndex = 0;
-    private const int ViewCount = 3; 
+    private const int ViewCount = 3;
 
     [Header("Cinemachine Cameras (Unity 6)")]
     public CinemachineCamera backCam;
@@ -21,94 +29,152 @@ public class MultiCatCameraManager : MonoBehaviour
 
     [Header("Target Paths")]
     [Tooltip("Path to the 3rd-person camera target")]
-    public string cameraTargetPath = "Player Core/CM Main Target"; 
-    
-    [Tooltip("Make sure this path ends with the FPS_Anchor you created!")]
-    public string headBonePath = "CG/Pelvis/Spine/Spine1/Spine2/Neck1/Neck2/FPS_Anchor"; 
+    public string cameraTargetPath = "Player Core/CM Main Target";
 
-    private int currentView = 0; 
+    [Tooltip("Make sure this path ends with the FPS_Anchor you created!")]
+    public string headBonePath = "CG/Pelvis/Spine/Spine1/Spine2/Neck1/Neck2/FPS_Anchor";
+
+    private int currentView = 0;
+    bool _playerInputEnabled = true;
+
+    public Transform ActivePlayerCat => activePlayerCat;
+    public Transform ObservedCat => cats != null && currentCatIndex >= 0 && currentCatIndex < cats.Length
+        ? cats[currentCatIndex]
+        : null;
 
     void Start()
     {
         ResolveDemoGodCamera();
 
-        // Initialize by focusing on the first cat
-        if (cats.Length > 0)
+        if (cats != null && cats.Length > 0)
         {
-            SwitchCat(0);
-            SetCameraPriority(); 
+            if (activePlayerCat == null)
+                activePlayerCat = cats[0];
+
+            FrameObservedCat(0);
+            ApplyMInputState();
+            SetCameraPriority();
         }
     }
 
     void Update()
     {
-        // LAYER 1: Switch between cats (using Tab key)
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (!handleKeyboardInput)
+            return;
+
         if (Input.GetKeyDown(KeyCode.Tab))
+            FrameNextCat();
+
+        if (Input.GetKeyDown(KeyCode.V))
+            CycleView();
+#endif
+    }
+
+    public void SetKeyboardInputEnabled(bool enabled)
+    {
+        handleKeyboardInput = enabled;
+    }
+
+    public void SetPlayerControlEnabled(bool enabled)
+    {
+        _playerInputEnabled = enabled;
+        ApplyMInputState();
+    }
+
+    public void SetActivePlayerCat(Transform playerCat)
+    {
+        if (playerCat == null)
+            return;
+
+        activePlayerCat = playerCat;
+        ApplyMInputState();
+    }
+
+    public void FrameNextCat()
+    {
+        if (cats == null || cats.Length == 0)
+            return;
+
+        FrameObservedCat((currentCatIndex + 1) % cats.Length);
+    }
+
+    public void CycleView()
+    {
+        currentView = (currentView + 1) % GetAvailableViewCount();
+        SetCameraPriority();
+    }
+
+    public void FrameObservedCat(int index)
+    {
+        if (cats == null || cats.Length == 0)
+            return;
+
+        currentCatIndex = Mathf.Clamp(index, 0, cats.Length - 1);
+        Transform observed = cats[currentCatIndex];
+        if (observed == null)
+            return;
+
+        if (possessCatWhenFraming)
+            activePlayerCat = observed;
+
+        SetCameraTargets(observed);
+        ApplyMInputState();
+        SetCameraPriority();
+    }
+
+    void SetCameraTargets(Transform cat)
+    {
+        Transform camTarget = cat.Find(cameraTargetPath);
+        Transform headBone = cat.Find(headBonePath);
+
+        if (backCam == null)
         {
-            if (cats.Length == 0) return; 
-            currentCatIndex = (currentCatIndex + 1) % cats.Length;
-            SwitchCat(currentCatIndex);
+            Debug.LogWarning("Back camera is not assigned on CameraManager.");
+        }
+        else if (camTarget != null)
+        {
+            backCam.Target.TrackingTarget = camTarget;
+        }
+        else
+        {
+            Debug.LogWarning("Camera Target not found at path: " + cameraTargetPath + " on " + cat.name);
         }
 
-        // LAYER 2: Switch camera angle (using V key)
-        if (Input.GetKeyDown(KeyCode.V))
+        if (fpsCam == null)
         {
-            currentView = (currentView + 1) % GetAvailableViewCount();
-            SetCameraPriority();
+            Debug.LogWarning("FPS camera is not assigned on CameraManager.");
+        }
+        else if (headBone != null)
+        {
+            fpsCam.Target.TrackingTarget = headBone;
+        }
+        else
+        {
+            Debug.LogWarning("FPS_Anchor not found at path: " + headBonePath + " on " + cat.name);
         }
     }
 
-    private void SwitchCat(int index)
+    void ApplyMInputState()
     {
+        if (!manageCatMInputStates || cats == null)
+            return;
+
         for (int i = 0; i < cats.Length; i++)
         {
-            if (cats[i] == null) continue;
+            Transform cat = cats[i];
+            if (cat == null)
+                continue;
 
-            // Find Malbers Input and Camera Targets
-            var mInput = cats[i].GetComponent<MInput>();
-            
-            // Now using your custom Inspector variable!
-            Transform camTarget = cats[i].Find(cameraTargetPath); 
-            Transform headBone = cats[i].Find(headBonePath); 
+            MInput mInput = cat.GetComponent<MInput>();
+            if (mInput == null)
+                continue;
 
-            if (i == index)
-            {
-                // ENABLE Player Control
-                if (mInput != null) mInput.enabled = true;
-                
-                // Set target for Back View
-                if (backCam == null)
-                {
-                    Debug.LogWarning("Back camera is not assigned on CameraManager.");
-                }
-                else if (camTarget != null)
-                {
-                    backCam.Target.TrackingTarget = camTarget;
-                }
-                else
-                {
-                    Debug.LogWarning("Camera Target not found at path: " + cameraTargetPath + " on " + cats[i].name);
-                }
-
-                // Set target for FPS View
-                if (fpsCam == null)
-                {
-                    Debug.LogWarning("FPS camera is not assigned on CameraManager.");
-                }
-                else if (headBone != null)
-                {
-                    fpsCam.Target.TrackingTarget = headBone;
-                }
-                else
-                {
-                    Debug.LogWarning("FPS_Anchor not found at path: " + headBonePath + " on " + cats[i].name);
-                }
-            }
-            else
-            {
-                // DISABLE Player Control (Cat returns to AI state)
-                if (mInput != null) mInput.enabled = false;
-            }
+            bool isActivePlayer = activePlayerCat != null && cat.root == activePlayerCat.root;
+            if (isActivePlayer)
+                mInput.enabled = _playerInputEnabled;
+            else if (disableMInputOnNpcCats)
+                mInput.enabled = false;
         }
     }
 
@@ -122,7 +188,7 @@ public class MultiCatCameraManager : MonoBehaviour
         // 2. Elevate the priority of the active view
         if (currentView == 0)
         {
-            SetPriority(backCam, 20); 
+            SetPriority(backCam, 20);
         }
         else if (currentView == 1)
         {

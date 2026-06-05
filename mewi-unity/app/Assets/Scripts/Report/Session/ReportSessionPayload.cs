@@ -9,7 +9,10 @@ using System;
 [Serializable]
 public class ReportSessionPayload
 {
-    public string schema_version = "mewi.report.raw.v1";
+    public const string RawSchemaV1 = "mewi.report.raw.v1";
+    public const string RawSchemaV2 = "mewi.report.raw.v2";
+
+    public string schema_version = RawSchemaV1;
     public string user_id;
     public ReportSource source;
     public ReportSession session;
@@ -30,6 +33,8 @@ public class ReportSession
     public string session_id;
     public int session_index;
     public string timestamp_start;
+    public string timestamp_end;
+    public string close_reason;
     public float duration_seconds;
     public ReportEvent[] events;
     public ReportMultiCatEncounter[] multi_cat_encounters;
@@ -38,10 +43,16 @@ public class ReportSession
 [Serializable]
 public class ReportEvent
 {
+    public string event_id;
+    public string correlation_id;
     public float t;
     public string actor;
+    public string actor_id;
     public string action;
     public string cat_id;
+    public string target_id;
+    public string phase;
+    public string status;
     public int trust_before;
     public int trust_after;
     public string trigger;
@@ -57,8 +68,14 @@ public class ReportEventParams
     public string item_id;
     public string subtype;
     public string initiated_by;
+    public string behavior_key;
+    public string motor_action;
+    public string social_act_kind;
+    public string source_event_id;
     public float distance_to_player_m = -1f;
     public float distance_to_nearest_cat_m = -1f;
+    public float facing_dot = -1f;
+    public float confidence = -1f;
     public float speed_mps = -1f;
 }
 

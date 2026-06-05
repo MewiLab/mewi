@@ -12,6 +12,7 @@ public class PlanExecutionReport
     public string agent_id;
     public string requestId;
     public string planId;
+    public string correlationId;
     public string status;
     public float startedAt;
     public float completedAt;
@@ -26,6 +27,7 @@ public class PlanStepExecutionReport
 {
     public string commandId;
     public string requestId;
+    public string correlationId;
     public string action;
     public string target;
     public string status;

@@ -25,6 +25,7 @@ public class ReportSessionFileOutbox : MonoBehaviour
     [SerializeField] string defaultUserId = "local_user";
 
     [Header("Debug")]
+    [SerializeField] bool sendPendingOnStart;
     [SerializeField] bool logOperations = true;
 
     bool _sendingBatch;
@@ -39,6 +40,12 @@ public class ReportSessionFileOutbox : MonoBehaviour
     {
         ResolveDefaults();
         RefreshCounts();
+    }
+
+    void Start()
+    {
+        if (sendPendingOnStart && PendingCount > 0)
+            SendAllPending();
     }
 
     public string ResolveRootDirectory()

@@ -14,6 +14,7 @@ public class CreatureBlackboard : MonoBehaviour
     public struct MindDirective
     {
         public string RequestId;
+        public string CorrelationId;
         public string Intent;
         public string FocusTarget;
         public string Mood;
@@ -30,11 +31,13 @@ public class CreatureBlackboard : MonoBehaviour
             string mood = "",
             string style = "",
             SocialAct socialAct = default,
-            string requestId = "")
+            string requestId = "",
+            string correlationId = "")
         {
             return new MindDirective
             {
                 RequestId = requestId ?? "",
+                CorrelationId = correlationId ?? "",
                 Intent = string.IsNullOrWhiteSpace(intent) ? "" : intent.Trim().ToUpperInvariant(),
                 FocusTarget = focusTarget ?? "",
                 Mood = mood ?? "",
@@ -53,8 +56,13 @@ public class CreatureBlackboard : MonoBehaviour
     [SerializeField] string _debugMicroActionSlot  = "—";
     [SerializeField] string _debugMicroActionQueue = "—";
 
+    // High Level Intent from LLM: SOCIALIZE,...
     readonly Queue<MindDirective> _intentQueue = new Queue<MindDirective>();
+    // Interrupt Queue with user action
+    readonly Queue<SocialStimulus> _socialStimulusQueue = new Queue<SocialStimulus>();
+    // Actual action with malber Animal Controll via adapter pattern design
     readonly Queue<IntentMessage> _microActionQueue = new Queue<IntentMessage>();
+    // The micro action report for llm workflow not session final report
     readonly Queue<PlanExecutionReport> _completedPlanReports = new Queue<PlanExecutionReport>();
 
     /// <summary>Latest behavior weights read by CatBehaviorGraph (scoring fallback).</summary>
@@ -67,6 +75,7 @@ public class CreatureBlackboard : MonoBehaviour
     /// <summary>Target id the active directive points at; the graph biases actions toward it.</summary>
     public string MindFocusTarget { get; private set; } = "";
     public string MindDirectiveRequestId { get; private set; } = "";
+    public string MindDirectiveCorrelationId { get; private set; } = "";
     public string MindDirectiveMood { get; private set; } = "";
     public string MindDirectiveStyle { get; private set; } = "";
     public string MindDirectiveReason { get; private set; } = "";
@@ -129,6 +138,14 @@ public class CreatureBlackboard : MonoBehaviour
         }
     }
 
+    public void SetCreatureId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            return;
+
+        creatureId = id.Trim();
+    }
+
     // -------------------------------------------------------------------------
     // High-Level Intent Queue
     // -------------------------------------------------------------------------
@@ -162,6 +179,51 @@ public class CreatureBlackboard : MonoBehaviour
     public void ClearMindDirectives() => _intentQueue.Clear();
 
     // -------------------------------------------------------------------------
+    // Local Social Stimulus Queue
+    // -------------------------------------------------------------------------
+
+    public int QueuedSocialStimulusCount => _socialStimulusQueue.Count;
+    public bool HasSocialStimulus => _socialStimulusQueue.Count > 0;
+
+    public void EnqueueSocialStimulus(SocialStimulus stimulus)
+    {
+        if (!stimulus.IsValid)
+            return;
+
+        CoalesceSocialStimulus(stimulus);
+        _socialStimulusQueue.Enqueue(stimulus);
+    }
+
+    public bool TryPeekSocialStimulus(out SocialStimulus stimulus)
+    {
+        if (_socialStimulusQueue.Count == 0)
+        {
+            stimulus = default;
+            return false;
+        }
+
+        stimulus = _socialStimulusQueue.Peek();
+        return true;
+    }
+
+    public bool TryPopSocialStimulus(out SocialStimulus stimulus)
+    {
+        if (_socialStimulusQueue.Count == 0)
+        {
+            stimulus = default;
+            return false;
+        }
+
+        stimulus = _socialStimulusQueue.Dequeue();
+        return true;
+    }
+
+    public void ClearSocialStimuli()
+    {
+        _socialStimulusQueue.Clear();
+    }
+
+    // -------------------------------------------------------------------------
     // Micro-Action Queue
     // -------------------------------------------------------------------------
 
@@ -182,10 +244,11 @@ public class CreatureBlackboard : MonoBehaviour
         Vector3 directionHint = default,
         string commandId = "",
         string requestId = "",
-        string targetKey = "")
+        string targetKey = "",
+        string correlationId = "")
     {
         _microActionQueue.Clear();
-        _microActionQueue.Enqueue(IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint, commandId, requestId, targetKey));
+        _microActionQueue.Enqueue(IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint, commandId, requestId, targetKey, correlationId));
     }
 
     /// <summary>Replace all queued micro-actions with a backend-authored legacy plan.</summary>
@@ -351,9 +414,11 @@ public class CreatureBlackboard : MonoBehaviour
                 directive.Mood,
                 directive.Style,
                 directive.SocialAct,
-                directive.RequestId)
+                directive.RequestId,
+                directive.CorrelationId)
             : default;
         MindDirectiveRequestId = ActiveMindDirective.RequestId ?? "";
+        MindDirectiveCorrelationId = ActiveMindDirective.CorrelationId ?? "";
         MindDirectiveIntent = ActiveMindDirective.Intent ?? "";
         MindFocusTarget = ActiveMindDirective.FocusTarget ?? "";
         MindDirectiveMood = ActiveMindDirective.Mood ?? "";
@@ -367,6 +432,7 @@ public class CreatureBlackboard : MonoBehaviour
     {
         ActiveMindDirective = default;
         MindDirectiveRequestId = "";
+        MindDirectiveCorrelationId = "";
         MindDirectiveIntent = "";
         MindFocusTarget = "";
         MindDirectiveMood = "";
@@ -457,6 +523,20 @@ public class CreatureBlackboard : MonoBehaviour
     {
         TrimInactiveMicroActions();
         return Mathf.Max(0, _microActionQueue.Count - 1);
+    }
+
+    void CoalesceSocialStimulus(SocialStimulus incoming)
+    {
+        if (_socialStimulusQueue.Count == 0)
+            return;
+
+        SocialStimulus[] existing = _socialStimulusQueue.ToArray();
+        _socialStimulusQueue.Clear();
+        for (int i = 0; i < existing.Length; i++)
+        {
+            if (!existing[i].SameCoalescingKey(incoming))
+                _socialStimulusQueue.Enqueue(existing[i]);
+        }
     }
 
     // -------------------------------------------------------------------------

@@ -101,6 +101,7 @@ public sealed class AuthoredInteractionStep
             directionHint,
             InteractionSequenceBuilder.NextCommandId("authored"),
             context.RequestId,
-            target));
+            target,
+            context.CorrelationId));
     }
 }

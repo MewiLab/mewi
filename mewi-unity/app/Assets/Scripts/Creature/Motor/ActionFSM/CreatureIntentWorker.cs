@@ -11,6 +11,10 @@ public sealed class CreatureIntentWorker : MonoBehaviour
     [SerializeField] CreatureBlackboard _board;
     [SerializeField] CreatureMotorWorker _motorWorker;
 
+    [Header("Social Stimulus")]
+    [SerializeField] bool enableSocialStimulusPolicy;
+    [SerializeField] CreatureSocialStimulusPolicy _socialPolicy;
+
     [Header("Debug")]
     [SerializeField] bool logIntentWorker;
 
@@ -21,6 +25,7 @@ public sealed class CreatureIntentWorker : MonoBehaviour
         _board = board;
         ResolveGraph();
         ResolveMotorWorker();
+        ResolveSocialPolicy();
         StartWorking();
     }
 
@@ -40,7 +45,9 @@ public sealed class CreatureIntentWorker : MonoBehaviour
         if (!_running || _board == null)
             return;
 
-        ConsumeIntentQueue();
+        bool consumedSocialStimulus = TryConsumeSocialStimulus();
+        if (!consumedSocialStimulus)
+            ConsumeIntentQueue();
 
         if (_board.HasMicroActionPlan || IsMotorExecuting() || _behaviorGraph == null)
             return;
@@ -92,6 +99,41 @@ public sealed class CreatureIntentWorker : MonoBehaviour
             Debug.Log($"[CreatureIntentWorker] active {latest.Intent}{(string.IsNullOrEmpty(latest.FocusTarget) ? "" : $"->{latest.FocusTarget}")}");
     }
 
+    bool TryConsumeSocialStimulus()
+    {
+        if (!enableSocialStimulusPolicy || _board == null)
+            return false;
+
+        ResolveSocialPolicy();
+        if (_socialPolicy == null)
+            return false;
+
+        if (!_socialPolicy.TryBuildReactionDirective(
+                _board,
+                out CreatureBlackboard.MindDirective directive,
+                out SocialStimulusPreemption preemption))
+        {
+            return false;
+        }
+
+        if (preemption == SocialStimulusPreemption.None)
+            return false;
+
+        if (preemption == SocialStimulusPreemption.Hard)
+        {
+            _board.ClearMicroActionPlan();
+            _board.ClearActiveMindDirective();
+        }
+
+        _board.SetMindDirective(directive);
+        _behaviorGraph?.ResetGoal(_board);
+
+        if (logIntentWorker)
+            Debug.Log($"[CreatureIntentWorker] social stimulus active {directive.SocialAct.kind}->{directive.FocusTarget} preemption={preemption}");
+
+        return true;
+    }
+
     void ResolveGraph()
     {
         if (_behaviorGraph != null)
@@ -111,6 +153,16 @@ public sealed class CreatureIntentWorker : MonoBehaviour
         _motorWorker = GetComponent<CreatureMotorWorker>();
         if (_motorWorker == null) _motorWorker = GetComponentInChildren<CreatureMotorWorker>();
         if (_motorWorker == null) _motorWorker = GetComponentInParent<CreatureMotorWorker>();
+    }
+
+    void ResolveSocialPolicy()
+    {
+        if (_socialPolicy != null || !enableSocialStimulusPolicy)
+            return;
+
+        _socialPolicy = GetComponent<CreatureSocialStimulusPolicy>();
+        if (_socialPolicy == null) _socialPolicy = GetComponentInChildren<CreatureSocialStimulusPolicy>();
+        if (_socialPolicy == null) _socialPolicy = GetComponentInParent<CreatureSocialStimulusPolicy>();
     }
 
     bool IsMotorExecuting()

@@ -9,24 +9,24 @@ public enum LayerSource
 public struct IntentMessage
 {
     [Tooltip("e.g. 'flinch', 'wander', 'flee', 'eat'")]
-    public string Intent;  
+    public string Intent;
 
     [Tooltip("Which layer generated this intent")]
-    public LayerSource Source;  
+    public LayerSource Source;
 
     [Tooltip("Time.time when this intent was created")]
-    public float SetTime; 
+    public float SetTime;
 
     /// <summary>
     /// How long this slot stays active. Negative = indefinite (tactical, mind).
     /// Positive = auto-expires after this many seconds (reflex).
     /// </summary>
     public float Duration;
-    
+
     /// <summary>
     /// A spatial hint for the motor (e.g., where to look, where to move, where to flee from).
     /// </summary>
-    public Vector3 DirectionHint; 
+    public Vector3 DirectionHint;
 
     /// <summary>
     /// LLM command correlation id. Empty for local/reflex/tactical intents.
@@ -44,15 +44,22 @@ public struct IntentMessage
     public string TargetKey;
 
     /// <summary>
+    /// Causal id shared by report-session rows and live plan reports.
+    /// Empty for ordinary backend/directive intents that are not part of a
+    /// player-cat social chain.
+    /// </summary>
+    public string CorrelationId;
+
+    /// <summary>
     /// Is this slot still active? Checks expiry if duration is positive.
     /// </summary>
-    public bool IsActive => Duration < 0f || (Time.time - SetTime) < Duration; 
-    
+    public bool IsActive => Duration < 0f || (Time.time - SetTime) < Duration;
+
     /// <summary>
     /// How many seconds remain before this slot expires. -1 if indefinite.
     /// </summary>
     public float TimeRemaining =>
-        Duration < 0f ? -1f : Mathf.Max(0f, Duration - (Time.time - SetTime)); 
+        Duration < 0f ? -1f : Mathf.Max(0f, Duration - (Time.time - SetTime));
 
     /// <summary>
     /// Factory method to cleanly generate an IntentMessage.
@@ -64,7 +71,8 @@ public struct IntentMessage
         Vector3 directionHint = default,
         string commandId = "",
         string requestId = "",
-        string targetKey = "")
+        string targetKey = "",
+        string correlationId = "")
     {
         return new IntentMessage
         {
@@ -76,6 +84,7 @@ public struct IntentMessage
             CommandId     = commandId ?? "",
             RequestId     = requestId ?? "",
             TargetKey     = targetKey ?? "",
+            CorrelationId = correlationId ?? "",
         };
     }
 

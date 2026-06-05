@@ -267,7 +267,8 @@ public static class InteractionSequenceBuilder
             directionHint,
             NextCommandId("interaction"),
             context.RequestId,
-            target ?? ""));
+            target ?? "",
+            context.CorrelationId));
     }
 
     static T FindOnTarget<T>(Transform target) where T : Component

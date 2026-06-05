@@ -43,6 +43,7 @@ public class CreatureMotorWorker : MonoBehaviour
     bool _hasActiveIntent;
     string _planRequestId = "";
     string _planId = "";
+    string _planCorrelationId = "";
     bool _warnedUninitialized;
 
     public bool IsBusy => _adapter != null && _adapter.IsBusy;
@@ -499,7 +500,8 @@ public class CreatureMotorWorker : MonoBehaviour
             climbTarget.position,
             BuildAutoCommandId(sourceIntent, "climb"),
             sourceIntent.RequestId ?? "",
-            climbKey));
+            climbKey,
+            sourceIntent.CorrelationId ?? ""));
 
         if (autoClimb.TryGetExitTarget(out Transform exitTarget, out string exitKey))
         {
@@ -511,7 +513,8 @@ public class CreatureMotorWorker : MonoBehaviour
                 exitTarget.position,
                 BuildAutoCommandId(sourceIntent, "climb-exit"),
                 sourceIntent.RequestId ?? "",
-                exitKey));
+                exitKey,
+                sourceIntent.CorrelationId ?? ""));
         }
 
         if (logWorkerDispatch)
@@ -532,6 +535,7 @@ public class CreatureMotorWorker : MonoBehaviour
             return;
 
         _planRequestId = intent.RequestId ?? "";
+        _planCorrelationId = intent.CorrelationId ?? "";
         _planId = string.IsNullOrWhiteSpace(_planRequestId)
             ? $"{(_board != null ? _board.CreatureId : name)}:{Time.frameCount}"
             : _planRequestId;
@@ -717,6 +721,7 @@ public class CreatureMotorWorker : MonoBehaviour
             agent_id    = _board != null ? _board.CreatureId : name,
             requestId   = _planRequestId,
             planId      = _planId,
+            correlationId = _planCorrelationId,
             status      = BuildPlanStatus(),
             startedAt   = _planStartedAt,
             completedAt = Time.time,
@@ -727,6 +732,7 @@ public class CreatureMotorWorker : MonoBehaviour
         _currentPlanSteps.Clear();
         _planRequestId = "";
         _planId = "";
+        _planCorrelationId = "";
     }
 
     void RecordStep(IntentMessage intent, string status, string reason, float startedAt, float endedAt)
@@ -735,10 +741,13 @@ public class CreatureMotorWorker : MonoBehaviour
             return;
 
         _board?.RecordMicroActionOutcome(intent, status, reason);
+        if (string.IsNullOrWhiteSpace(_planCorrelationId) && !string.IsNullOrWhiteSpace(intent.CorrelationId))
+            _planCorrelationId = intent.CorrelationId;
         _currentPlanSteps.Add(new PlanStepExecutionReport
         {
             commandId = intent.CommandId ?? "",
             requestId = intent.RequestId ?? "",
+            correlationId = intent.CorrelationId ?? "",
             action    = intent.Intent ?? "",
             target    = intent.TargetKey ?? "",
             status    = status ?? "",

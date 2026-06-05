@@ -181,17 +181,20 @@ Current graph-emitted intent names:
 - `investigate`
 - `look_at`
 - `eat`
+- `drink`
 - `vocalize`
 - `sit`
 - `sleep`
 - `lie`
 - `groom`
+- `smell`
 - `flee`
 - `alert`
 
 Additional Malbers Action-mode strings accepted by `CreatureMotorWorker` for
-authored social recipes include `meow`, `stun`, `dig`, `crawl`, `open_chest`,
-`shake`, `yes`, `no`, `push`, `poop`, and `pee`.
+authored social recipes include `meow`, `flinch`, `stun`, `startle`, `dig`,
+`crawl`, `open_chest`, `shake`, `nod_head`, `yes`, `no`, `push`, `poop`, and
+`pee`.
 
 `CreatureMotorWorker` remains the only translator from intent strings to
 `MotorCommand`, and `MalbersAnimalAdapter` remains the only body executor.
