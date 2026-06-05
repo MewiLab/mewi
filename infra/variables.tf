@@ -20,3 +20,10 @@ variable "project_name" {
   type        = string
   default     = "mewi"
 }
+
+variable "anthropic_api_key" {
+  description = "ANTHROPIC_API_KEY for the report Lambdas (passed into the aws-lambda module). Set via TF_VAR_anthropic_api_key or a tfvars file — never commit it."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

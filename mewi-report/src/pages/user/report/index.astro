@@ -1,0 +1,285 @@
+---
+// src/pages/user/report/index.astro
+// Reports directory — lists every user, each represented by their latest report.
+// Users with more than one report expose their history inline.
+
+import Base from '../../../layouts/Base.astro';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { loadReportRoutes } from '../../../utils/reportRoutes';
+
+const routes = await loadReportRoutes();
+
+// load each report's metadata
+const entries = await Promise.all(
+  routes.map(async (route) => {
+    const dataPath = path.join(process.cwd(), 'src', 'data', `report_${route.dataFileId}.json`);
+    let report: Record<string, any> = {};
+    try {
+      report = JSON.parse(await readFile(dataPath, 'utf-8'));
+    } catch {
+      report = {};
+    }
+    const meta = report.meta ?? {};
+    const summary = report.summary ?? {};
+    const user = report.user ?? {};
+    const cats = report.cats ?? {};
+    const bondId = summary.primary_bond;
+    return {
+      routeId: route.routeId,
+      userKey: user.handle ?? user.display_name ?? route.displayName ?? route.routeId,
+      displayName: user.display_name ?? user.handle ?? route.displayName ?? route.routeId,
+      lastSeen: meta.last_seen ?? '',
+      sessions: meta.sessions ?? 0,
+      totalEvents: meta.total_events ?? 0,
+      patience: summary.patience_pct,
+      bondName: cats?.[bondId]?.name ?? bondId ?? '—',
+      bondAccent: cats?.[bondId]?.accent ?? 'var(--ink3)',
+    };
+  })
+);
+
+// group by user, newest report first within each group
+const groups = new Map<string, typeof entries>();
+for (const e of entries) {
+  const list = groups.get(e.userKey) ?? [];
+  list.push(e);
+  groups.set(e.userKey, list);
+}
+const users = [...groups.values()].map((list) => {
+  const sorted = [...list].sort((a, b) => String(b.lastSeen).localeCompare(String(a.lastSeen)));
+  return { latest: sorted[0], history: sorted };
+});
+users.sort((a, b) => String(b.latest.lastSeen).localeCompare(String(a.latest.lastSeen)));
+
+const userCount = users.length;
+const reportCount = entries.length;
+---
+
+<Base title="Mewi · Reports" wide>
+  <header class="dir-header">
+    <div>
+      <div class="label">Mewi · behavioral trace reports</div>
+      <h1 class="dir-title serif">Everyone the cats remember.</h1>
+      <p class="dir-sub">
+        One card per player, drawn from the latest session they left behind.
+        Open a card to read the full trace; players with more than one visit
+        keep their history below their name.
+      </p>
+    </div>
+    <div class="dir-stats" aria-hidden="true">
+      <div><span class="serif">{userCount}</span><em>players</em></div>
+      <div><span class="serif">{reportCount}</span><em>reports</em></div>
+    </div>
+  </header>
+
+  {users.length === 0 ? (
+    <p class="dir-empty">No reports generated yet. Drop a <code>report_*.json</code> into <code>src/data/</code>.</p>
+  ) : (
+    <section class="dir-grid" aria-label="User reports">
+      {users.map(({ latest, history }) => (
+        <article class="user-card" style={`--bond-accent:${latest.bondAccent}`}>
+          <a class="user-main" href={`/user/report/${latest.routeId}`}>
+            <span class="user-avatar serif">{String(latest.displayName).slice(0, 1).toUpperCase()}</span>
+            <span class="user-id">
+              <span class="user-name serif">{latest.displayName}</span>
+              <span class="user-last">last seen {latest.lastSeen || '—'}</span>
+            </span>
+          </a>
+
+          <dl class="user-stats">
+            <div><dt>Sessions</dt><dd>{latest.sessions}</dd></div>
+            <div><dt>Primary bond</dt><dd class="bond">{latest.bondName}</dd></div>
+            <div><dt>Patience</dt><dd>{latest.patience != null ? `${latest.patience}%` : '—'}</dd></div>
+          </dl>
+
+          {history.length > 1 && (
+            <div class="user-history">
+              <span class="label">History</span>
+              <div class="history-chips">
+                {history.map((h, i) => (
+                  <a
+                    href={`/user/report/${h.routeId}`}
+                    class:list={['history-chip', { 'is-latest': i === 0 }]}
+                  >
+                    {h.lastSeen || h.routeId}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <a class="user-open" href={`/user/report/${latest.routeId}`}>Open latest report →</a>
+        </article>
+      ))}
+    </section>
+  )}
+</Base>
+
+<style>
+.dir-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2rem;
+  align-items: end;
+  padding: 3.5rem 0 2rem;
+  border-bottom: 0.5px solid var(--border);
+}
+.dir-title {
+  font-size: clamp(2.2rem, 6vw, 4.4rem);
+  line-height: .95;
+  font-weight: 400;
+  color: var(--ink);
+  margin: .6rem 0 1rem;
+}
+.dir-sub {
+  color: var(--ink2);
+  font-size: 13px;
+  line-height: 1.85;
+  max-width: 480px;
+}
+.dir-stats {
+  display: flex;
+  gap: 2rem;
+}
+.dir-stats div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1;
+}
+.dir-stats span {
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  color: var(--ink);
+  opacity: .14;
+}
+.dir-stats em {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-top: .4rem;
+}
+
+.dir-empty {
+  margin-top: 3rem;
+  color: var(--ink2);
+  font-size: 13px;
+}
+.dir-empty code {
+  font-size: 11px;
+  background: var(--bg2);
+  border: 0.5px solid var(--border);
+  border-radius: 5px;
+  padding: .1rem .35rem;
+}
+
+.dir-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  padding: 2rem 0 3rem;
+}
+.user-card {
+  position: relative;
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 1.15rem 1.2rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: hidden;
+  transition: transform var(--transition), border-color var(--transition);
+}
+.user-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: var(--bond-accent);
+}
+.user-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-md);
+}
+.user-main {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+}
+.user-avatar {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(120% 120% at 30% 25%,
+    color-mix(in srgb, var(--bond-accent) 26%, var(--surface)) 0%, var(--surface) 72%);
+  border: 1px solid color-mix(in srgb, var(--bond-accent) 45%, var(--border));
+  color: var(--bond-accent);
+  font-size: 1.3rem;
+}
+.user-id { display: flex; flex-direction: column; gap: .15rem; }
+.user-name { color: var(--ink); font-size: 1.15rem; line-height: 1; }
+.user-last { color: var(--ink3); font-size: 10px; letter-spacing: .06em; }
+
+.user-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+.user-stats div {
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: .5rem .55rem;
+  background: var(--bg);
+}
+.user-stats dt {
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: .25rem;
+}
+.user-stats dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+}
+.user-stats dd.bond { color: var(--bond-accent); }
+
+.user-history { display: flex; flex-direction: column; gap: .4rem; }
+.history-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.history-chip {
+  border: 0.5px solid var(--border);
+  border-radius: 999px;
+  padding: .2rem .5rem;
+  color: var(--ink3);
+  font-size: 10px;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+.history-chip:hover { color: var(--ink); border-color: var(--border-md); background: var(--bg2); }
+.history-chip.is-latest {
+  color: var(--ink2);
+  border-color: color-mix(in srgb, var(--bond-accent) 45%, var(--border));
+}
+
+.user-open {
+  margin-top: auto;
+  align-self: flex-start;
+  color: var(--ink3);
+  font-size: 11px;
+  transition: color var(--transition);
+}
+.user-open:hover { color: var(--ink); }
+
+@media (max-width: 620px) {
+  .dir-header { grid-template-columns: 1fr; align-items: start; }
+  .dir-stats { gap: 1.5rem; }
+  .dir-stats div { align-items: flex-start; }
+}
+</style>

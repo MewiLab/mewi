@@ -1,0 +1,79 @@
+{
+  "schema_version": "mewi.report.raw.v1",
+  "user_id": "vanillasky_01",
+  "source": {
+    "app": "mewi-unity",
+    "build": "demo",
+    "platform": "demo",
+    "scene": "demo_fishing_village"
+  },
+  "session": {
+    "session_id": "s5",
+    "session_index": 5,
+    "timestamp_start": "2026-05-27T17:15:00Z",
+    "duration_seconds": 530,
+    "events": [
+      {
+        "t": 4,
+        "actor": "human",
+        "action": "sit",
+        "params": {}
+      },
+      {
+        "t": 12,
+        "actor": "human",
+        "action": "wait",
+        "params": {}
+      },
+      {
+        "t": 30,
+        "actor": "cat",
+        "cat_id": "mewi",
+        "action": "settle",
+        "trust_before": 21,
+        "trust_after": 34,
+        "trigger": "plateau_near_lantern_light"
+      },
+      {
+        "t": 55,
+        "actor": "cat",
+        "cat_id": "miso",
+        "action": "approach",
+        "trust_before": 28,
+        "trust_after": 38,
+        "trigger": "non_food_approach"
+      },
+      {
+        "t": 82,
+        "actor": "cat",
+        "cat_id": "haru",
+        "action": "hold_distance",
+        "trust_before": 24,
+        "trust_after": 26,
+        "trigger": "presence_held"
+      },
+      {
+        "t": 117,
+        "actor": "cat",
+        "cat_id": "yuzu",
+        "action": "notice_motion",
+        "trust_before": 5,
+        "trust_after": 6,
+        "trigger": "unpredictable_motion"
+      }
+    ],
+    "multi_cat_encounters": [
+      {
+        "t": 130,
+        "cats_present": [
+          "mewi",
+          "miso",
+          "yuzu",
+          "haru"
+        ],
+        "human_action": "do_not_move_toward_any",
+        "outcome": "miso_approached_after_90s"
+      }
+    ]
+  }
+}

@@ -1,0 +1,80 @@
+---
+// src/components/RadarChart.astro
+export interface Props { radarJson: string; }
+const { radarJson } = Astro.props;
+---
+
+<div class="radar-chart" data-radar={radarJson}>
+  <div class="legend" aria-hidden="true"></div>
+  <div class="chart-wrap">
+    <canvas role="img"
+      aria-label="Hexagonal radar chart of human action distribution across six categories">
+      Human action distribution radar.
+    </canvas>
+  </div>
+</div>
+
+<script>
+import Chart from 'chart.js/auto';
+
+document.querySelectorAll('.radar-chart').forEach(root => {
+  const radar = JSON.parse(root.dataset.radar || '{}');
+  const labels = ['Approach', 'Retreat', 'Offer item', 'Wait / dwell', 'Call out', 'Pet attempt'];
+  const values = labels.map(l => radar[l] ?? 0);
+  const legEl = root.querySelector('.legend');
+  const ctx = root.querySelector('canvas')?.getContext('2d');
+  const styles = getComputedStyle(document.documentElement);
+  const axisColor = styles.getPropertyValue('--ink2').trim() || '#5F5E5A';
+  const gridColor = styles.getPropertyValue('--border').trim() || 'rgba(128,128,128,.12)';
+
+  if (!legEl || !ctx) return;
+
+  labels.forEach((label, i) => {
+    const span = document.createElement('span');
+    span.className = 'leg-item';
+    span.innerHTML = `<span class="leg-swatch" style="background:#888780;opacity:${0.4 + i * 0.1}"></span>${label} ${values[i]}%`;
+    legEl.appendChild(span);
+  });
+
+  new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: '#888780',
+        backgroundColor: 'rgba(136,135,128,.08)',
+        borderWidth: 1.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#888780',
+        pointBorderColor: 'transparent',
+        label: 'You',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        r: {
+          ticks: { display: false, stepSize: 25 },
+          grid: { circular: false, color: gridColor },
+          angleLines: { color: gridColor },
+          pointLabels: { font: { size: 11 }, color: axisColor },
+          suggestedMin: 0, suggestedMax: 100,
+        }
+      }
+    }
+  });
+});
+</script>
+
+<style is:global>
+.radar-chart .chart-wrap { position: relative; width: 100%; height: 280px; }
+.radar-chart .chart-wrap canvas { position: absolute; inset: 0; }
+.radar-chart .legend {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 8px; font-size: 11px; color: var(--ink2);
+}
+.radar-chart .leg-item { display: flex; align-items: center; gap: 4px; }
+.radar-chart .leg-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+</style>

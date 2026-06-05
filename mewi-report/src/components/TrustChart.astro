@@ -1,0 +1,93 @@
+---
+// src/components/TrustChart.astro
+export interface Props {
+  catsJson: string;
+  sessionCount: number;
+}
+const { catsJson, sessionCount } = Astro.props;
+---
+
+<div class="trust-chart" data-cats={catsJson} data-session-count={sessionCount}>
+  <div class="legend" aria-hidden="true"></div>
+  <div class="chart-wrap">
+    <canvas role="img"
+      aria-label="Line chart comparing trust score per session for all four cats">
+      Trust comparison chart for all four cats.
+    </canvas>
+  </div>
+</div>
+
+<script>
+import Chart from 'chart.js/auto';
+
+document.querySelectorAll('.trust-chart').forEach(root => {
+  const cats = JSON.parse(root.dataset.cats || '{}');
+  const sessionCount = Number(root.dataset.sessionCount || 0);
+  const order = ['mewi', 'miso', 'yuzu', 'haru'].filter(k => cats[k]);
+  const labels = Array.from({ length: sessionCount }, (_, i) => `S${i + 1}`);
+  const legEl = root.querySelector('.legend');
+  const ctx = root.querySelector('canvas')?.getContext('2d');
+  const styles = getComputedStyle(document.documentElement);
+  const axisColor = styles.getPropertyValue('--ink3').trim() || '#888780';
+  const gridColor = styles.getPropertyValue('--border').trim() || 'rgba(128,128,128,.1)';
+
+  if (!legEl || !ctx) return;
+
+  order.forEach(k => {
+    const c = cats[k];
+    const last = c.trust_arc[c.trust_arc.length - 1];
+    const sign = last >= 0 ? '+' : '';
+    const span = document.createElement('span');
+    span.className = 'leg-item';
+    span.innerHTML = `<span class="leg-swatch" style="background:${c.accent}"></span>${c.name} (${sign}${last})`;
+    legEl.appendChild(span);
+  });
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: order.map(k => ({
+        label: cats[k].name,
+        data: cats[k].trust_arc,
+        borderColor: cats[k].accent,
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        pointRadius: 4,
+        pointBackgroundColor: cats[k].accent,
+        pointBorderColor: 'transparent',
+        tension: .4,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { font: { size: 10 }, color: axisColor },
+          grid: { color: gridColor },
+          border: { display: false },
+        },
+        y: {
+          ticks: { font: { size: 10 }, color: axisColor },
+          grid: { color: gridColor },
+          suggestedMin: 0, suggestedMax: 45,
+          title: { display: true, text: 'trust score', font: { size: 10 }, color: axisColor },
+          border: { display: false },
+        }
+      }
+    }
+  });
+});
+</script>
+
+<style is:global>
+.trust-chart .chart-wrap { position: relative; width: 100%; height: 240px; }
+.trust-chart .chart-wrap canvas { position: absolute; inset: 0; }
+.trust-chart .legend {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 8px; font-size: 11px; color: var(--ink2);
+}
+.trust-chart .leg-item { display: flex; align-items: center; gap: 5px; }
+.trust-chart .leg-swatch { display: inline-block; width: 18px; height: 1.5px; }
+</style>

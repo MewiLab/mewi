@@ -1,0 +1,10 @@
+# Generated Lambda zips (archive_file output_path)
+.build/
+
+# Vendored deps installed into the domain dirs before packaging
+# (pip install -r <domain>/requirements.txt -t <domain>/)
+__pycache__/
+*.pyc
+*/bin/
+*/*.dist-info/
+*/*.egg-info/

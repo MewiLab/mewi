@@ -1,0 +1,15 @@
+{
+  "name": "mewi-report",
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "charts": "uv run pipeline/scripts/visualize.py"
+  },
+  "dependencies": {
+    "astro": "^4.15.0",
+    "chart.js": "^4.4.1"
+  }
+}

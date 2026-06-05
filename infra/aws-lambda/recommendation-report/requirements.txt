@@ -1,0 +1,4 @@
+# Runtime dependencies bundled into the recommendation-report Lambda zip.
+# Scaffold — same convention as attachment-report. Install into this directory
+# before packaging (e.g. `pip install -r requirements.txt -t .`).
+claude-agent-sdk>=0.1.0
