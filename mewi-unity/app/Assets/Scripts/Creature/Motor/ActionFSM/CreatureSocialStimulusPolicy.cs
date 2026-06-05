@@ -85,7 +85,9 @@ public sealed class CreatureSocialStimulusPolicy : MonoBehaviour
     {
         string kind = Normalize(stimulus.Kind);
         if (hardPreemptFastApproachAndContact &&
-            (kind == "player_approach_fast" || kind == "player_contact"))
+            (kind == "player_approach_fast" ||
+             kind == "player_contact" ||
+             kind == "player_attack"))
         {
             return SocialStimulusPreemption.Hard;
         }
@@ -113,6 +115,8 @@ public sealed class CreatureSocialStimulusPolicy : MonoBehaviour
                 return CatPlayerSocialFsm.SettleClose;
             case "player_play_invite":
                 return CatPlayerSocialFsm.PlayInvite;
+            case "player_attack":
+                return CatPlayerSocialFsm.StartledFreeze;
             case "player_groom":
             case "player_sit":
             case "player_lie":

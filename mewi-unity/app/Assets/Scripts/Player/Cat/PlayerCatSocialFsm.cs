@@ -40,13 +40,26 @@ public sealed class PlayerCatSocialFsm : MonoBehaviour
         string socialKind,
         string motorAction,
         bool requiresApproach)
+        => TryPerformAction(socialKind, motorAction, requiresApproach, true);
+
+    public bool TryPerformAction(
+        string socialKind,
+        string motorAction,
+        bool requiresApproach,
+        bool playBodyAction)
     {
         string normalizedMotor = Normalize(motorAction);
         string normalizedKind = NormalizeSocialKind(socialKind, normalizedMotor);
-        if (string.IsNullOrWhiteSpace(normalizedKind) || string.IsNullOrWhiteSpace(normalizedMotor))
+        if (string.IsNullOrWhiteSpace(normalizedKind))
+            return false;
+        if (playBodyAction && string.IsNullOrWhiteSpace(normalizedMotor))
             return false;
 
-        return TryPerformSpec(new GestureSpec(normalizedKind, normalizedMotor, requiresApproach));
+        return TryPerformSpec(new GestureSpec(
+            normalizedKind,
+            normalizedMotor,
+            requiresApproach,
+            playBodyAction));
     }
 
     bool TryPerformSpec(GestureSpec spec)
@@ -65,8 +78,12 @@ public sealed class PlayerCatSocialFsm : MonoBehaviour
         RememberTarget(target);
         Emit(target, spec, correlationId, "started");
 
-        if (playMalbersActionDirectly)
+        if (playMalbersActionDirectly &&
+            spec.PlayBodyAction &&
+            !string.IsNullOrWhiteSpace(spec.MotorAction))
+        {
             actionDriver?.TryPlay(spec.MotorAction);
+        }
 
         Emit(target, spec, correlationId, "committed");
         if (emitCompletedImmediately)
@@ -99,6 +116,9 @@ public sealed class PlayerCatSocialFsm : MonoBehaviour
             case "play_invite":
             case "play":
                 return TryPerform(PlayerCatSocialGesture.PlayInvite);
+            case "player_attack":
+            case "attack":
+                return TryPerformAction("player_attack", "", false, false);
             default:
             {
                 string normalized = Normalize(kind);
@@ -241,12 +261,19 @@ public sealed class PlayerCatSocialFsm : MonoBehaviour
         public readonly string Kind;
         public readonly string MotorAction;
         public readonly bool RequiresApproach;
+        public readonly bool PlayBodyAction;
 
         public GestureSpec(string kind, string motorAction, bool requiresApproach)
+            : this(kind, motorAction, requiresApproach, true)
+        {
+        }
+
+        public GestureSpec(string kind, string motorAction, bool requiresApproach, bool playBodyAction)
         {
             Kind = kind;
             MotorAction = motorAction;
             RequiresApproach = requiresApproach;
+            PlayBodyAction = playBodyAction;
         }
     }
 }

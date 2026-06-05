@@ -14,6 +14,8 @@ public sealed class PlayerCatSocialActionBinding
     public KeyCode key = KeyCode.None;
     public string socialKind = "";
     public string motorAction = "";
+    [Tooltip("Off for actions already driven by Malbers input, such as left-click attack. The social event is still emitted.")]
+    public bool playBodyAction = true;
     public bool requiresApproach;
 }
 
@@ -38,7 +40,7 @@ public sealed class PlayerCatSocialInputRouter : MonoBehaviour
 
     [Header("Inspector Debug")]
     [SerializeField, Min(0)] int debugBindingIndex;
-    const int CurrentDefaultBindingsVersion = 1;
+    const int CurrentDefaultBindingsVersion = 2;
 
 #if ENABLE_INPUT_SYSTEM
     [Header("Input System Actions (optional)")]
@@ -142,7 +144,8 @@ public sealed class PlayerCatSocialInputRouter : MonoBehaviour
         socialFsm?.TryPerformAction(
             binding.socialKind,
             binding.motorAction,
-            binding.requiresApproach);
+            binding.requiresApproach,
+            binding.playBodyAction);
     }
 
     public void SetKeyboardInputEnabled(bool enabled)
@@ -233,7 +236,11 @@ public sealed class PlayerCatSocialInputRouter : MonoBehaviour
             if (binding == null)
                 continue;
 
-            switch (Normalize(binding.socialKind))
+            string kind = Normalize(binding.socialKind);
+            if (kind != "player_attack")
+                binding.playBodyAction = true;
+
+            switch (kind)
             {
                 case "player_play_invite":
                     binding.label = "Play invite";
@@ -241,17 +248,29 @@ public sealed class PlayerCatSocialInputRouter : MonoBehaviour
                     binding.motorAction = string.IsNullOrWhiteSpace(binding.motorAction)
                         ? "scratch"
                         : binding.motorAction;
+                    binding.playBodyAction = true;
                     binding.requiresApproach = true;
                     break;
                 case "player_nod_yes":
                     binding.label = string.IsNullOrWhiteSpace(binding.label) || binding.label == "Nod yes"
                         ? "Yes / nod"
                         : binding.label;
+                    binding.playBodyAction = true;
                     break;
                 case "player_shake_no":
                     binding.label = string.IsNullOrWhiteSpace(binding.label) || binding.label == "Shake no"
                         ? "No / shake head"
                         : binding.label;
+                    binding.playBodyAction = true;
+                    break;
+                case "player_attack":
+                    binding.label = string.IsNullOrWhiteSpace(binding.label)
+                        ? "Attack"
+                        : binding.label;
+                    binding.key = KeyCode.Mouse0;
+                    binding.motorAction = "";
+                    binding.playBodyAction = false;
+                    binding.requiresApproach = false;
                     break;
             }
         }
@@ -262,6 +281,7 @@ public sealed class PlayerCatSocialInputRouter : MonoBehaviour
         return new List<PlayerCatSocialActionBinding>
         {
             Binding("Play invite", KeyCode.Q, "player_play_invite", "scratch", true),
+            Binding("Attack", KeyCode.Mouse0, "player_attack", "", false, false),
             Binding("Meow", KeyCode.M, "player_meow", "vocalize", false),
             Binding("Yes / nod", KeyCode.N, "player_nod_yes", "nod_head", false),
             Binding("No / shake head", KeyCode.X, "player_shake_no", "no", false),
@@ -293,7 +313,8 @@ public sealed class PlayerCatSocialInputRouter : MonoBehaviour
         KeyCode key,
         string socialKind,
         string motorAction,
-        bool requiresApproach)
+        bool requiresApproach,
+        bool playBodyAction = true)
     {
         return new PlayerCatSocialActionBinding
         {
@@ -302,6 +323,7 @@ public sealed class PlayerCatSocialInputRouter : MonoBehaviour
             key = key,
             socialKind = socialKind,
             motorAction = motorAction,
+            playBodyAction = playBodyAction,
             requiresApproach = requiresApproach,
         };
     }
@@ -330,6 +352,9 @@ public sealed class PlayerCatSocialInputRouter : MonoBehaviour
             return false;
 
 #if ENABLE_INPUT_SYSTEM
+        if (WasMousePressed(key))
+            return true;
+
         Keyboard keyboard = Keyboard.current;
         if (keyboard != null && TryConvertToInputSystemKey(key, out Key inputKey))
         {
@@ -348,6 +373,25 @@ public sealed class PlayerCatSocialInputRouter : MonoBehaviour
     }
 
 #if ENABLE_INPUT_SYSTEM
+    static bool WasMousePressed(KeyCode key)
+    {
+        Mouse mouse = Mouse.current;
+        if (mouse == null)
+            return false;
+
+        switch (key)
+        {
+            case KeyCode.Mouse0:
+                return mouse.leftButton.wasPressedThisFrame;
+            case KeyCode.Mouse1:
+                return mouse.rightButton.wasPressedThisFrame;
+            case KeyCode.Mouse2:
+                return mouse.middleButton.wasPressedThisFrame;
+            default:
+                return false;
+        }
+    }
+
     static bool TryConvertToInputSystemKey(KeyCode keyCode, out Key inputKey)
     {
         switch (keyCode)
