@@ -14,8 +14,9 @@ public class ReportSessionSendResult
 }
 
 /// <summary>
-/// Thin transport for uploading one immutable report session to FastAPI.
+/// Thin transport for uploading one closed-session report payload to FastAPI.
 /// Unity does not know storage details; the backend owns local files/S3/etc.
+/// This is separate from the live websocket tick/report channel.
 /// </summary>
 public class ReportSessionSender : MonoBehaviour
 {

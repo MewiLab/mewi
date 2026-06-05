@@ -1,5 +1,11 @@
 using System;
 
+/// <summary>
+/// Live tick feedback for the backend mind loop.
+/// This reports the micro-actions the cat body actually attempted/completed
+/// since the previous snapshot. It is sent over the agent websocket with
+/// SnapshotPayload and is not the persisted mewi-report session JSON.
+/// </summary>
 [Serializable]
 public class PlanExecutionReport
 {
@@ -12,6 +18,9 @@ public class PlanExecutionReport
     public PlanStepExecutionReport[] steps;
 }
 
+/// <summary>
+/// One executed body step inside a live plan execution report.
+/// </summary>
 [Serializable]
 public class PlanStepExecutionReport
 {

@@ -1,9 +1,10 @@
 using System;
 
 /// <summary>
-/// Offline report-export DTOs for mewi-report.
-/// These are intentionally separate from SnapshotPayload, which is the live
-/// LLM tick contract.
+/// Closed-session behavioral report DTOs for mewi-report.
+/// This payload is persisted and processed after a play session. It is
+/// intentionally separate from SnapshotPayload and PlanExecutionReport, which
+/// are live LLM tick feedback contracts.
 /// </summary>
 [Serializable]
 public class ReportSessionPayload

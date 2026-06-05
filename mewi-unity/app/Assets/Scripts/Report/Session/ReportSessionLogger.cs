@@ -6,8 +6,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Offline behavioral report logger for mewi-report raw JSON.
-/// It records factual session events only; Python owns all report values.
+/// Closed-session behavioral report logger for mewi-report raw JSON.
+/// It records factual player/cat session events only; Python owns all report
+/// values. Live cat micro-action feedback uses PlanExecutionReport instead.
 /// </summary>
 public class ReportSessionLogger : MonoBehaviour
 {

@@ -141,12 +141,25 @@ public sealed class CatCatSocialFsm : MonoBehaviour, IInteractionProvider
 
     static bool LooksLikeCatTarget(InteractionContext context)
     {
+        if (LooksLikePlayerTarget(context))
+            return false;
+
         CreatureBlackboard targetBoard = CatSocialMotionUtil.FindOnTarget<CreatureBlackboard>(context.Target);
         if (targetBoard != null && targetBoard != context.Board)
             return true;
 
         SmartObject smart = CatSocialMotionUtil.FindOnTarget<SmartObject>(context.Target);
         return smart != null && smart.HasTag("entity.cat");
+    }
+
+    static bool LooksLikePlayerTarget(InteractionContext context)
+    {
+        SmartObject smart = CatSocialMotionUtil.FindOnTarget<SmartObject>(context.Target);
+        if (smart != null && (smart.HasTag("entity.player") || smart.HasTag("player")))
+            return true;
+
+        string name = context.Target != null ? context.Target.root.name : "";
+        return CatSocialMotionUtil.Contains(name, "player");
     }
 
     static List<CatSocialMotionRecipe> BuildDefaultRecipes()

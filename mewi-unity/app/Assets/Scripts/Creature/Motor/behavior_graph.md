@@ -6,7 +6,9 @@ This documents the Unity-side graph stack:
 - `AgentWebSocketDispatcher` parses shared websocket replies and buffers
   directives by creature id.
 - `AgentMessageDispatcher` is the thin per-cat delivery step.
-- `SnapshotTicker` sends snapshots and prior execution reports.
+- `SnapshotTicker` sends snapshots and prior live execution reports
+  (`PlanExecutionReport`). These are backend feedback for the next mind tick,
+  not persisted mewi-report session analytics.
 - `CreatureIntentWorker` consumes high-level `MindDirective`s, owns the active
   goal lifecycle, and asks `CatBehaviorGraph` for the next micro-action only
   when the motor is no longer executing.
@@ -27,7 +29,7 @@ flowchart TD
     Dispatcher -->|EnqueueMindDirective| IntentQueue[Blackboard IntentQueue]
 
     SnapshotTicker -->|FlushReport| Worker[CreatureMotorWorker]
-    Worker --> ReportQueue[Blackboard completed plan reports]
+    Worker --> ReportQueue[Blackboard completed live plan reports]
     ReportQueue --> SnapshotTicker
     SnapshotTicker -->|snapshot + last report| Backend
 
@@ -60,11 +62,16 @@ recipe is used before the graph's built-in fallback sequence.
 | --- | --- | --- | --- |
 | IntentQueue | `AgentMessageDispatcher` | `CreatureIntentWorker` | `MindDirective` (`Intent`, `FocusTarget`, mood/style/social render hints) |
 | MicroActionQueue | `CreatureIntentWorker` or tests | `CreatureMotorWorker` | `IntentMessage` body actions |
-| ReportQueue | `CreatureMotorWorker` | `SnapshotTicker` | `PlanExecutionReport` |
+| ReportQueue | `CreatureMotorWorker` | `SnapshotTicker` | `PlanExecutionReport` live tick feedback |
 
 The names matter: a high-level intent is a policy choice, not something the body
 can execute. A micro-action is the body-level vocabulary handled by
 `CreatureMotorWorker.TryBuildCommand`.
+
+This `ReportQueue` is not the closed-session report pipeline. The persisted
+behavioral analytics payload is `ReportSessionPayload`, written by
+`ReportSessionLogger` and sent through `ReportSessionSender` to
+`POST /api/v1/report/session`.
 
 ## Goal Lifecycle
 
