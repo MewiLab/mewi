@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Any, Protocol
+
+from langchain_core.messages import HumanMessage
 
 from app.agent.schemas.place_memory_schema import (
     PlaceMemoryContext,
@@ -34,12 +37,39 @@ class PlaceMemoryStore(Protocol):
         request_id: str = "",
     ) -> None: ...
 
+    async def record_place_summary(
+        self,
+        creature_id: str,
+        zone_id: str,
+        *,
+        summary: str,
+        evidence: dict[str, Any],
+        observed_at: float,
+        request_id: str = "",
+    ) -> None: ...
+
+
+_PLACE_SUMMARY_PROMPT = """You write one cat's memory of one place.
+
+Use only the clean facts below. Summarize what actually happened in this place
+as ONE short sentence useful for future decisions. Mention actors/targets when
+they are present. Do not invent motives, emotions, or outcomes. Do not describe
+future plans.
+
+PLACE: {place}
+FACTS:
+{facts}
+
+Return only the sentence, with no label or quote marks."""
+
 
 class PlaceMemoryService:
     """Reflects completed movement ticks into prompt-safe place memory."""
 
-    def __init__(self, store: PlaceMemoryStore | None) -> None:
+    def __init__(self, store: PlaceMemoryStore | None, llm: Any | None = None) -> None:
         self._store = store
+        self._llm = llm
+        self._summary_tasks: set[asyncio.Task] = set()
 
     async def reflect_tick(
         self,
@@ -84,6 +114,13 @@ class PlaceMemoryService:
                 request_id=request_id,
             )
             overlay = await self._store.load_overlay(creature_id)
+            self._schedule_place_summary(
+                creature_id=creature_id,
+                zone_id=current_zone_id,
+                snapshot=snapshot,
+                observed_at=observed_at,
+                request_id=request_id,
+            )
         except Exception:
             logger.warning(
                 "Place memory unavailable; continuing without coverage creature_id=%s",
@@ -126,6 +163,69 @@ class PlaceMemoryService:
             best_exploration_target=best_target,
             lines=tuple(lines),
         )
+
+    def _schedule_place_summary(
+        self,
+        *,
+        creature_id: str,
+        zone_id: str,
+        snapshot: dict[str, Any],
+        observed_at: float,
+        request_id: str,
+    ) -> None:
+        if self._llm is None or self._store is None:
+            return
+        if not hasattr(self._store, "record_place_summary"):
+            return
+        facts = _place_summary_facts(snapshot)
+        if not facts:
+            return
+        try:
+            task = asyncio.create_task(
+                self._safe_record_place_summary(
+                    creature_id=creature_id,
+                    zone_id=zone_id,
+                    facts=facts,
+                    snapshot=snapshot,
+                    observed_at=observed_at,
+                    request_id=request_id,
+                )
+            )
+        except RuntimeError:
+            logger.warning("Place summary skipped: no running event loop")
+            return
+        self._summary_tasks.add(task)
+        task.add_done_callback(self._summary_tasks.discard)
+
+    async def _safe_record_place_summary(
+        self,
+        *,
+        creature_id: str,
+        zone_id: str,
+        facts: list[str],
+        snapshot: dict[str, Any],
+        observed_at: float,
+        request_id: str,
+    ) -> None:
+        try:
+            summary = await _summarize_place_llm(self._llm, zone_id, facts)
+            if not summary:
+                return
+            await self._store.record_place_summary(
+                creature_id,
+                zone_id,
+                summary=summary,
+                evidence=_place_summary_evidence(snapshot, facts),
+                observed_at=observed_at,
+                request_id=request_id,
+            )
+        except Exception:
+            logger.warning(
+                "Place summary failed creature_id=%s zone_id=%s",
+                creature_id,
+                zone_id,
+                exc_info=True,
+            )
 
 
 def _extract_place_observation(snapshot: dict[str, Any]) -> dict[str, Any]:
@@ -220,6 +320,8 @@ def _build_prompt_lines(
     current = overlay.get(current_zone_id)
     current_feel = _familiarity_phrase(current)
     lines.append(f"Current place: {_display_name(current_zone_id)} feels {current_feel}.")
+    if current is not None and current.summary:
+        lines.append(f"Memory of this place: {current.summary}")
 
     recent = [
         entry for entry in overlay.recent(limit=5)
@@ -310,6 +412,92 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [text for item in value if (text := _clean_text(item))]
+
+
+async def _summarize_place_llm(llm: Any, zone_id: str, facts: list[str]) -> str:
+    if llm is None or not facts:
+        return ""
+    prompt = _PLACE_SUMMARY_PROMPT.format(
+        place=_display_name(zone_id),
+        facts="\n".join(f"- {fact}" for fact in facts if fact),
+    )
+    response = await llm.ainvoke([HumanMessage(content=prompt)])
+    return _clean_text(getattr(response, "content", ""))
+
+
+def _place_summary_facts(snapshot: dict[str, Any]) -> list[str]:
+    facts: list[str] = []
+    action_result = snapshot.get("action_result")
+    if not isinstance(action_result, dict):
+        return facts
+
+    status = _clean_text(action_result.get("status"))
+    if status:
+        facts.append(f"previous Unity report status: {status}")
+
+    for event in _dicts(action_result.get("events"))[:6]:
+        action = _clean_text(event.get("action")) or _clean_text(event.get("kind")) or "event"
+        actor_type = _clean_text(event.get("actor_type")) or _clean_text(event.get("actorType"))
+        actor_id = _clean_text(event.get("actor_id")) or _clean_text(event.get("actorId"))
+        target_type = _clean_text(event.get("target_type")) or _clean_text(event.get("targetType"))
+        target_id = _clean_text(event.get("target_id")) or _clean_text(event.get("targetId"))
+        phase = _clean_text(event.get("phase")) or _clean_text(event.get("status"))
+        relation = _actor_relation(actor_type, actor_id, target_type, target_id)
+        suffix = f"; phase={phase}" if phase else ""
+        facts.append(f"live event: {action}{relation}{suffix}")
+
+    for step in _dicts(action_result.get("steps"))[:6]:
+        action = _clean_text(step.get("action")) or "unknown_action"
+        target = _clean_text(step.get("target"))
+        step_status = _clean_text(step.get("status"))
+        reason = _clean_text(step.get("reason"))
+        text = f"body step: {action}"
+        if target:
+            text += f" target={target}"
+        if step_status:
+            text += f" status={step_status}"
+        if reason:
+            text += f" reason={reason}"
+        facts.append(text)
+
+    return facts
+
+
+def _place_summary_evidence(snapshot: dict[str, Any], facts: list[str]) -> dict[str, Any]:
+    action_result = snapshot.get("action_result")
+    if not isinstance(action_result, dict):
+        action_result = {}
+    return {
+        "request_id": _clean_text(snapshot.get("requestId") or snapshot.get("request_id")),
+        "tick": int(snapshot.get("tick", 0) or 0),
+        "facts": facts,
+        "report_status": _clean_text(action_result.get("status")),
+        "event_count": len(_dicts(action_result.get("events"))),
+        "step_count": len(_dicts(action_result.get("steps"))),
+    }
+
+
+def _dicts(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _actor_relation(
+    actor_type: str,
+    actor_id: str,
+    target_type: str,
+    target_id: str,
+) -> str:
+    actor = " ".join(part for part in (actor_type, actor_id) if part)
+    target = " ".join(part for part in (target_type, target_id) if part)
+    if actor and target:
+        return f"; actor={actor}; target={target}"
+    if actor:
+        return f"; actor={actor}"
+    if target:
+        return f"; target={target}"
+    return ""
 
 
 def _clean_text(value: Any) -> str:

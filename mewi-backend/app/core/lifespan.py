@@ -13,12 +13,14 @@ from app.agent.behavior_graph import build_behavior_graph
 from app.agent.prompt_loader import PersonaManager
 from app.cat_journal.raw_agent_graph import RawCatJournal
 from app.repositories.composite_memory_store import CompositeMemoryStore
+from app.repositories.micro_action_journal_store import MicroActionJournalStore
 from app.repositories.place_memory_cache import PlaceMemoryCache
 from app.repositories.place_memory_repo import PlaceMemoryRepository
 from app.repositories.supabase_memory_store import SupabaseMemoryStore
 from app.services.agent_tick.tick_service import AgentTickService
 from app.repositories.place_memory_store import PlaceMemoryStoreChain
 from app.agent.memory.place_memory_service import PlaceMemoryService
+from app.services.perception.embedding_service import EmbeddingService
 from app.social.service import SocialService
 from app.workers.agent_tick_worker import AgentTickWorker
 from app.world.state import WorldState
@@ -41,14 +43,19 @@ def _configure_langsmith(settings) -> None:
     logger.info("LangSmith tracing enabled (project=%s)", ls.project)
 
 
-def _build_memory_store(settings, supabase) -> CompositeMemoryStore:
+def _build_memory_store(settings, supabase, journal: RawCatJournal) -> CompositeMemoryStore:
     """Assemble the durable memory store.
 
-    Supabase (recent + keyword) is always present. mem0 + Neo4j/pgvector memory
-    is added only when MEMORY_GRAPH_ENABLED=true and the required endpoints are
-    set. A failure there degrades to Supabase-only rather than blocking startup.
+    Supabase semantic summaries and the structural micro-action journal are
+    always present. Optional mem0 vector memory is added only when
+    MEMORY_GRAPH_ENABLED=true and the required endpoints are set. A failure
+    there degrades to Phase 1 stores rather than blocking startup.
     """
-    stores: list = [SupabaseMemoryStore(supabase)]
+    embedding = EmbeddingService(settings)
+    stores: list = [
+        SupabaseMemoryStore(supabase, embed_text=embedding.embed_text),
+        MicroActionJournalStore(journal),
+    ]
     mem = settings.memory
     missing_memory_settings = [
         name
@@ -114,8 +121,14 @@ async def lifespan(app: FastAPI):
         app.state.place_memory_cache,
         app.state.place_memory_repository,
     )
-    app.state.place_memory_service = PlaceMemoryService(app.state.place_memory_store)
-    app.state.memory_store = _build_memory_store(settings, app.state.supabase)
+    app.state.place_memory_service = PlaceMemoryService(app.state.place_memory_store, llm=llm)
+    app.state.cat_journal = RawCatJournal.from_settings(settings)
+    logger.info("Cat journal raw graph logs: %s", app.state.cat_journal.root_dir)
+    app.state.memory_store = _build_memory_store(
+        settings,
+        app.state.supabase,
+        app.state.cat_journal,
+    )
     app.state.world_state = WorldState()
     app.state.social_service = SocialService(world=app.state.world_state)
     app.state.behavior_graph = build_behavior_graph(
@@ -141,9 +154,6 @@ async def lifespan(app: FastAPI):
         redis=app.state.redis,
         settings=settings,
     )
-    app.state.cat_journal = RawCatJournal.from_settings(settings)
-    logger.info("Cat journal raw graph logs: %s", app.state.cat_journal.root_dir)
-
     app.state.agent_tick_worker = AgentTickWorker(
         service=app.state.agent_tick_service,
         graph=app.state.behavior_graph,

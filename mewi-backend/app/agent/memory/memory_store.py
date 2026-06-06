@@ -2,7 +2,7 @@
 
 Hot, per-tick state lives in :class:`~app.agent.memory.memory_manager.MemoryManager`.
 Anything that must survive a restart or support cross-session / semantic /
-graph recall goes through a ``MemoryStore``.
+structural recall goes through a ``MemoryStore``.
 
 This is intentionally a tiny Protocol so the agent package stays decoupled
 from infrastructure: concrete implementations (Supabase, mem0/Neo4j) live in
@@ -20,7 +20,7 @@ class MemoryStore(Protocol):
     """Durable memory backend the MemoryManager delegates to."""
 
     async def record_turn(self, write: TurnMemoryWrite) -> None:
-        """Persist one planning turn (raw event + aspect memories)."""
+        """Persist the durable tier a store owns for one memory write."""
         ...
 
     async def search(
@@ -29,6 +29,7 @@ class MemoryStore(Protocol):
         *,
         creature_id: str,
         limit: int = 5,
+        now_tick: int | None = None,
     ) -> list[dict[str, Any]]:
         """Return memories relevant to ``query`` for one creature."""
         ...

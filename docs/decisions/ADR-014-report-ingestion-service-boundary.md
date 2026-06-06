@@ -138,74 +138,44 @@ Migration touches only the adapter and trigger — never the route or service:
 | `ProcessingTrigger` | `NoopProcessingTrigger` | `EventBridgeTrigger` / `SqsTrigger` → Lambda runs `process.py` |
 | Wiring | `get_report_ingestion_service()` returns local impls | same factory returns cloud impls (env-selected) |
 
-Because `process.py` already reads immutable per-session files (ADR-013), the
-Lambda processor runs the *same code* over S3-synced inputs. No second pipeline.
+Because raw sessions are immutable, the Lambda processor can run over S3-synced
+inputs without changing the route/service contract.
 
-## Implemented Design (2026-05-30)
+## Superseded Processing Ownership (2026-06-06)
 
-The boundary shipped, and the team chose to extend it past the original
-storage-only relocation so the backend is the **single owner** of the report
-pipeline. mewi-report is now render-only.
+The ingestion boundary still stands, but report generation ownership changed in
+[ADR-030](ADR-030-post-session-report-processing.md),
+[ADR-031](ADR-031-report-end-to-end-workflow.md),
+[ADR-032](ADR-032-sqs-first-hop-report-ingestion.md), and
+[ADR-033](ADR-033-astro-report-frontend-data-source.md).
 
-Deltas from the proposal above:
+FastAPI is no longer a report processor. It stores raw sessions and uses
+`ProcessingTrigger` only to no-op or enqueue work. The full attachment report is
+produced by `infra/aws-lambda/attachment-report`:
 
-1. **Full processing moved into the backend.** `mewi-report/pipeline/scripts/process.py`
-   was relocated (logic-for-logic) into `app/services/report/processor.py` as a
-   pure `process_report(user_id, sessions, users, report_overrides)` function.
-   The mewi-report copy was deleted; its npm `pipeline` script is replaced by a
-   render-only `charts` script (`visualize.py` stays — it is chart rendering, not
-   derivation). Output is byte-identical to the previous `process.py` for the
-   existing demo data.
-2. **The trigger runs processing inline.** `ProcessingTrigger.maybe_run` replaces
-   the proposal's `maybe_queue`. `InlineProcessingTrigger` loads every stored raw
-   session for the user, calls `process_report`, and writes the processed value
-   JSON. `NoopProcessingTrigger` is kept for tests / ingest-only environments.
-   The future AWS shape is unchanged: swap `InlineProcessingTrigger` for an
-   SQS/EventBridge → Lambda trigger.
-3. **Two extra ports.** Beyond `RawSessionStore`, the implementation adds
-   `ProcessedReportStore` (writes `processed_data/` + the `src/data/` site copy)
-   and `ReportSources` (reads `user_info.json` + demo `report_overrides/`). These
-   are the I/O the moved processor needs; logic stays pure.
-4. **`ready_threshold` defaults to 1** (process on every session) so a local
-   render is always current, overridable with `MEWI_REPORT_READY_THRESHOLD` (set
-   it to `5` to match ADR-013's conservative production trigger).
-5. **One ingestion path.** The legacy Supabase ATF prototype
-   (`/attachment/session` + `AttachmentWorker` + `services/attachment/**` +
-   `attachment_repo` + `models/attachment.py`, ADR-007) was unused by Unity and
-   was the source of the route confusion. It was removed so `POST /api/v1/report/session`
-   is the only Unity-facing ingestion route.
+- `report_processor.py` builds the deterministic website-ready shape.
+- `attachment_analysis.py` owns Claude attachment-analysis enrichment.
+- `handler.py` merges those into `results/{user_id}/attachment.json`.
 
-### Implemented layout
+The backend-side inline processor, processed-output store, local report sources,
+and reprocess CLI were removed to avoid a duplicate preprocessing path.
+
+### Current implemented layout
 
 ```text
 mewi-backend/app/services/report/
     __init__.py
-    processor.py   # pure process_report(...) + derivation helpers (was process.py)
-    store.py       # RawSessionStore + ProcessedReportStore + ReportSources (+ local impls)
-    trigger.py     # ProcessingTrigger + Inline/Noop impls
+    store.py       # RawSessionStore + local/S3 raw-session impls
+    trigger.py     # ProcessingTrigger + Noop/local-queue/SQS impls
     service.py     # ReportIngestionService + IngestResult
 mewi-backend/app/api/deps.py   # get_report_ingestion_service() factory (env-selected paths)
+
+infra/aws-lambda/attachment-report/
+    handler.py
+    report_processor.py
+    attachment_analysis.py
+    skills/attachment-analysis/SKILL.md
 ```
-
-### Note (2026-05-30b): agent-driven attachment analysis is backend-only too
-
-An optional **LLM** alternative to the deterministic `_attachment_analysis` rule
-in `processor.py` was added — and, per this ADR's single-owner rule, it lives in
-the backend, not in `mewi-report`. A short-lived `mewi-report/services/report/`
-copy (skill + client) was relocated and deleted; `mewi-report` stays render-only.
-
-```text
-mewi-backend/app/services/report/
-    attachment_client.py                       # Claude Agent SDK runner (CLI)
-    skills/attachment-analysis/SKILL.md        # the analysis procedure + output contract
-```
-
-`attachment_client.py` reuses the same `MEWI_REPORT_ROOT` path convention as
-`deps.py`, reads raw Unity sessions (slug / files / stdin), and emits the
-`attachment_analysis` block. It is an opt-in extra
-(`pip install 'backend[report-agent]'`), not part of the FastAPI runtime. The
-`attachment-theory-report` skill (conceptual heuristics) still lives under
-`mewi-report/skills/` and is a candidate to consolidate here next.
 
 ## Consequences
 
@@ -216,13 +186,9 @@ mewi-backend/app/services/report/
 - Matches the existing `app/services/*` package convention.
 
 **Cons / tradeoffs**
-- Adds ~3 small files. Justified by the explicit Lambda-migration goal; without
-  that goal the inline version would be fine.
-- The proposal capped abstraction at two `Protocol` ports. Pulling full
-  processing into the backend justified a third (`ProcessedReportStore`) and a
-  context reader (`ReportSources`) — the explicit "revisit rather than expand
-  silently" path, documented under *Implemented Design* above. That is the
-  ceiling: no further seams without another ADR.
+- Adds small service/port files. Justified by the explicit Lambda-migration goal.
+- Report generation now has a clear Lambda owner; changing the processed schema
+  means updating Lambda `report_processor.py` and the frontend report schema.
 
 ## Migration Steps (done 2026-05-30)
 

@@ -88,15 +88,52 @@ Each file is immutable raw data for one completed session:
 }
 ```
 
-Processing is owned by the **mewi-backend** service (ADR-014). The backend
-groups session files by `user_id`, derives `processed_data/report_{userId}.json`,
-and copies it into `src/data/` automatically when Unity posts a session to
-`POST /api/v1/report/session`. This site is render-only — it does not run the
-processor.
+Processing is owned by the **attachment-report Lambda**. FastAPI stores raw
+sessions and enqueues/no-ops depending on `MEWI_REPORT_PROCESSING_MODE`; it does
+not build the processed report inline. This site is render-only — it reads
+already-processed `report_*.json` files from `src/data/` in local mode.
 
 User-facing names live in `pipeline/user_info.json` (read by the backend
 processor). Keep `user_id` stable for internal files, and set `display_name` /
 `handle` for what appears in the report UI.
+
+### 2b. Local Unity-to-render E2E smoke
+
+For local testing after a Unity play session closes, run FastAPI in local file
+mode, let Unity POST `POST /api/v1/report/session`, then invoke the local Lambda
+smoke runner to generate the frontend JSON:
+
+```bash
+# In mewi-backend, run the API with local raw-session storage.
+MEWI_REPORT_PROCESSING_MODE=noop \
+MEWI_REPORT_ROOT=../mewi-report \
+uvicorn app.main:app --reload
+
+# In Unity, configure BackendConfig:
+#   base URL: http://127.0.0.1:8000
+#   API key:  dev-secret-change-me   # or your API_SECRET_TOKEN
+# Play, close/send the session.
+
+# In mewi-report, process stored Unity sessions and write src/data/report_*.json.
+npm run e2e:unity-report -- --user vanillasky_01
+
+# Render the result.
+npm run dev
+# open the route printed by the e2e runner
+```
+
+You can also skip FastAPI and process a Unity-saved JSON directly:
+
+```bash
+npm run e2e:unity-report -- --raw-file /path/to/unity-session.json
+```
+
+To exercise the POST route from a saved JSON and then render:
+
+```bash
+API_SECRET_TOKEN=dev-secret-change-me \
+npm run e2e:unity-report -- --post /path/to/unity-session.json --user vanillasky_01
+```
 
 ### 3. Render charts (optional)
 

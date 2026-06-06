@@ -16,16 +16,24 @@ recent entries verbatim and writes the recap back in their place.
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 from langchain_core.messages import HumanMessage
 
-from app.agent.memory.memory_models import AspectMemory, RawMemoryEvent, TurnMemoryWrite
+from app.agent.memory.memory_models import (
+    AspectMemory,
+    MicroActionEvent,
+    RawMemoryEvent,
+    TurnMemoryWrite,
+)
 from app.agent.mind.context import clean_text, format_previous_action_result
 from app.services.perception.semantic_service import SemanticService
 
 if TYPE_CHECKING:  # avoid a runtime import cycle via creature_runtime -> memory
     from app.agent.creature_runtime import CreatureRuntimeState
+
+logger = logging.getLogger(__name__)
 
 
 # ─── Write path: turn -> memory ──────────────────────────────────────────────
@@ -73,7 +81,335 @@ def build_turn_memory_write(state: "CreatureRuntimeState") -> TurnMemoryWrite:
             state=state,
             semantic_context=semantic_context,
         ),
+        micro_action_events=build_micro_action_events(state),
     )
+
+
+def build_micro_action_events(state: "CreatureRuntimeState") -> list[MicroActionEvent]:
+    """Normalize Unity's current live PlanExecutionReport into micro-actions.
+
+    Phase 1 intentionally maps only fields Unity already sends. It does not
+    synthesize player-cat stimulus lanes, lifecycle phases, or trust deltas.
+    """
+    raw = state.get("raw_payload", {}) or {}
+    report = raw.get("action_result")
+    if not isinstance(report, dict):
+        _diagnose_normalizer("missing_field", reason="action_result_not_dict")
+        return []
+
+    steps = report.get("steps")
+    live_events = report.get("events")
+    if not isinstance(steps, list):
+        steps = []
+    if not isinstance(live_events, list):
+        live_events = []
+    if not steps and not live_events:
+        _diagnose_normalizer("empty_steps", reason="report_steps_and_events_missing")
+        return []
+
+    creature_id = clean_text(state.get("creature_id")) or clean_text(raw.get("agent_id"))
+    tick = int(state.get("tick", raw.get("tick", 0)) or 0)
+    report_request_id = _first_text(
+        report.get("requestId"),
+        report.get("request_id"),
+        raw.get("requestId"),
+        raw.get("request_id"),
+    )
+    report_correlation_id = _first_text(
+        report.get("correlationId"),
+        report.get("correlation_id"),
+    )
+    actor_id = _first_text(report.get("agent_id"), report.get("agentId"), creature_id)
+    known_cat_ids = _known_cat_ids(state, raw, creature_id)
+
+    events: list[MicroActionEvent] = []
+    for index, event_value in enumerate(live_events):
+        if not isinstance(event_value, dict):
+            _diagnose_normalizer("missing_field", reason="event_not_dict")
+            continue
+        normalized = _normalize_live_event(
+            event_value,
+            creature_id=creature_id,
+            tick=tick,
+            index=index,
+            report_request_id=report_request_id,
+            report_correlation_id=report_correlation_id,
+            report_status=clean_text(report.get("status")),
+            known_cat_ids=known_cat_ids,
+        )
+        if normalized is not None:
+            events.append(normalized)
+
+    for index, step_value in enumerate(steps):
+        if not isinstance(step_value, dict):
+            _diagnose_normalizer("missing_field", reason="step_not_dict")
+            continue
+
+        action = clean_text(step_value.get("action"))
+        target_id = clean_text(step_value.get("target"))
+        request_id = _first_text(
+            step_value.get("requestId"),
+            step_value.get("request_id"),
+            report_request_id,
+        )
+        correlation_id = _first_text(
+            step_value.get("correlationId"),
+            step_value.get("correlation_id"),
+            report_correlation_id,
+        )
+        event_id = _first_text(step_value.get("commandId"), step_value.get("command_id"))
+        if not event_id:
+            event_id = _fallback_event_id(
+                creature_id=creature_id,
+                request_id=request_id,
+                step_index=index,
+                action=action,
+                target=target_id,
+            )
+
+        evidence = {
+            "plan_id": _first_text(report.get("planId"), report.get("plan_id")),
+            "report_status": clean_text(report.get("status")),
+            "reason": clean_text(step_value.get("reason")),
+            "started_at": _first_text(
+                step_value.get("startedAt"),
+                step_value.get("started_at"),
+            ),
+            "ended_at": _first_text(
+                step_value.get("endedAt"),
+                step_value.get("ended_at"),
+            ),
+            "report_started_at": _first_text(
+                report.get("startedAt"),
+                report.get("started_at"),
+            ),
+            "report_completed_at": _first_text(
+                report.get("completedAt"),
+                report.get("completed_at"),
+            ),
+            "step_index": index,
+            "raw_step": step_value,
+        }
+
+        if not action:
+            action = "unknown"
+            evidence["normalization_status"] = "unknown_action"
+            _diagnose_normalizer("unknown_action", reason="empty_action")
+
+        target_type = _target_type(target_id, known_cat_ids)
+        events.append(
+            MicroActionEvent(
+                creature_id=creature_id,
+                event_id=event_id,
+                correlation_id=correlation_id,
+                request_id=request_id,
+                tick=tick,
+                actor_type="cat",
+                actor_id=actor_id,
+                target_type=target_type,
+                target_id=target_id,
+                direction=_direction("cat", target_type),
+                action=action,
+                behavior_key="",
+                motor_action="",
+                phase="",
+                status=_first_text(step_value.get("status"), report.get("status")),
+                source_event_id="",
+                trust_delta=None,
+                evidence=evidence,
+            )
+        )
+
+    return events
+
+
+def _normalize_live_event(
+    event_value: dict[str, Any],
+    *,
+    creature_id: str,
+    tick: int,
+    index: int,
+    report_request_id: str,
+    report_correlation_id: str,
+    report_status: str,
+    known_cat_ids: set[str],
+) -> MicroActionEvent | None:
+    action = _first_text(event_value.get("action"), event_value.get("kind"))
+    actor_type = _first_text(event_value.get("actor_type"), event_value.get("actorType"))
+    actor_id = _first_text(event_value.get("actor_id"), event_value.get("actorId"))
+    target_type = _first_text(event_value.get("target_type"), event_value.get("targetType"))
+    target_id = _first_text(event_value.get("target_id"), event_value.get("targetId"))
+    source_event_id = _first_text(
+        event_value.get("source_event_id"),
+        event_value.get("sourceEventId"),
+    )
+
+    if not target_type:
+        target_type = _target_type(target_id, known_cat_ids)
+    if not actor_type:
+        actor_type = _actor_type(actor_id, creature_id, known_cat_ids)
+    if not actor_id and actor_type == "cat":
+        actor_id = creature_id
+    direction = _first_text(event_value.get("direction"))
+    if not direction:
+        direction = _direction(actor_type, target_type)
+
+    event_id = _first_text(
+        event_value.get("event_id"),
+        event_value.get("eventId"),
+        event_value.get("commandId"),
+        event_value.get("command_id"),
+    )
+    if not event_id:
+        event_id = _fallback_event_id(
+            creature_id=creature_id,
+            request_id=report_request_id,
+            step_index=index,
+            action=action or "event",
+            target=target_id,
+        )
+
+    if not action:
+        action = "unknown"
+        _diagnose_normalizer("unknown_action", reason="empty_live_event_action")
+
+    return MicroActionEvent(
+        creature_id=creature_id,
+        event_id=event_id,
+        correlation_id=_first_text(
+            event_value.get("correlation_id"),
+            event_value.get("correlationId"),
+            report_correlation_id,
+        ),
+        request_id=_first_text(
+            event_value.get("request_id"),
+            event_value.get("requestId"),
+            report_request_id,
+        ),
+        tick=tick,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        target_type=target_type,
+        target_id=target_id,
+        direction=direction,
+        action=action,
+        behavior_key=_first_text(
+            event_value.get("behavior_key"),
+            event_value.get("behaviorKey"),
+        ),
+        motor_action=_first_text(
+            event_value.get("motor_action"),
+            event_value.get("motorAction"),
+        ),
+        phase=_first_text(event_value.get("phase")),
+        status=_first_text(event_value.get("status"), report_status),
+        source_event_id=source_event_id,
+        trust_delta=_float_or_none(
+            event_value.get("trust_delta")
+            if "trust_delta" in event_value
+            else event_value.get("trustDelta")
+        ),
+        evidence={
+            "event_index": index,
+            "raw_event": event_value,
+            "timestamp": event_value.get("timestamp"),
+            "distance_m": event_value.get("distance_m") or event_value.get("distanceM"),
+            "facing_dot": event_value.get("facing_dot") or event_value.get("facingDot"),
+            "confidence": event_value.get("confidence"),
+        },
+    )
+
+
+def _first_text(*values: Any) -> str:
+    for value in values:
+        text = clean_text(value)
+        if text:
+            return text
+    return ""
+
+
+def _fallback_event_id(
+    *,
+    creature_id: str,
+    request_id: str,
+    step_index: int,
+    action: str,
+    target: str,
+) -> str:
+    return ":".join(
+        [
+            creature_id or "unknown_cat",
+            request_id or "unknown_request",
+            str(step_index),
+            action or "unknown_action",
+            target or "none",
+        ]
+    )
+
+
+def _known_cat_ids(
+    state: "CreatureRuntimeState",
+    raw: dict[str, Any],
+    creature_id: str,
+) -> set[str]:
+    ids = {creature_id} if creature_id else set()
+    for container in (
+        state.get("dialogue") or [],
+        (state.get("social_context") or {}).get("delivered_inbox") or [],
+    ):
+        if not isinstance(container, dict):
+            continue
+        for key in ("from", "target", "actor_id", "target_id"):
+            value = clean_text(container.get(key))
+            if value:
+                ids.add(value)
+
+    nearby = raw.get("nearby_entities")
+    if isinstance(nearby, list):
+        for entity in nearby:
+            if not isinstance(entity, dict):
+                continue
+            for key in ("id", "name", "creature_id"):
+                value = clean_text(entity.get(key))
+                if value:
+                    ids.add(value)
+    return ids
+
+
+def _target_type(target_id: str, known_cat_ids: set[str]) -> str:
+    if not target_id:
+        return ""
+    lowered = target_id.lower()
+    if lowered in {"player", "player_cat"}:
+        return "player_cat"
+    if target_id in known_cat_ids:
+        return "cat"
+    return ""
+
+
+def _actor_type(actor_id: str, creature_id: str, known_cat_ids: set[str]) -> str:
+    if not actor_id:
+        return ""
+    lowered = actor_id.lower()
+    if lowered in {"player", "player_cat"}:
+        return "player_cat"
+    if actor_id == creature_id or actor_id in known_cat_ids:
+        return "cat"
+    return ""
+
+
+def _direction(actor_type: str, target_type: str) -> str:
+    if actor_type == "cat" and target_type == "cat":
+        return "cat_to_cat"
+    if actor_type == "cat" and target_type == "player_cat":
+        return "cat_to_player_cat"
+    if actor_type == "player_cat" and target_type == "cat":
+        return "player_cat_to_cat"
+    return ""
+
+
+def _diagnose_normalizer(name: str, *, reason: str) -> None:
+    logger.debug("micro_action_normalizer.%s reason=%s", name, reason)
 
 
 def _build_aspect_memories(
@@ -108,7 +444,7 @@ def _action_memory(
     raw: dict[str, Any],
     state: "CreatureRuntimeState",
 ) -> AspectMemory:
-    previous = format_previous_action_result(raw.get("action_result"))
+    previous = _previous_action_fact(raw.get("action_result"))
     intent = clean_text((state.get("intent_decision") or {}).get("intent"))
     text_parts = []
     if previous:
@@ -119,9 +455,11 @@ def _action_memory(
         if isinstance(proposal, dict)
     ]
     if intent and plan_steps:
-        text_parts.append(f"Next intent {intent} became plan: {_plan_text(plan_steps)}.")
+        text_parts.append(f"Selected next intent {intent}; planned body steps: {_plan_text(plan_steps)}.")
     elif intent:
-        text_parts.append(f"Next intent {intent} was handed to Unity's directive FSM.")
+        target = clean_text((state.get("intent_decision") or {}).get("target_id"))
+        suffix = f" toward {target}" if target else ""
+        text_parts.append(f"Selected next intent {intent}{suffix}; Unity will execute the directive after this tick.")
     elif proposals:
         text_parts.append(f"Domain proposals collected: {_proposal_text(proposals)}.")
     else:
@@ -262,6 +600,75 @@ def _action_salience(action_result: Any) -> float:
     if status == "completed_with_recoveries":
         return 0.6
     return 0.4
+
+
+def _previous_action_fact(action_result: Any) -> str:
+    if not isinstance(action_result, dict):
+        return ""
+    status = clean_text(action_result.get("status"))
+    parts: list[str] = []
+    if status:
+        parts.append(f"Unity reported previous execution status {status}.")
+
+    step_facts = _step_facts(action_result.get("steps"))
+    if step_facts:
+        parts.append("Executed steps: " + "; ".join(step_facts[:5]) + ".")
+
+    event_facts = _event_facts(action_result.get("events"))
+    if event_facts:
+        parts.append("Live events: " + "; ".join(event_facts[:5]) + ".")
+
+    if not parts:
+        return format_previous_action_result(action_result)
+    return " ".join(parts)
+
+
+def _step_facts(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    facts: list[str] = []
+    for step in value:
+        if not isinstance(step, dict):
+            continue
+        action = clean_text(step.get("action")) or "unknown_action"
+        target = clean_text(step.get("target"))
+        status = clean_text(step.get("status"))
+        reason = clean_text(step.get("reason"))
+        text = action
+        if target:
+            text += f"({target})"
+        if status:
+            text += f"={status}"
+        if reason:
+            text += f" because {reason}"
+        facts.append(text)
+    return facts
+
+
+def _event_facts(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    facts: list[str] = []
+    for event in value:
+        if not isinstance(event, dict):
+            continue
+        action = clean_text(event.get("action")) or clean_text(event.get("kind")) or "event"
+        actor = clean_text(event.get("actor_id")) or clean_text(event.get("actorId"))
+        target = clean_text(event.get("target_id")) or clean_text(event.get("targetId"))
+        phase = clean_text(event.get("phase")) or clean_text(event.get("status"))
+        relation = ""
+        if actor or target:
+            relation = f" {actor or 'unknown_actor'}->{target or 'unknown_target'}"
+        suffix = f" {phase}" if phase else ""
+        facts.append(f"{action}{relation}{suffix}".strip())
+    return facts
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        return None if value is None or value == "" else float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 # ─── Consolidation: many AspectMemory -> one recap ───────────────────────────

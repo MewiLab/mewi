@@ -185,6 +185,14 @@ def test_intent_selection_prompt_includes_backend_social_context():
                     "target": "cat_milo",
                 },
             },
+            "relationships": [
+                {
+                    "pair": ["cat_mewi", "cat_milo"],
+                    "trust": 0.71,
+                    "affinity": 0.3,
+                    "encounters": 3,
+                }
+            ],
         },
     )
 
@@ -193,6 +201,36 @@ def test_intent_selection_prompt_includes_backend_social_context():
     assert "# SOCIAL EXCHANGE" in prompt
     assert "Heard cat_milo: Milo chirps from the crate." in prompt
     assert "You expressed: Mewi sniffs back softly." in prompt
+    assert "trust is strong" in prompt
+    assert "affinity is warm" in prompt
+    assert "+0.71" not in prompt
+    assert "trust 0.71" not in prompt
+
+
+def test_intent_selection_prompt_renders_related_longterm_memory():
+    prompt = format_intent_selection_prompt(
+        temperament="curious",
+        trust="0.82",
+        semantic_context={
+            "situation": "The cat is idle on the dock.",
+            "body_lines": ["fullness: fullness is high"],
+        },
+        memory_context={
+            "short_term_lines": ["action: Last plan worked."],
+            "longterm": [
+                {
+                    "aspect": "social",
+                    "text": "The player has been gentle in recent meetings.",
+                }
+            ],
+        },
+    )
+
+    assert "Trust cue: comfortable." in prompt
+    assert "# RELATED MEMORY" in prompt
+    assert "social: The player has been gentle in recent meetings." in prompt
+    assert "Trust Level" not in prompt
+    assert "0.82" not in prompt
 
 
 def test_previous_action_result_uses_semantic_step_recap():

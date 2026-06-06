@@ -1,0 +1,43 @@
+---
+export const prerender = false;
+
+import ReportView from '../../components/ReportView.astro';
+import {
+  createLocalFileReportSource,
+  createRemoteReportSource,
+} from '../../utils/reportSource';
+import { isAttachmentReport } from '../../utils/reportSchema';
+
+const sourceMode = import.meta.env.PUBLIC_REPORT_SOURCE === 'remote' ? 'remote' : 'local';
+const token = Astro.url.searchParams.get('token')?.trim() ?? '';
+const product = 'attachment';
+
+let report = null;
+
+if (sourceMode === 'remote') {
+  if (!token) {
+    return Astro.redirect('/404');
+  }
+  const apiBase = import.meta.env.REPORT_API_BASE ?? 'http://localhost:8000';
+  report = await createRemoteReportSource(apiBase, token).load('me', product);
+} else {
+  const localId = Astro.url.searchParams.get('id')?.trim();
+  const localSource = createLocalFileReportSource();
+  if (localId) {
+    report = await localSource.load(localId, product);
+  } else {
+    const [firstRoute] = await localSource.list(product);
+    report = firstRoute ? await localSource.load(firstRoute.dataFileId, product) : null;
+  }
+}
+
+if (!isAttachmentReport(report)) {
+  return Astro.redirect('/404');
+}
+---
+
+{sourceMode === 'remote' ? (
+  <ReportView report={report} />
+) : (
+  <ReportView report={report} routeUserId={report.user_id} />
+)}

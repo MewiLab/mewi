@@ -18,6 +18,7 @@ def build_langgraph_memory_state(
             "memory_ticks": memory.get("memory_ticks"),
             "recent_perceptions": memory.get("recent_perceptions") or [],
             "short_term_lines": memory.get("short_term_lines") or [],
+            "longterm": memory.get("longterm") or [],
         },
         "working": memory.get("short_term") or {},
         "episodic": memory.get("recent_raw_events") or [],

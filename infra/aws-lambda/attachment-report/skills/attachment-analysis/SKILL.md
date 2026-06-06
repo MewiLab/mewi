@@ -33,15 +33,23 @@ read in this priority order:
 1. **Raw sessions** — `pipeline/raw_data/sessions/<slug>/*.json` (richest).
    Each file: `{schema_version, user_id, source, session}` where `session` has:
    - `session_index`, `duration_seconds`
-   - `events[]`: `{t, actor, action, params}` — `actor` is `human` | `cat`;
-     `action` ∈ approach / retreat / offer / call / pet / wait / withdrew / …
+   - `events[]`: `{event_id, correlation_id, t, actor, actor_id, action,
+     target_id, phase, status, params}`. Raw v2 actors include `player_cat`,
+     `system`, and `cat`. The player is represented by `actor: "player_cat"`
+     and `action` values such as `player_meow`, `player_groom`,
+     `player_push`, not by `cat_id == report_slug`.
    - `multi_cat_encounters[]`: `{t, cats_present[], human_action, outcome}`
 2. **Processed report** — `pipeline/processed_data/report_<slug>.json`. Use when
    raw is unavailable, or to cross-check. Relevant fields:
    - `summary`: `avg_trust_gained`, `primary_bond`, `avg_reaction_latency_s`,
      `patience_pct`
+   - `interaction_signature`: exact player action counts, action-family
+     percentages, target distribution, and ignored/unknown actions.
+   - `gesture_response_chains`: correlated `player_cat` action -> delivered
+     stimulus -> target-cat response rows.
+   - `attachment_features`: v2 feature bars with evidence event ids.
    - `attachment_profile[]`: `{label, value (0–100), color}` — the six derived
-     signals (see mapping below)
+     legacy signals (fallback for old reports)
    - `cats.<id>.trust_arc[]` (one int per session, can dip), `cats.<id>.moments[]`
    - `radar` (Approach/Retreat/Offer/Wait/Call/Pet), `attention_pct`
 3. **Overrides** — `pipeline/report_overrides/<slug>.json`. If an
@@ -52,21 +60,33 @@ Read everything available before labeling. Never invent sessions or numbers.
 
 ## Step 1 — Derive Strange-Situation signals
 
-Map raw events to the ADR-007 behavioral constructs (these are the dependent
-variable — the player's response to cat-initiated / episode events, not generic
-activity):
+Map raw v2 events to the ADR-035 behavioral constructs first. These are the
+dependent variable — the player's response to cat-initiated / episode events,
+not generic activity:
+
+| Construct | Derive from raw v2 |
+|---|---|
+| soft contact bids | `player_meow`, `player_nod_yes`, `player_groom`, `player_play_invite` |
+| calm presence / secure-base behavior | `player_sit_near`, `player_lie`, `player_sleep`, quiet dwell after a cat response |
+| cautious exploration | `player_smell`, `player_crawl`, `player_look_around`, exploration with valid target/facing |
+| boundary / refusal | `player_shake_no`, `player_alert`, respectful retreat/wait after rejection |
+| intrusion / threat pressure | `player_push`, `player_attack`, `player_contact`, `player_approach_fast` |
+| fear / shutdown / conflict | `player_flinch`, `player_startle`, `player_stun`, contradictory approach-avoidance chains |
+
+Then derive the older ADR-007 constructs when possible:
 
 | Construct (ADR-007) | Derive from |
 |---|---|
-| `reapproach_latency` | time from a `cat withdrew` event to the next `human approach` |
-| `pursuit_ratio` | human approaches *after* a withdrawal ÷ withdrawals |
+| `reapproach_latency` | time from a cat withdrawal/negative response to the next targeted `player_*` bid |
+| `pursuit_ratio` | player bids *after* a withdrawal ÷ withdrawals |
 | `time_near_ratio` | share of session within close distance (`params.distance_final_m`) |
 | `reunion_response` | approach/closeness after a return-after-absence |
-| `withdrawal_tolerance` | time the human lets distance stand before acting |
+| `withdrawal_tolerance` | time the player lets distance stand before acting |
 | selectivity | spread of `attention_pct` / distinct primary bond vs. others |
 
-If you only have processed data, the six `attachment_profile` labels already
-encode these — use them directly:
+If you have `attachment_features`, use those as the primary evidence. If you
+only have old processed data, the six `attachment_profile` labels encode the
+legacy fallback:
 
 - Patience under rejection ↔ withdrawal_tolerance (high = secure)
 - Low approach-retreat oscillation ↔ inverse pursuit volatility

@@ -65,17 +65,67 @@ class AspectMemory:
 
 
 @dataclass
+class MicroActionEvent:
+    """One normalized Unity live micro-action owned by the memory pipeline."""
+
+    creature_id: str
+    event_id: str
+    correlation_id: str
+    request_id: str
+    tick: int
+    actor_type: str
+    actor_id: str
+    target_type: str
+    target_id: str
+    direction: str
+    action: str
+    behavior_key: str = ""
+    motor_action: str = ""
+    phase: str = ""
+    status: str = ""
+    source_event_id: str = ""
+    trust_delta: float | None = None
+    evidence: dict[str, Any] = field(default_factory=dict)
+
+    def to_prompt_context(self) -> dict[str, Any]:
+        return {
+            "creature_id": self.creature_id,
+            "event_id": self.event_id,
+            "correlation_id": self.correlation_id,
+            "request_id": self.request_id,
+            "tick": self.tick,
+            "actor_type": self.actor_type,
+            "actor_id": self.actor_id,
+            "target_type": self.target_type,
+            "target_id": self.target_id,
+            "direction": self.direction,
+            "action": self.action,
+            "behavior_key": self.behavior_key,
+            "motor_action": self.motor_action,
+            "phase": self.phase,
+            "status": self.status,
+            "source_event_id": self.source_event_id,
+            "trust_delta": self.trust_delta,
+            "evidence": self.evidence,
+        }
+
+
+@dataclass
 class TurnMemoryWrite:
     """What the summarize_memory node wrote this turn."""
 
     raw_event: RawMemoryEvent
     aspect_memories: list[AspectMemory]
+    micro_action_events: list[MicroActionEvent] = field(default_factory=list)
 
     def to_prompt_context(self) -> dict[str, Any]:
         return {
             "raw_event": self.raw_event.to_prompt_context(),
             "aspect_memories": [
                 memory.to_prompt_context() for memory in self.aspect_memories
+            ],
+            "micro_action_events": [
+                event.to_prompt_context() for event in self.micro_action_events
             ],
         }
 
@@ -89,6 +139,7 @@ class MemoryRecall:
     threat_history: list[ThreatLevel]
     tick_range: tuple[int, int]
     recent_raw_events: list[RawMemoryEvent] = field(default_factory=list)
+    recent_micro_actions: list[MicroActionEvent] = field(default_factory=list)
     short_term: dict[str, list[AspectMemory]] = field(default_factory=dict)
 
     def to_prompt_context(self) -> dict[str, Any]:
@@ -101,6 +152,9 @@ class MemoryRecall:
             ],
             "recent_raw_events": [
                 event.to_prompt_context() for event in self.recent_raw_events
+            ],
+            "recent_micro_actions": [
+                event.to_prompt_context() for event in self.recent_micro_actions
             ],
             "short_term": {
                 aspect: [item.to_prompt_context() for item in items[-3:]]

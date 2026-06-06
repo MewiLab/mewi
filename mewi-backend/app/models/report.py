@@ -7,6 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 REPORT_RAW_SCHEMA_VERSION = "mewi.report.raw.v1"
+REPORT_RAW_SCHEMA_VERSION_V2 = "mewi.report.raw.v2"
+ReportProduct = Literal["attachment", "recommendation"]
 
 
 class ReportSource(BaseModel):
@@ -26,8 +28,14 @@ class ReportEventParams(BaseModel):
     item_id: str = ""
     subtype: str = ""
     initiated_by: str = ""
+    behavior_key: str = ""
+    motor_action: str = ""
+    social_act_kind: str = ""
+    source_event_id: str = ""
     distance_to_player_m: float = -1.0
     distance_to_nearest_cat_m: float = -1.0
+    facing_dot: float = -1.0
+    confidence: float = -1.0
     speed_mps: float = -1.0
 
 
@@ -43,10 +51,16 @@ class ReportEventMeta(BaseModel):
 class ReportEventInput(BaseModel):
     model_config = ConfigDict(extra="allow")
 
+    event_id: str = ""
+    correlation_id: str = ""
     t: float = Field(ge=0.0)
-    actor: Literal["human", "cat"]
+    actor: Literal["human", "player_cat", "cat", "system"]
+    actor_id: str = ""
     action: str = Field(min_length=1)
     cat_id: str = ""
+    target_id: str = ""
+    phase: str = ""
+    status: str = ""
     trust_before: int = Field(0, ge=0, le=100)
     trust_after: int = Field(0, ge=0, le=100)
     trigger: str = ""
@@ -57,13 +71,14 @@ class ReportEventInput(BaseModel):
     @classmethod
     def _cat_event_requires_cat_id(cls, value: str, info) -> str:
         actor = info.data.get("actor")
-        if actor == "cat" and not (value or "").strip():
+        actor_id = info.data.get("actor_id")
+        if actor == "cat" and not (value or actor_id or "").strip():
             raise ValueError("cat events require cat_id")
-        return (value or "").strip().lower()
+        return (value or actor_id or "").strip().lower()
 
-    @field_validator("action", "trigger")
+    @field_validator("event_id", "correlation_id", "actor_id", "action", "target_id", "phase", "status", "trigger")
     @classmethod
-    def _normalize_snakeish(cls, value: str) -> str:
+    def _normalize_text(cls, value: str) -> str:
         return (value or "").strip()
 
 
@@ -82,6 +97,8 @@ class ReportSessionInput(BaseModel):
     session_id: str = Field(min_length=1)
     session_index: int = Field(ge=1)
     timestamp_start: str = Field(min_length=1)
+    timestamp_end: str = ""
+    close_reason: str = ""
     duration_seconds: float = Field(ge=0.0)
     events: list[ReportEventInput] = Field(default_factory=list)
     multi_cat_encounters: list[ReportMultiCatEncounter] = Field(default_factory=list)
@@ -98,7 +115,7 @@ class ReportSessionInput(BaseModel):
 class ReportSessionPayload(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    schema_version: Literal["mewi.report.raw.v1"] = REPORT_RAW_SCHEMA_VERSION
+    schema_version: Literal["mewi.report.raw.v1", "mewi.report.raw.v2"] = REPORT_RAW_SCHEMA_VERSION
     user_id: str = Field(min_length=1)
     source: ReportSource = Field(default_factory=ReportSource)
     session: ReportSessionInput
@@ -118,3 +135,14 @@ class ReportSessionAcceptedResponse(BaseModel):
     processing_queued: bool = False
     storage_key: str
 
+
+class ReportCardResponse(BaseModel):
+    user_id: str
+    data_file_id: str
+    route_id: str
+    display_name: str
+    product: ReportProduct = "attachment"
+    last_seen: str = ""
+    sessions: int = 0
+    total_events: int = 0
+    primary_bond: str = ""

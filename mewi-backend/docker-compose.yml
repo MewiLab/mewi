@@ -54,7 +54,6 @@ services:
       - .env 
     environment:
       MEWI_REPORT_ROOT: /mewi-report
-      MEWI_REPORT_ATTACHMENT_MODE: agent
       MEMORY_GRAPH_ENABLED: ${MEMORY_GRAPH_ENABLED:-false}
       MEMORY_NEO4J_URL: ${MEMORY_NEO4J_URL:-}
       MEMORY_NEO4J_USERNAME: ${MEMORY_NEO4J_USERNAME:-neo4j}

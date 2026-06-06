@@ -1,6 +1,6 @@
 {
-  "schema_version": "mewi.report.raw.v1",
-  "user_id": "vanillaSky00",
+  "schema_version": "mewi.report.raw.v2",
+  "user_id": "vanillasky_01",
   "source": {
     "app": "mewi-unity",
     "build": "0.1.0",
@@ -9,35 +9,10 @@
   },
   "session": {
     "session_id": "unity-session-01-20260530112556",
-    "session_index": 1,
+    "session_index": 2,
     "timestamp_start": "2026-05-30T11:25:56Z",
     "duration_seconds": 194.84243774414062,
     "events": [
-      {
-        "t": 0.0,
-        "actor": "cat",
-        "action": "idle",
-        "cat_id": "vanillasky00",
-        "trust_before": 30,
-        "trust_after": 30,
-        "trigger": "action_changed",
-        "params": {
-          "zone_id": "Bamboo_Boardwalk_1",
-          "target_id": "",
-          "item_id": "",
-          "subtype": "",
-          "initiated_by": "",
-          "distance_to_player_m": 0.1326131671667099,
-          "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
-        },
-        "meta": {
-          "source_system": "cat_state_sampler",
-          "recorder": "ReportSessionLogger",
-          "derivation": "action_changed",
-          "note": ""
-        }
-      },
       {
         "t": 0.0,
         "actor": "cat",
@@ -54,14 +29,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0002",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 0.0,
@@ -79,14 +66,26 @@
           "initiated_by": "",
           "distance_to_player_m": 1.7990148067474365,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0003",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 0.0,
@@ -104,14 +103,26 @@
           "initiated_by": "",
           "distance_to_player_m": 23.595993041992188,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0004",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 0.0,
@@ -129,39 +140,63 @@
           "initiated_by": "",
           "distance_to_player_m": 18.563369750976562,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0005",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 3.1162426471710205,
-        "actor": "human",
-        "action": "retreat",
+        "actor": "player_cat",
+        "action": "player_look_around",
         "cat_id": "",
         "trust_before": 0,
         "trust_after": 0,
         "trigger": "",
         "params": {
           "zone_id": "Bamboo_Boardwalk_1",
-          "target_id": "vanillaSky00",
+          "target_id": "",
           "item_id": "",
-          "subtype": "",
+          "subtype": "legacy_proximity_retreat",
           "initiated_by": "derived_proximity",
           "distance_to_player_m": -1.0,
           "distance_to_nearest_cat_m": 1.3070094585418701,
-          "speed_mps": 0.9116377234458923
+          "speed_mps": 0.9116377234458923,
+          "behavior_key": "player_look_around",
+          "motor_action": "look_around",
+          "social_act_kind": "player_look_around",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "proximity_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "distance increased by >= 0.35m",
-          "note": ""
-        }
+          "note": "migrated from raw.v1 actor=human action=retreat; removed legacy self target vanillaSky00"
+        },
+        "event_id": "unity-session-01-20260530112556-e0006",
+        "correlation_id": "unity-session-01-20260530112556-e0006",
+        "actor_id": "vanillaSky00",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 3.1162426471710205,
@@ -179,14 +214,26 @@
           "initiated_by": "",
           "distance_to_player_m": 1.6752957105636597,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0007",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 3.1162426471710205,
@@ -204,39 +251,63 @@
           "initiated_by": "",
           "distance_to_player_m": 23.644832611083984,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0008",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 5.756108283996582,
-        "actor": "human",
-        "action": "wait",
+        "actor": "player_cat",
+        "action": "player_sit_near",
         "cat_id": "",
         "trust_before": 0,
         "trust_after": 0,
         "trigger": "",
         "params": {
           "zone_id": "Bamboo_Boardwalk_1",
-          "target_id": "vanillaSky00",
+          "target_id": "",
           "item_id": "",
-          "subtype": "",
+          "subtype": "legacy_proximity_wait",
           "initiated_by": "derived_proximity",
           "distance_to_player_m": -1.0,
           "distance_to_nearest_cat_m": 1.357142448425293,
-          "speed_mps": 0.0
+          "speed_mps": 0.0,
+          "behavior_key": "player_sit_near",
+          "motor_action": "sit",
+          "social_act_kind": "player_sit_near",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "proximity_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "distance stable for >= 2.0s",
-          "note": ""
-        }
+          "note": "migrated from raw.v1 actor=human action=wait; removed legacy self target vanillaSky00"
+        },
+        "event_id": "unity-session-01-20260530112556-e0009",
+        "correlation_id": "unity-session-01-20260530112556-e0009",
+        "actor_id": "vanillaSky00",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 6.301764488220215,
@@ -254,14 +325,26 @@
           "initiated_by": "",
           "distance_to_player_m": 18.58734130859375,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0010",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 7.343956470489502,
@@ -279,39 +362,63 @@
           "initiated_by": "",
           "distance_to_player_m": 1.6752917766571045,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0011",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 7.880936145782471,
-        "actor": "human",
-        "action": "retreat",
+        "actor": "player_cat",
+        "action": "player_look_around",
         "cat_id": "",
         "trust_before": 0,
         "trust_after": 0,
         "trigger": "",
         "params": {
           "zone_id": "Bamboo_Boardwalk_1",
-          "target_id": "vanillaSky00",
+          "target_id": "",
           "item_id": "",
-          "subtype": "",
+          "subtype": "legacy_proximity_retreat",
           "initiated_by": "derived_proximity",
           "distance_to_player_m": -1.0,
           "distance_to_nearest_cat_m": 2.5838871002197266,
-          "speed_mps": 1.0721694231033325
+          "speed_mps": 1.0721694231033325,
+          "behavior_key": "player_look_around",
+          "motor_action": "look_around",
+          "social_act_kind": "player_look_around",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "proximity_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "distance increased by >= 0.35m",
-          "note": ""
-        }
+          "note": "migrated from raw.v1 actor=human action=retreat; removed legacy self target vanillaSky00"
+        },
+        "event_id": "unity-session-01-20260530112556-e0012",
+        "correlation_id": "unity-session-01-20260530112556-e0012",
+        "actor_id": "vanillaSky00",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 9.434633255004883,
@@ -329,14 +436,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0013",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 9.434633255004883,
@@ -354,14 +473,26 @@
           "initiated_by": "",
           "distance_to_player_m": 1.676127314567566,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0014",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 10.471478462219238,
@@ -379,39 +510,63 @@
           "initiated_by": "",
           "distance_to_player_m": 18.618417739868164,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0015",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 11.49535846710205,
-        "actor": "human",
-        "action": "wait",
+        "actor": "player_cat",
+        "action": "player_sit_near",
         "cat_id": "",
         "trust_before": 0,
         "trust_after": 0,
         "trigger": "",
         "params": {
           "zone_id": "Bamboo_Boardwalk_1",
-          "target_id": "vanillaSky00",
+          "target_id": "",
           "item_id": "",
-          "subtype": "",
+          "subtype": "legacy_proximity_wait",
           "initiated_by": "derived_proximity",
           "distance_to_player_m": -1.0,
           "distance_to_nearest_cat_m": 3.2156689167022705,
-          "speed_mps": 0.0
+          "speed_mps": 0.0,
+          "behavior_key": "player_sit_near",
+          "motor_action": "sit",
+          "social_act_kind": "player_sit_near",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "proximity_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "distance stable for >= 2.0s",
-          "note": ""
-        }
+          "note": "migrated from raw.v1 actor=human action=wait; removed legacy self target vanillaSky00"
+        },
+        "event_id": "unity-session-01-20260530112556-e0016",
+        "correlation_id": "unity-session-01-20260530112556-e0016",
+        "actor_id": "vanillaSky00",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 11.49535846710205,
@@ -429,14 +584,26 @@
           "initiated_by": "",
           "distance_to_player_m": 23.598005294799805,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0017",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 12.564335823059082,
@@ -454,64 +621,100 @@
           "initiated_by": "",
           "distance_to_player_m": 18.66855812072754,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0018",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 13.070436477661133,
-        "actor": "human",
-        "action": "wait",
+        "actor": "player_cat",
+        "action": "player_sit_near",
         "cat_id": "",
         "trust_before": 0,
         "trust_after": 0,
         "trigger": "",
         "params": {
           "zone_id": "Bamboo_Boardwalk_1",
-          "target_id": "vanillaSky00",
+          "target_id": "",
           "item_id": "",
-          "subtype": "",
+          "subtype": "legacy_proximity_wait",
           "initiated_by": "derived_proximity",
           "distance_to_player_m": -1.0,
           "distance_to_nearest_cat_m": 3.2156612873077393,
-          "speed_mps": 0.0
+          "speed_mps": 0.0,
+          "behavior_key": "player_sit_near",
+          "motor_action": "sit",
+          "social_act_kind": "player_sit_near",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "proximity_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "distance stable for >= 2.0s",
-          "note": ""
-        }
+          "note": "migrated from raw.v1 actor=human action=wait; removed legacy self target vanillaSky00"
+        },
+        "event_id": "unity-session-01-20260530112556-e0019",
+        "correlation_id": "unity-session-01-20260530112556-e0019",
+        "actor_id": "vanillaSky00",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 13.60036563873291,
-        "actor": "human",
-        "action": "retreat",
+        "actor": "player_cat",
+        "action": "player_look_around",
         "cat_id": "",
         "trust_before": 0,
         "trust_after": 0,
         "trigger": "",
         "params": {
           "zone_id": "Bamboo_Boardwalk_1",
-          "target_id": "vanillaSky00",
+          "target_id": "",
           "item_id": "",
-          "subtype": "",
+          "subtype": "legacy_proximity_retreat",
           "initiated_by": "derived_proximity",
           "distance_to_player_m": -1.0,
           "distance_to_nearest_cat_m": 4.521713733673096,
-          "speed_mps": 2.4645793437957764
+          "speed_mps": 2.4645793437957764,
+          "behavior_key": "player_look_around",
+          "motor_action": "look_around",
+          "social_act_kind": "player_look_around",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "proximity_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "distance increased by >= 0.35m",
-          "note": ""
-        }
+          "note": "migrated from raw.v1 actor=human action=retreat; removed legacy self target vanillaSky00"
+        },
+        "event_id": "unity-session-01-20260530112556-e0020",
+        "correlation_id": "unity-session-01-20260530112556-e0020",
+        "actor_id": "vanillaSky00",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 13.60036563873291,
@@ -529,14 +732,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0021",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 15.678746223449707,
@@ -554,64 +769,100 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0022",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 16.20931625366211,
-        "actor": "human",
-        "action": "wait",
+        "actor": "player_cat",
+        "action": "player_sit_near",
         "cat_id": "",
         "trust_before": 0,
         "trust_after": 0,
         "trigger": "",
         "params": {
           "zone_id": "Bamboo_Boardwalk_1",
-          "target_id": "vanillaSky00",
+          "target_id": "",
           "item_id": "",
-          "subtype": "",
+          "subtype": "legacy_proximity_wait",
           "initiated_by": "derived_proximity",
           "distance_to_player_m": -1.0,
           "distance_to_nearest_cat_m": 4.513646125793457,
-          "speed_mps": 0.0
+          "speed_mps": 0.0,
+          "behavior_key": "player_sit_near",
+          "motor_action": "sit",
+          "social_act_kind": "player_sit_near",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "proximity_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "distance stable for >= 2.0s",
-          "note": ""
-        }
+          "note": "migrated from raw.v1 actor=human action=wait; removed legacy self target vanillaSky00"
+        },
+        "event_id": "unity-session-01-20260530112556-e0023",
+        "correlation_id": "unity-session-01-20260530112556-e0023",
+        "actor_id": "vanillaSky00",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 17.83242416381836,
-        "actor": "human",
-        "action": "retreat",
+        "actor": "player_cat",
+        "action": "player_look_around",
         "cat_id": "",
         "trust_before": 0,
         "trust_after": 0,
         "trigger": "",
         "params": {
           "zone_id": "Bamboo_Boardwalk_1",
-          "target_id": "vanillaSky00",
+          "target_id": "",
           "item_id": "",
-          "subtype": "",
+          "subtype": "legacy_proximity_retreat",
           "initiated_by": "derived_proximity",
           "distance_to_player_m": -1.0,
           "distance_to_nearest_cat_m": 5.0082478523254395,
-          "speed_mps": 0.7913916707038879
+          "speed_mps": 0.7913916707038879,
+          "behavior_key": "player_look_around",
+          "motor_action": "look_around",
+          "social_act_kind": "player_look_around",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "proximity_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "distance increased by >= 0.35m",
-          "note": ""
-        }
+          "note": "migrated from raw.v1 actor=human action=retreat; removed legacy self target vanillaSky00"
+        },
+        "event_id": "unity-session-01-20260530112556-e0024",
+        "correlation_id": "unity-session-01-20260530112556-e0024",
+        "actor_id": "vanillaSky00",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 17.83242416381836,
@@ -629,14 +880,26 @@
           "initiated_by": "",
           "distance_to_player_m": 3.4854953289031982,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0025",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 18.381778717041016,
@@ -654,64 +917,100 @@
           "initiated_by": "",
           "distance_to_player_m": 22.767229080200195,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0026",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 19.433765411376953,
-        "actor": "human",
-        "action": "retreat",
+        "actor": "player_cat",
+        "action": "player_look_around",
         "cat_id": "",
         "trust_before": 0,
         "trust_after": 0,
         "trigger": "",
         "params": {
           "zone_id": "Bamboo_Boardwalk_1",
-          "target_id": "vanillaSky00",
+          "target_id": "",
           "item_id": "",
-          "subtype": "",
+          "subtype": "legacy_proximity_retreat",
           "initiated_by": "derived_proximity",
           "distance_to_player_m": -1.0,
           "distance_to_nearest_cat_m": 6.827605247497559,
-          "speed_mps": 1.2679539918899536
+          "speed_mps": 1.2679539918899536,
+          "behavior_key": "player_look_around",
+          "motor_action": "look_around",
+          "social_act_kind": "player_look_around",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "proximity_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "distance increased by >= 0.35m",
-          "note": ""
-        }
+          "note": "migrated from raw.v1 actor=human action=retreat; removed legacy self target vanillaSky00"
+        },
+        "event_id": "unity-session-01-20260530112556-e0027",
+        "correlation_id": "unity-session-01-20260530112556-e0027",
+        "actor_id": "vanillaSky00",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 20.982967376708984,
-        "actor": "human",
-        "action": "retreat",
+        "actor": "player_cat",
+        "action": "player_look_around",
         "cat_id": "",
         "trust_before": 0,
         "trust_after": 0,
         "trigger": "",
         "params": {
           "zone_id": "Bamboo_Boardwalk_1",
-          "target_id": "vanillaSky00",
+          "target_id": "",
           "item_id": "",
-          "subtype": "",
+          "subtype": "legacy_proximity_retreat",
           "initiated_by": "derived_proximity",
           "distance_to_player_m": -1.0,
           "distance_to_nearest_cat_m": 8.461986541748047,
-          "speed_mps": 0.9970711469650269
+          "speed_mps": 0.9970711469650269,
+          "behavior_key": "player_look_around",
+          "motor_action": "look_around",
+          "social_act_kind": "player_look_around",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "proximity_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "distance increased by >= 0.35m",
-          "note": ""
-        }
+          "note": "migrated from raw.v1 actor=human action=retreat; removed legacy self target vanillaSky00"
+        },
+        "event_id": "unity-session-01-20260530112556-e0028",
+        "correlation_id": "unity-session-01-20260530112556-e0028",
+        "actor_id": "vanillaSky00",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 20.982967376708984,
@@ -729,14 +1028,26 @@
           "initiated_by": "",
           "distance_to_player_m": 18.110488891601562,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0029",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 24.062950134277344,
@@ -754,14 +1065,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0030",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 24.57925033569336,
@@ -779,14 +1102,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0031",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 27.144573211669922,
@@ -804,14 +1139,26 @@
           "initiated_by": "",
           "distance_to_player_m": 22.716392517089844,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0032",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 28.18035888671875,
@@ -829,14 +1176,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0033",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 30.258525848388672,
@@ -854,14 +1213,26 @@
           "initiated_by": "",
           "distance_to_player_m": 4.913787364959717,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0034",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 30.800703048706055,
@@ -879,14 +1250,26 @@
           "initiated_by": "",
           "distance_to_player_m": 4.930325031280518,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0035",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 32.33702087402344,
@@ -904,14 +1287,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0036",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 33.43806838989258,
@@ -929,14 +1324,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.45069122314453,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0037",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 33.944705963134766,
@@ -954,14 +1361,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0038",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 33.944705963134766,
@@ -979,14 +1398,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.22007942199707,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0039",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 42.38092041015625,
@@ -1004,14 +1435,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0040",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 42.38092041015625,
@@ -1029,14 +1472,26 @@
           "initiated_by": "",
           "distance_to_player_m": 24.775957107543945,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0041",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 42.90262222290039,
@@ -1054,14 +1509,26 @@
           "initiated_by": "",
           "distance_to_player_m": 24.448068618774414,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0042",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 48.72502517700195,
@@ -1079,14 +1546,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0043",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 48.72502517700195,
@@ -1104,14 +1583,26 @@
           "initiated_by": "",
           "distance_to_player_m": 16.78000259399414,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0044",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 49.23814010620117,
@@ -1129,14 +1620,26 @@
           "initiated_by": "",
           "distance_to_player_m": 16.61200523376465,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0045",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 52.926578521728516,
@@ -1154,14 +1657,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0046",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 54.465492248535156,
@@ -1179,14 +1694,26 @@
           "initiated_by": "",
           "distance_to_player_m": 15.638340950012207,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0047",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 55.17597198486328,
@@ -1204,14 +1731,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.634031295776367,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0048",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 55.68348693847656,
@@ -1229,14 +1768,26 @@
           "initiated_by": "",
           "distance_to_player_m": 29.896791458129883,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0049",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 58.75031280517578,
@@ -1254,14 +1805,26 @@
           "initiated_by": "",
           "distance_to_player_m": 23.065773010253906,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0050",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 61.29612731933594,
@@ -1279,14 +1842,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0051",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 61.80915069580078,
@@ -1304,14 +1879,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0052",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 64.45962524414062,
@@ -1329,14 +1916,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0053",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 64.45962524414062,
@@ -1354,14 +1953,26 @@
           "initiated_by": "",
           "distance_to_player_m": 29.735015869140625,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0054",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 65.58509063720703,
@@ -1379,14 +1990,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0055",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 67.15412139892578,
@@ -1404,14 +2027,26 @@
           "initiated_by": "",
           "distance_to_player_m": 23.046245574951172,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0056",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 67.6615219116211,
@@ -1429,14 +2064,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.166173934936523,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0057",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 69.18907165527344,
@@ -1454,14 +2101,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.238784790039062,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0058",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 69.7260971069336,
@@ -1479,14 +2138,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0059",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 72.8313980102539,
@@ -1504,14 +2175,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.18004608154297,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0060",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 73.8568115234375,
@@ -1529,14 +2212,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0061",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 75.4151611328125,
@@ -1554,14 +2249,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0062",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 79.49976348876953,
@@ -1579,14 +2286,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0063",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 80.01760864257812,
@@ -1604,14 +2323,26 @@
           "initiated_by": "",
           "distance_to_player_m": 32.02324295043945,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0064",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 80.01760864257812,
@@ -1629,14 +2360,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.23207664489746,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0065",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 81.55059814453125,
@@ -1654,14 +2397,26 @@
           "initiated_by": "",
           "distance_to_player_m": 32.02350997924805,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0066",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 82.81777954101562,
@@ -1679,14 +2434,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.17527198791504,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0067",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 83.8505859375,
@@ -1704,14 +2471,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.902751922607422,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0068",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 85.38595581054688,
@@ -1729,14 +2508,26 @@
           "initiated_by": "",
           "distance_to_player_m": 32.0722541809082,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0069",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 85.38595581054688,
@@ -1754,14 +2545,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.896879196166992,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0070",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 85.89883422851562,
@@ -1779,14 +2582,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.171192169189453,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0071",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 87.44010162353516,
@@ -1804,14 +2619,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.167545318603516,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0072",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 88.48169708251953,
@@ -1829,14 +2656,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.417112350463867,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0073",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 91.17216491699219,
@@ -1854,14 +2693,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0074",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 91.17216491699219,
@@ -1879,14 +2730,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.361774444580078,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0075",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 91.7367935180664,
@@ -1904,14 +2767,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0076",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 93.79545593261719,
@@ -1929,14 +2804,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.950422286987305,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0077",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 95.99505615234375,
@@ -1954,14 +2841,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0078",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 95.99505615234375,
@@ -1979,14 +2878,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.071260452270508,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0079",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 97.01425170898438,
@@ -2004,14 +2915,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.897323608398438,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0080",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 98.55933380126953,
@@ -2029,14 +2952,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.91653823852539,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0081",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 99.61309051513672,
@@ -2054,14 +2989,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0082",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 101.17655944824219,
@@ -2079,14 +3026,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0083",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 103.2686538696289,
@@ -2104,14 +3063,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.072179794311523,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0084",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 105.36494445800781,
@@ -2129,14 +3100,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0085",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 106.37618255615234,
@@ -2154,14 +3137,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.04131507873535,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0086",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 107.43683624267578,
@@ -2179,14 +3174,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.91685676574707,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0087",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 110.5546646118164,
@@ -2204,14 +3211,26 @@
           "initiated_by": "",
           "distance_to_player_m": 29.990598678588867,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0088",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 111.62947082519531,
@@ -2229,14 +3248,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.022682189941406,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0089",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 112.14574432373047,
@@ -2254,14 +3285,26 @@
           "initiated_by": "",
           "distance_to_player_m": 29.98244285583496,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0090",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 112.65430450439453,
@@ -2279,14 +3322,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.032384872436523,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0091",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 115.24959564208984,
@@ -2304,14 +3359,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0092",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 115.24959564208984,
@@ -2329,14 +3396,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.865394592285156,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0093",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 115.77192687988281,
@@ -2354,14 +3433,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0094",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 115.77192687988281,
@@ -2379,14 +3470,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.8584041595459,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0095",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 115.77192687988281,
@@ -2404,14 +3507,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.836212158203125,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0096",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 118.38062286376953,
@@ -2429,14 +3544,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.85776138305664,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0097",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 119.39432525634766,
@@ -2454,14 +3581,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0098",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 119.39432525634766,
@@ -2479,14 +3618,26 @@
           "initiated_by": "",
           "distance_to_player_m": 29.628536224365234,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0099",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 119.9460220336914,
@@ -2504,14 +3655,26 @@
           "initiated_by": "",
           "distance_to_player_m": 29.70429039001465,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0100",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 119.9460220336914,
@@ -2529,14 +3692,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.139305114746094,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0101",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 120.99983978271484,
@@ -2554,14 +3729,26 @@
           "initiated_by": "",
           "distance_to_player_m": 29.683048248291016,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0102",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 121.54827880859375,
@@ -2579,14 +3766,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.116849899291992,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0103",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 125.72710418701172,
@@ -2604,14 +3803,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.07796287536621,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0104",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 127.79585266113281,
@@ -2629,14 +3840,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0105",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 127.79585266113281,
@@ -2654,14 +3877,26 @@
           "initiated_by": "",
           "distance_to_player_m": 29.48431396484375,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0106",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 129.3789520263672,
@@ -2679,14 +3914,26 @@
           "initiated_by": "",
           "distance_to_player_m": 29.623933792114258,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0107",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 130.39193725585938,
@@ -2704,14 +3951,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0108",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 131.4307403564453,
@@ -2729,14 +3988,26 @@
           "initiated_by": "",
           "distance_to_player_m": 29.4842529296875,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0109",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 133.49513244628906,
@@ -2754,14 +4025,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.151769638061523,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0110",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 133.49513244628906,
@@ -2779,14 +4062,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.993886947631836,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0111",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 134.50701904296875,
@@ -2804,14 +4099,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0112",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 136.2092742919922,
@@ -2829,14 +4136,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.874353408813477,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0113",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 137.76437377929688,
@@ -2854,14 +4173,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.882354736328125,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0114",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 137.76437377929688,
@@ -2879,14 +4210,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.7099609375,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0115",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 138.80743408203125,
@@ -2904,14 +4247,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0116",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 139.3190155029297,
@@ -2929,14 +4284,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.1555118560791,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0117",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 139.3190155029297,
@@ -2954,14 +4321,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.65213966369629,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0118",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 140.3491973876953,
@@ -2979,14 +4358,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0119",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 143.95220947265625,
@@ -3004,14 +4395,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0120",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 146.03033447265625,
@@ -3029,14 +4432,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.891429901123047,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0121",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 148.0834503173828,
@@ -3054,14 +4469,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.216867446899414,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0122",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 148.0834503173828,
@@ -3079,14 +4506,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.712261199951172,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0123",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 148.67416381835938,
@@ -3104,14 +4543,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.216835021972656,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0124",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 149.20791625976562,
@@ -3129,14 +4580,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.7668399810791,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0125",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 150.2433319091797,
@@ -3154,14 +4617,26 @@
           "initiated_by": "",
           "distance_to_player_m": 30.21683120727539,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0126",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 154.96693420410156,
@@ -3179,14 +4654,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.92125129699707,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0127",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 155.7296142578125,
@@ -3204,14 +4691,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.991025924682617,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0128",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 156.77096557617188,
@@ -3229,14 +4728,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.766212463378906,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0129",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 157.81809997558594,
@@ -3254,14 +4765,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.76588249206543,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0130",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 157.81809997558594,
@@ -3279,14 +4802,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.832809448242188,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0131",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 158.4213409423828,
@@ -3304,14 +4839,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.767005920410156,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0132",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 158.9376678466797,
@@ -3329,14 +4876,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0133",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 159.44090270996094,
@@ -3354,14 +4913,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.816547393798828,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0134",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 162.10891723632812,
@@ -3379,14 +4950,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.901094436645508,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0135",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 163.69590759277344,
@@ -3404,14 +4987,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.91014289855957,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0136",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 166.29872131347656,
@@ -3429,14 +5024,26 @@
           "initiated_by": "",
           "distance_to_player_m": 32.02642059326172,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0137",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 166.94039916992188,
@@ -3454,14 +5061,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0138",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 166.94039916992188,
@@ -3479,14 +5098,26 @@
           "initiated_by": "",
           "distance_to_player_m": 31.8336181640625,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0139",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 166.94039916992188,
@@ -3504,14 +5135,26 @@
           "initiated_by": "",
           "distance_to_player_m": 32.0596923828125,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0140",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 167.46937561035156,
@@ -3529,14 +5172,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0141",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 171.5424041748047,
@@ -3554,14 +5209,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0142",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 172.59524536132812,
@@ -3579,14 +5246,26 @@
           "initiated_by": "",
           "distance_to_player_m": 34.42449188232422,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0143",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 173.10684204101562,
@@ -3604,14 +5283,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0144",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 175.1787567138672,
@@ -3629,14 +5320,26 @@
           "initiated_by": "",
           "distance_to_player_m": 34.48994064331055,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0145",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 176.2453155517578,
@@ -3654,14 +5357,26 @@
           "initiated_by": "",
           "distance_to_player_m": 34.4437255859375,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0146",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 178.83843994140625,
@@ -3679,14 +5394,26 @@
           "initiated_by": "",
           "distance_to_player_m": 34.06197738647461,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0147",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 178.83843994140625,
@@ -3704,14 +5431,26 @@
           "initiated_by": "",
           "distance_to_player_m": 34.09613800048828,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0148",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 179.84300231933594,
@@ -3729,14 +5468,26 @@
           "initiated_by": "",
           "distance_to_player_m": 33.89740753173828,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0149",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 179.84300231933594,
@@ -3754,14 +5505,26 @@
           "initiated_by": "",
           "distance_to_player_m": 34.44364929199219,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0150",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 181.8937530517578,
@@ -3779,14 +5542,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0151",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 181.8937530517578,
@@ -3804,14 +5579,26 @@
           "initiated_by": "",
           "distance_to_player_m": 34.42374038696289,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0152",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 182.95608520507812,
@@ -3829,14 +5616,26 @@
           "initiated_by": "",
           "distance_to_player_m": 34.30360412597656,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0153",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 183.99005126953125,
@@ -3854,14 +5653,26 @@
           "initiated_by": "",
           "distance_to_player_m": 33.94953536987305,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0154",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 185.5146026611328,
@@ -3879,14 +5690,26 @@
           "initiated_by": "",
           "distance_to_player_m": 33.94369125366211,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0155",
+        "correlation_id": "",
+        "actor_id": "miso",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 187.58425903320312,
@@ -3904,14 +5727,26 @@
           "initiated_by": "",
           "distance_to_player_m": 34.79926300048828,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0156",
+        "correlation_id": "",
+        "actor_id": "haru",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 190.23666381835938,
@@ -3929,14 +5764,26 @@
           "initiated_by": "",
           "distance_to_player_m": 0.0,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0157",
+        "correlation_id": "",
+        "actor_id": "mewi",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       },
       {
         "t": 190.23666381835938,
@@ -3954,16 +5801,30 @@
           "initiated_by": "",
           "distance_to_player_m": 34.458065032958984,
           "distance_to_nearest_cat_m": -1.0,
-          "speed_mps": -1.0
+          "speed_mps": -1.0,
+          "behavior_key": "",
+          "motor_action": "",
+          "social_act_kind": "",
+          "source_event_id": "",
+          "facing_dot": -1.0,
+          "confidence": -1.0
         },
         "meta": {
           "source_system": "cat_state_sampler",
           "recorder": "ReportSessionLogger",
           "derivation": "action_changed",
           "note": ""
-        }
+        },
+        "event_id": "unity-session-01-20260530112556-e0158",
+        "correlation_id": "",
+        "actor_id": "yuzu",
+        "target_id": "",
+        "phase": "completed",
+        "status": ""
       }
     ],
-    "multi_cat_encounters": []
+    "multi_cat_encounters": [],
+    "timestamp_end": "2026-05-30T11:29:10Z",
+    "close_reason": "legacy_static_report_migrated"
   }
 }

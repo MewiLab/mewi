@@ -60,6 +60,24 @@ def short_term_memory_lines(memory_context: dict[str, Any] | None) -> list[str]:
     return result
 
 
+def related_memory_lines(memory_context: dict[str, Any] | None) -> list[str]:
+    if not isinstance(memory_context, dict):
+        return []
+    rows = memory_context.get("longterm")
+    if not isinstance(rows, list):
+        return []
+    lines: list[str] = []
+    for row in rows[:5]:
+        if not isinstance(row, dict):
+            continue
+        text = clean_text(row.get("text"))
+        if not text:
+            continue
+        aspect = clean_text(row.get("aspect")) or "memory"
+        lines.append(f"{aspect}: {text}")
+    return lines
+
+
 def world_view_lines(world_view: dict[str, Any] | None) -> list[str]:
     if not isinstance(world_view, dict):
         return []
@@ -85,10 +103,10 @@ def world_view_lines(world_view: dict[str, Any] | None) -> list[str]:
         mood = peer.get("mood")
         if isinstance(mood, dict):
             cues = [
-                f"{key}={float(value):.2f}"
+                cue
                 for key, value in mood.items()
                 if key in {"fear", "social", "trust"}
-                and isinstance(value, (int, float))
+                and (cue := _mood_cue_text(key, value))
             ]
             if cues:
                 line += f"; mood cues: {', '.join(cues[:3])}"
@@ -125,24 +143,9 @@ def social_context_lines(social_context: dict[str, Any] | None) -> list[str]:
     relationships = social_context.get("relationships")
     if isinstance(relationships, list):
         for relationship in relationships[:4]:
-            if not isinstance(relationship, dict):
-                continue
-            pair = relationship.get("pair")
-            pair_text = ", ".join(clean_text(item) for item in pair if clean_text(item)) \
-                if isinstance(pair, list) else ""
-            if not pair_text:
-                continue
-            trust = _metric_text(relationship.get("trust"))
-            affinity = _metric_text(relationship.get("affinity"))
-            encounters = relationship.get("encounters")
-            parts = [f"bond {pair_text}"]
-            if trust:
-                parts.append(f"trust {trust}")
-            if affinity:
-                parts.append(f"affinity {affinity}")
-            if isinstance(encounters, int):
-                parts.append(f"{encounters} encounter(s)")
-            lines.append("; ".join(parts) + ".")
+            line = relationship_memory_line(relationship)
+            if line:
+                lines.append(line)
 
     if lines:
         return lines
@@ -254,6 +257,7 @@ def build_dynamic_section(
 
     last_tick_block = (previous_action_result or "").rstrip() or "  - no previous action report"
     short_term_lines = short_term_memory_lines(memory_context)
+    related_lines = related_memory_lines(memory_context)
 
     return (
         f"{extra_prefix}"
@@ -269,6 +273,7 @@ def build_dynamic_section(
         f"{render_block('WHAT CHANGED', whats_changed)}"
         f"\n# LAST TICK\n{last_tick_block}\n"
         f"{render_block('SHORT TERM MEMORY', short_term_lines)}"
+        f"{render_block('RELATED MEMORY', related_lines)}"
         f"{render_block('DECISION FOCUS', decision_focus)}"
     )
 
@@ -307,6 +312,27 @@ def _social_feedback_line(value: Any) -> str:
     return f"Social feedback from {source or 'someone'}: {outcome}."
 
 
+def relationship_memory_line(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    pair = value.get("pair")
+    pair_text = ", ".join(clean_text(item) for item in pair if clean_text(item)) \
+        if isinstance(pair, list) else ""
+    if not pair_text:
+        return ""
+    trust = _metric_text(value.get("trust"), kind="trust")
+    affinity = _metric_text(value.get("affinity"), kind="affinity")
+    encounters = value.get("encounters")
+    parts = [f"bond {pair_text}"]
+    if trust:
+        parts.append(trust)
+    if affinity:
+        parts.append(affinity)
+    if isinstance(encounters, int):
+        parts.append(_encounter_text(encounters))
+    return "; ".join(parts) + "."
+
+
 def _meaningful_targets(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -318,7 +344,96 @@ def _meaningful_targets(value: Any) -> list[str]:
     ]
 
 
-def _metric_text(value: Any) -> str:
+def _metric_text(value: Any, *, kind: str) -> str:
     if not isinstance(value, (int, float)):
         return ""
-    return f"{float(value):+.2f}"
+    amount = float(value)
+    if kind == "trust":
+        label = _qualitative_band(
+            amount,
+            negative="trust is strained",
+            low="trust is cautious",
+            neutral="trust is still forming",
+            high="trust is comfortable",
+            strong="trust is strong",
+        )
+    else:
+        label = _qualitative_band(
+            amount,
+            negative="affinity is chilly",
+            low="affinity is tentative",
+            neutral="affinity is neutral",
+            high="affinity is warm",
+            strong="affinity is close",
+        )
+    return label
+
+
+def _mood_cue_text(key: str, value: Any) -> str:
+    if not isinstance(value, (int, float)):
+        return ""
+    amount = float(value)
+    if key == "fear":
+        return _qualitative_band(
+            amount,
+            negative="fear is absent",
+            low="fear is low",
+            neutral="fear is mild",
+            high="fear is high",
+            strong="fear is very high",
+            signed=False,
+        )
+    if key == "social":
+        return _qualitative_band(
+            amount,
+            negative="social pull is absent",
+            low="social pull is low",
+            neutral="social pull is present",
+            high="social pull is strong",
+            strong="social pull is very strong",
+            signed=False,
+        )
+    if key == "trust":
+        return _metric_text(amount, kind="trust")
+    return ""
+
+
+def _qualitative_band(
+    value: float,
+    *,
+    negative: str,
+    low: str,
+    neutral: str,
+    high: str,
+    strong: str,
+    signed: bool = True,
+) -> str:
+    if not signed:
+        if value < 0.05:
+            return negative
+        if value < 0.25:
+            return low
+        if value < 0.6:
+            return neutral
+        if value < 0.85:
+            return high
+        return strong
+    if signed and value < -0.35:
+        return negative
+    if signed and value < -0.05:
+        return low
+    if value < 0.25:
+        return neutral
+    if value < 0.7:
+        return high
+    return strong
+
+
+def _encounter_text(encounters: int) -> str:
+    if encounters <= 0:
+        return "no settled encounters yet"
+    if encounters == 1:
+        return "one encounter"
+    if encounters < 4:
+        return "a few encounters"
+    return "many encounters"

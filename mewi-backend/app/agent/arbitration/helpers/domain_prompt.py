@@ -8,7 +8,7 @@ from langchain_core.messages import HumanMessage
 from app.agent.mind.affordances import IntentAffordances, build_intent_affordances
 from app.agent.mind.context import clean_text, normalize_target, parse_llm_json_object
 from app.agent.mind.intents import INTENT_IDLE, normalize_intent
-from app.agent.prompts.sections import build_dynamic_section
+from app.agent.prompts.sections import build_dynamic_section, relationship_memory_line
 
 
 def build_domain_message(prompt: str) -> HumanMessage:
@@ -150,6 +150,12 @@ def _memory_state_lines(memory_state: Any) -> list[str]:
     if isinstance(recent, dict):
         for line in _string_list(recent.get("short_term_lines"))[:5]:
             lines.append(f"recent: {line}")
+        for row in recent.get("longterm") or []:
+            if isinstance(row, dict):
+                text = clean_text(row.get("text"))
+                aspect = clean_text(row.get("aspect")) or "memory"
+                if text:
+                    lines.append(f"past related {aspect}: {text}")
 
     working = memory_state.get("working")
     if isinstance(working, dict):
@@ -182,7 +188,9 @@ def _memory_state_lines(memory_state: Any) -> list[str]:
                 lines.append(f"relationship room: {_json_compact(room.get('members'))}")
             for item in social_context.get("relationships") or []:
                 if isinstance(item, dict):
-                    lines.append(f"relationship: {_json_compact(item)}")
+                    line = relationship_memory_line(item)
+                    if line:
+                        lines.append(f"relationship: {line}")
     return lines
 
 

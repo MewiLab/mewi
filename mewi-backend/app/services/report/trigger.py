@@ -1,22 +1,33 @@
 """Processing trigger port.
 
-ADR-014 keeps the "is this user ready, and what runs the processor?" decision in
-one place behind a ``Protocol``. Today processing runs in-process right after
-ingest (``InlineProcessingTrigger``). Later this same seam becomes an
-EventBridge / SQS hand-off to a Lambda running the *same* processor over
-S3-synced raw sessions — the route and service never change.
+FastAPI owns only the "is this user ready, and should a job be enqueued?"
+decision. Report generation itself lives in the attachment-report Lambda, so
+this module intentionally has no inline processor path.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import UTC, datetime
+import json
+from pathlib import Path
 from typing import Protocol
-
-from app.services.report.processor import process_report
-from app.services.report.store import ProcessedReportStore, RawSessionStore, ReportSources
 
 
 class ProcessingTrigger(Protocol):
     def maybe_run(self, user_id: str, session_count: int) -> bool: ...
+
+
+@dataclass(frozen=True)
+class ProcessingJob:
+    job_id: str
+    user_id: str
+    session_count: int
+    enqueued_at: str
+
+
+class ProcessingQueue(Protocol):
+    def enqueue(self, user_id: str, session_count: int) -> ProcessingJob: ...
 
 
 class NoopProcessingTrigger:
@@ -26,36 +37,77 @@ class NoopProcessingTrigger:
         return False
 
 
-class InlineProcessingTrigger:
-    """Runs the report processor synchronously after a session is stored.
+class LocalFileProcessingQueue:
+    """Append-only local job queue for ADR-030's thin enqueue mode.
 
-    Reads every stored raw session for the user, derives the processed report
-    value data, and writes it to the processed/site stores so ``mewi-report``
-    can render it without a manual ``process.py`` run.
+    This is intentionally tiny: the production replacement can be SQS/EventBridge
+    while tests and local runs still exercise the route -> store -> enqueue seam.
     """
 
-    def __init__(
-        self,
-        raw_store: RawSessionStore,
-        processed_store: ProcessedReportStore,
-        sources: ReportSources,
-        attachment_mode: str = "agent",
-    ) -> None:
-        self._raw_store = raw_store
-        self._processed_store = processed_store
-        self._sources = sources
-        self._attachment_mode = attachment_mode
+    def __init__(self, queue_dir: Path) -> None:
+        self._queue_dir = queue_dir
+
+    def enqueue(self, user_id: str, session_count: int) -> ProcessingJob:
+        job = _new_processing_job(user_id, session_count)
+        self._queue_dir.mkdir(parents=True, exist_ok=True)
+        with (self._queue_dir / "report_processing_jobs.jsonl").open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(_job_payload(job), ensure_ascii=False) + "\n")
+        return job
+
+
+class SqsQueue:
+    """Production report-processing queue backed by AWS SQS (ADR-032)."""
+
+    def __init__(self, queue_url: str, client: object | None = None) -> None:
+        if not queue_url.strip():
+            raise ValueError("SqsQueue requires a queue URL")
+        self._queue_url = queue_url.strip()
+        if client is None:
+            import boto3
+
+            client = boto3.client("sqs")
+        self._client = client
+
+    def enqueue(self, user_id: str, session_count: int) -> ProcessingJob:
+        job = _new_processing_job(user_id, session_count)
+        self._client.send_message(
+            QueueUrl=self._queue_url,
+            MessageBody=json.dumps(_job_payload(job), ensure_ascii=False),
+        )
+        return job
+
+
+class QueuedProcessingTrigger:
+    """Enqueues report processing and returns immediately."""
+
+    def __init__(self, queue: ProcessingQueue) -> None:
+        self._queue = queue
 
     def maybe_run(self, user_id: str, session_count: int) -> bool:
-        sessions = self._raw_store.load_sessions(user_id)
-        if not sessions:
-            return False
-        report = process_report(
-            user_id,
-            sessions,
-            self._sources.user_info(),
-            self._sources.overrides(user_id),
-            attachment_mode=self._attachment_mode,
-        )
-        self._processed_store.write(user_id, report)
+        self._queue.enqueue(user_id, session_count)
         return True
+
+
+def _safe_segment(value: str) -> str:
+    cleaned = "".join(c if c.isalnum() or c in "_.-" else "_" for c in (value or "").strip())
+    return cleaned or "unknown"
+
+
+def _new_processing_job(user_id: str, session_count: int) -> ProcessingJob:
+    now = datetime.now(UTC)
+    safe_user = _safe_segment(user_id)
+    return ProcessingJob(
+        job_id=f"{safe_user}-{now:%Y%m%d%H%M%S%f}",
+        user_id=user_id,
+        session_count=session_count,
+        enqueued_at=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+
+
+def _job_payload(job: ProcessingJob) -> dict[str, object]:
+    return {
+        "job_id": job.job_id,
+        "user_id": job.user_id,
+        "session_count": job.session_count,
+        "enqueued_at": job.enqueued_at,
+    }

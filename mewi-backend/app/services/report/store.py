@@ -1,10 +1,8 @@
-"""Storage ports for the report pipeline.
+"""Storage ports for report ingestion.
 
-These are the only abstractions ADR-014 allows: small ``Protocol`` ports that
-hide *where* raw sessions, processed reports, and report context live. Today
-everything is local files under ``mewi-report/``. Later, ``RawSessionStore`` and
-``ProcessedReportStore`` can become S3-backed without touching the route or the
-service orchestration.
+FastAPI stores raw session payloads and enqueues processing jobs. Processed
+report JSON is produced by the attachment-report Lambda, so this module does not
+contain processed-report writers or report-context loaders.
 """
 
 from __future__ import annotations
@@ -13,6 +11,18 @@ import json
 import re
 from pathlib import Path
 from typing import Any, Protocol
+
+from app.models.report import ReportProduct
+
+REPORT_PRODUCTS: set[str] = {"attachment", "recommendation"}
+
+
+class ReportResultNotFound(Exception):
+    """Raised when a finished report product is not present."""
+
+
+class ReportResultInvalid(Exception):
+    """Raised when a finished report object is not valid JSON/dict data."""
 
 
 def safe_segment(value: str) -> str:
@@ -80,61 +90,137 @@ class LocalFileRawSessionStore:
         return sessions
 
 
-# ── processed report store ────────────────────────────────────────────────────
+class S3RawSessionStore:
+    """S3-backed raw-session store for ADR-032 production ingestion.
 
-class ProcessedReportStore(Protocol):
-    def write(self, user_id: str, report: dict[str, Any]) -> list[str]: ...
-
-
-class LocalFileProcessedReportStore:
-    """Writes ``report_{user_id}.json`` to the pipeline output and the Astro site.
-
-    Mirrors what ``mewi-report/pipeline/scripts/process.py`` used to do at the end
-    of a run: write to ``processed_data/`` and copy into ``src/data/`` so the
-    static site can import it at build time.
+    Stores the same full ReportSessionPayload JSON that the local file store
+    writes, but under ``raw/{user_id}/{session_id}.json`` in the configured
+    bucket. The service can still call ``count`` immediately after ``put``; S3
+    now provides strong read-after-write/list consistency for new objects.
     """
 
-    def __init__(self, processed_dir: Path, site_data_dir: Path) -> None:
-        self._processed_dir = processed_dir
-        self._site_data_dir = site_data_dir
+    def __init__(self, bucket: str, client: Any | None = None) -> None:
+        if not bucket.strip():
+            raise ValueError("S3RawSessionStore requires a bucket name")
+        self._bucket = bucket.strip()
+        if client is None:
+            import boto3
 
-    def write(self, user_id: str, report: dict[str, Any]) -> list[str]:
-        payload = json.dumps(report, indent=2, ensure_ascii=False)
-        written: list[str] = []
-        for directory in (self._processed_dir, self._site_data_dir):
-            directory.mkdir(parents=True, exist_ok=True)
-            path = directory / f"report_{safe_segment(user_id)}.json"
-            tmp_path = path.with_suffix(".json.tmp")
-            tmp_path.write_text(payload, encoding="utf-8")
-            tmp_path.replace(path)
-            written.append(str(path))
-        return written
+            client = boto3.client("s3")
+        self._client = client
+
+    def put(self, user_id: str, session_id: str, data: dict[str, Any]) -> str:
+        key = _raw_session_key(user_id, session_id)
+        self._client.put_object(
+            Bucket=self._bucket,
+            Key=key,
+            Body=json.dumps(data, ensure_ascii=False).encode("utf-8"),
+            ContentType="application/json",
+        )
+        return key
+
+    def count(self, user_id: str) -> int:
+        prefix = _raw_user_prefix(user_id)
+        return sum(1 for key in self._iter_keys(prefix) if key.endswith(".json"))
+
+    def load_sessions(self, user_id: str) -> list[dict[str, Any]]:
+        sessions: list[dict[str, Any]] = []
+        for key in self._iter_keys(_raw_user_prefix(user_id)):
+            if not key.endswith(".json"):
+                continue
+            resp = self._client.get_object(Bucket=self._bucket, Key=key)
+            raw = json.loads(resp["Body"].read().decode("utf-8"))
+            if isinstance(raw, dict) and isinstance(raw.get("session"), dict):
+                sessions.append(raw["session"])
+        return sessions
+
+    def _iter_keys(self, prefix: str):
+        paginator = self._client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self._bucket, Prefix=prefix):
+            for obj in page.get("Contents", []):
+                key = obj.get("Key")
+                if isinstance(key, str):
+                    yield key
 
 
-# ── report context (user_info + demo overrides) ───────────────────────────────
-
-class ReportSources(Protocol):
-    def user_info(self) -> dict[str, dict[str, Any]]: ...
-    def overrides(self, user_id: str) -> dict[str, Any]: ...
+def _raw_user_prefix(user_id: str) -> str:
+    return f"raw/{safe_segment(user_id)}/"
 
 
-class LocalFileReportSources:
-    """Reads ``pipeline/user_info.json`` and ``pipeline/report_overrides/{user}.json``."""
+def _raw_session_key(user_id: str, session_id: str) -> str:
+    return f"{_raw_user_prefix(user_id)}{safe_segment(session_id)}.json"
 
-    def __init__(self, user_info_path: Path, overrides_dir: Path) -> None:
-        self._user_info_path = user_info_path
-        self._overrides_dir = overrides_dir
 
-    def user_info(self) -> dict[str, dict[str, Any]]:
-        raw = _read_json(self._user_info_path)
-        if not raw:
-            return {}
-        users = raw.get("users")
-        return users if isinstance(users, dict) else {}
+# ── processed report result store ────────────────────────────────────────────
 
-    def overrides(self, user_id: str) -> dict[str, Any]:
-        raw = _read_json(self._overrides_dir / f"{safe_segment(user_id)}.json")
-        if not raw:
-            return {}
-        nested = raw.get("report_overrides")
-        return nested if isinstance(nested, dict) else raw
+class ReportResultStore(Protocol):
+    def get(self, user_id: str, product: ReportProduct) -> dict[str, Any]: ...
+    def list(self, product: ReportProduct) -> list[dict[str, Any]]: ...
+
+
+class S3ReportResultStore:
+    """S3-backed reader for finished report products.
+
+    The attachment/recommendation Lambdas own writes under
+    ``results/{user_id}/{product}.json``. FastAPI only reads those private
+    objects after application-level authorization succeeds.
+    """
+
+    def __init__(self, bucket: str, client: Any | None = None) -> None:
+        if not bucket.strip():
+            raise ValueError("S3ReportResultStore requires a bucket name")
+        self._bucket = bucket.strip()
+        if client is None:
+            import boto3
+
+            client = boto3.client("s3")
+        self._client = client
+
+    def get(self, user_id: str, product: ReportProduct) -> dict[str, Any]:
+        return self._get_key(_report_result_key(user_id, product))
+
+    def list(self, product: ReportProduct) -> list[dict[str, Any]]:
+        _validate_report_product(product)
+        reports: list[dict[str, Any]] = []
+        suffix = f"/{product}.json"
+        paginator = self._client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self._bucket, Prefix="results/"):
+            for obj in page.get("Contents", []):
+                key = obj.get("Key")
+                if isinstance(key, str) and key.endswith(suffix):
+                    reports.append(self._get_key(key))
+        return reports
+
+    def _get_key(self, key: str) -> dict[str, Any]:
+        try:
+            resp = self._client.get_object(Bucket=self._bucket, Key=key)
+        except Exception as exc:
+            if _is_s3_not_found(exc):
+                raise ReportResultNotFound(key) from exc
+            raise
+
+        raw_body = resp["Body"].read()
+        if isinstance(raw_body, bytes):
+            raw_body = raw_body.decode("utf-8")
+        try:
+            data = json.loads(raw_body)
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise ReportResultInvalid(key) from exc
+        if not isinstance(data, dict):
+            raise ReportResultInvalid(key)
+        return data
+
+
+def _report_result_key(user_id: str, product: ReportProduct) -> str:
+    _validate_report_product(product)
+    return f"results/{safe_segment(user_id)}/{product}.json"
+
+
+def _validate_report_product(product: str) -> None:
+    if product not in REPORT_PRODUCTS:
+        raise ValueError(f"Unsupported report product: {product!r}")
+
+
+def _is_s3_not_found(exc: Exception) -> bool:
+    error = getattr(exc, "response", {}).get("Error", {})
+    return error.get("Code") in {"NoSuchKey", "404", "NotFound"}

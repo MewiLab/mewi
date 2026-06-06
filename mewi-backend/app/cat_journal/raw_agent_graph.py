@@ -12,6 +12,7 @@ from typing import Any
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_JOURNAL_DIR = Path(__file__).resolve().parent / "journal"
 RAW_GRAPH_FILENAME = "raw_agent_graph.jsonl"
+LIVE_MICRO_ACTION_FILENAME = "live_micro_actions.jsonl"
 
 _SAFE_PATH_PART = re.compile(r"[^A-Za-z0-9_.-]+")
 _OMITTED_GRAPH_KEYS = {"messages", "runtime", "raw_payload"}
@@ -55,6 +56,20 @@ class RawCatJournal:
         await asyncio.to_thread(_append_jsonl, path, record)
         return path
 
+    async def append_micro_action_events(
+        self,
+        *,
+        creature_id: str,
+        events: list[Any],
+    ) -> Path:
+        records = [
+            self.build_micro_action_record(creature_id=creature_id, event=event)
+            for event in events
+        ]
+        path = self.micro_action_path_for(creature_id)
+        await asyncio.to_thread(_append_jsonl_many, path, records)
+        return path
+
     def build_record(
         self,
         *,
@@ -87,8 +102,31 @@ class RawCatJournal:
             "unity_result": _jsonable(unity_result),
         }
 
+    def build_micro_action_record(
+        self,
+        *,
+        creature_id: str,
+        event: Any,
+    ) -> dict[str, Any]:
+        payload = _jsonable(event)
+        if not isinstance(payload, dict):
+            payload = {"value": payload}
+        return {
+            "schema_version": "mewi.live_micro_action.v1",
+            "recorded_at": datetime.now(timezone.utc).isoformat(),
+            "creature_id": creature_id or payload.get("creature_id", ""),
+            "event_id": payload.get("event_id", ""),
+            "correlation_id": payload.get("correlation_id", ""),
+            "tick": payload.get("tick", 0),
+            "request_id": payload.get("request_id", ""),
+            "event": payload,
+        }
+
     def path_for(self, creature_id: str) -> Path:
         return self.root_dir / _safe_creature_dir(creature_id) / RAW_GRAPH_FILENAME
+
+    def micro_action_path_for(self, creature_id: str) -> Path:
+        return self.root_dir / _safe_creature_dir(creature_id) / LIVE_MICRO_ACTION_FILENAME
 
 
 def _resolve_root(root_dir: str | Path | None) -> Path:
@@ -136,8 +174,15 @@ def _jsonable(value: Any) -> Any:
 
 
 def _append_jsonl(path: Path, record: dict[str, Any]) -> None:
+    _append_jsonl_many(path, [record])
+
+
+def _append_jsonl_many(path: Path, records: list[dict[str, Any]]) -> None:
+    if not records:
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
-    line = json.dumps(record, ensure_ascii=False, sort_keys=True)
     with path.open("a", encoding="utf-8") as file:
-        file.write(line)
-        file.write("\n")
+        for record in records:
+            line = json.dumps(record, ensure_ascii=False, sort_keys=True)
+            file.write(line)
+            file.write("\n")

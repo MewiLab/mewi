@@ -1,0 +1,30 @@
+# Secrets — never commit (deploy.sh sources secrets.env; use secrets.env.example
+# as the committed template). The generic .env / *.env patterns are defense in
+# depth so ANY env-style secret file is ignored regardless of its exact name,
+# while *.env.example templates stay committable.
+secrets.env
+.env
+*.env
+!*.env.example
+*.tfvars
+*.auto.tfvars
+
+# Terraform working files + state
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Lambda build artifacts + vendored deps (deploy.sh pip-installs these into each
+# Lambda folder before apply; they should not be committed). Keep the source
+# files: handlers, *.py, requirements.txt, skills/.
+aws-lambda/.build/
+aws-lambda/*/*
+!aws-lambda/*/handler.py
+!aws-lambda/*/_s3io.py
+!aws-lambda/*/attachment_analysis.py
+!aws-lambda/*/report_processor.py
+!aws-lambda/*/recommendation.py
+!aws-lambda/*/requirements.txt
+!aws-lambda/*/skills/
+!aws-lambda/*/skills/**

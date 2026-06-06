@@ -1,0 +1,537 @@
+---
+import Base          from '../layouts/Base.astro';
+import SectionLabel  from './SectionLabel.astro';
+import MetricCard    from './MetricCard.astro';
+import BarRow        from './BarRow.astro';
+import SequenceLog   from './SequenceLog.astro';
+import Timeline      from './Timeline.astro';
+import CatSwitcher   from './CatSwitcher.astro';
+import TrustChart    from './TrustChart.astro';
+import ActionSignature from './ActionSignature.astro';
+
+import type { ProcessedAttachmentReport } from '../utils/reportSchema';
+
+export interface Props {
+  report: ProcessedAttachmentReport;
+  routeDisplayName?: string;
+  routeUserId?: string;
+}
+
+const { report, routeDisplayName, routeUserId } = Astro.props;
+
+const meta = report.meta ?? {};
+const summary = report.summary ?? {};
+const cats = report.cats ?? {};
+const attention_pct = report.attention_pct ?? {};
+const multi_cat_encounters = report.multi_cat_encounters ?? [];
+const attachment_profile = report.attachment_profile ?? [];
+const attachment_features = report.attachment_features ?? [];
+const timeline = report.timeline ?? [];
+const user = report.user ?? {};
+const userId = routeUserId ?? report.user_id ?? user.id ?? 'report';
+const displayUserName = routeDisplayName ?? user.display_name ?? user.handle ?? userId;
+const sessionCount = Number(meta.sessions ?? 0);
+const totalEvents = Number(meta.total_events ?? 0);
+const catMap = cats as Record<string, any>;
+const catEntries = Object.entries(catMap);
+
+const primaryCat = catEntries.reduce((current, [key, value]) =>
+  (value.sequence_log?.length ?? 0) > (catMap[current]?.sequence_log?.length ?? 0) ? key : current
+, summary.primary_bond ?? catEntries[0]?.[0] ?? 'mewi');
+
+const primaryCatData = catMap[primaryCat] ?? { name: primaryCat, accent: 'var(--ink3)', sequence_log: [] };
+const avgTrustGained = Number(summary.avg_trust_gained ?? 0);
+const avgTrustDisplay = avgTrustGained > 0 ? `+${avgTrustGained}` : `${avgTrustGained}`;
+const attentionRows = Object.entries(attention_pct as Record<string, number>).map(([catId, pct]) => ({
+  label: catMap[catId]?.name ?? catId,
+  value: pct,
+  color: catMap[catId]?.accent ?? 'var(--ink3)',
+}));
+const encounterRows = multi_cat_encounters as any[];
+const attachmentRows = (attachment_features.length > 0 ? attachment_features : attachment_profile) as any[];
+const attachmentSectionLabel = attachment_features.length > 0 ? 'Attachment features' : 'Attachment profile';
+const attachmentAnalysis = report.attachment_analysis ?? {};
+const attachmentEvidence = attachmentAnalysis.evidence ?? [];
+const attachmentScores = attachmentAnalysis.scores ?? {};
+const interactionSignature = report.interaction_signature ?? {};
+const gestureChains = report.gesture_response_chains ?? [];
+
+const actionLabels: Record<string, string> = {
+  player_play_invite: 'play invite',
+  player_meow: 'meow',
+  player_nod_yes: 'nod yes',
+  player_shake_no: 'shake no',
+  player_sit_near: 'sit near',
+  player_groom: 'groom',
+  player_poop: 'poop',
+  player_pee: 'pee',
+  player_scratch: 'scratch',
+  player_lie: 'lie',
+  player_sleep: 'sleep',
+  player_smell: 'smell target',
+  player_look_around: 'look around',
+  player_alert: 'alert watch',
+  player_push: 'push',
+  player_shake: 'shake body',
+  player_dig: 'dig',
+  player_crawl: 'crawl',
+  player_drink: 'drink',
+  player_flinch: 'flinch',
+  player_startle: 'startle',
+  player_stun: 'stun',
+  player_open_chest: 'open chest',
+  player_eat: 'eat target',
+  player_attack: 'attack',
+};
+
+const familyLabels: Record<string, string> = {
+  affiliative_bid: 'affiliative bids',
+  calm_presence: 'calm presence',
+  cautious_investigation: 'cautious investigation',
+  exploration_resource: 'exploration and resources',
+  boundary_refusal: 'boundary and refusal signals',
+  intrusion_threat: 'intrusion and threat signals',
+  fear_startle_shutdown: 'fear, startle, and shutdown signals',
+  unknown: 'unknown actions',
+};
+
+const actionRows = Object.entries((interactionSignature.action_counts ?? {}) as Record<string, number>)
+  .map(([action, count]) => ({
+    label: actionLabels[action] ?? action.replace(/^player_/, '').replaceAll('_', ' '),
+    count: Number(count ?? 0),
+  }))
+  .filter(row => row.count > 0)
+  .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+const familyRows = Object.entries((interactionSignature.action_family_pct ?? {}) as Record<string, number>)
+  .map(([family, value]) => ({
+    label: familyLabels[family] ?? family.replaceAll('_', ' '),
+    value: Number(value ?? 0),
+  }))
+  .filter(row => row.value > 0)
+  .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+const topFeature = [...attachmentRows].sort((a, b) => Number(b.value ?? 0) - Number(a.value ?? 0))[0];
+const topFamily = familyRows[0];
+const topActions = actionRows.slice(0, 3);
+const totalActionCount = actionRows.reduce((sum, row) => sum + row.count, 0);
+const deliveredChains = gestureChains.filter(chain => chain.delivered).length;
+const narrativeArchetypeName = topFeature?.label === 'Respect for distance'
+  ? 'The Distance Reader'
+  : topFeature?.label === 'Attuned soft bids'
+    ? 'The Soft Bidder'
+    : topFeature?.label === 'Exploration over reassurance'
+      ? 'The Quiet Explorer'
+      : 'The Session Reader';
+const actionSummary = topActions.length > 0
+  ? topActions.map(row => `${row.label} (${row.count})`).join(', ')
+  : 'no explicit player-cat actions';
+const familySummary = topFamily
+  ? `The dominant action family is ${topFamily.label} at ${topFamily.value}%`
+  : 'no dominant action family was recorded';
+const featureSummary = topFeature
+  ? `${topFeature.label} is the strongest attachment feature at ${topFeature.value}%`
+  : 'attachment features are not available for this report';
+const actionSummarySentence = topActions.length > 0
+  ? `The clearest player-cat actions are ${actionSummary}.`
+  : 'No explicit player-cat actions were recorded.';
+const chainSummary = `${gestureChains.length} player-action chains were recorded; ${deliveredChains} include a delivered social stimulus.`;
+
+const catsJson = JSON.stringify(cats);
+const signatureJson = JSON.stringify(report.interaction_signature ?? {});
+const chainsJson = JSON.stringify(report.gesture_response_chains ?? []);
+
+const navLinks = [
+  { href: '#trust',      label: 'Trust' },
+  { href: '#patterns',   label: 'Actions' },
+  { href: '#encounters', label: 'Encounters' },
+  { href: '#profile',    label: 'Profile' },
+];
+---
+
+<Base title={`Mewi · ${displayUserName}`}>
+
+  <Fragment slot="nav-links">
+    {navLinks.map(l => (
+      <a class="nav-link" href={l.href}>{l.label}</a>
+    ))}
+  </Fragment>
+
+  <header class="rpt-header">
+    <div class="label rpt-label">Mewi · {meta.variant_label ?? 'behavioral trace report'}</div>
+    <h1 class="rpt-title serif">
+      What the cats<br/>remember about you
+    </h1>
+    <p class="rpt-sub">
+      {sessionCount} sessions, four cats, {Math.round(totalEvents / 6)} minutes.
+      Each cat holds a separate memory of how you moved, waited, and left.
+    </p>
+    <div class="rpt-meta">
+      <span>User <b>{displayUserName}</b></span>
+      <span>Sessions <b>{sessionCount}</b></span>
+      <span>Events <b>{totalEvents}</b></span>
+      <span>Last seen <b>{meta.last_seen ?? '—'}</b></span>
+    </div>
+  </header>
+
+  <section class="report-widget">
+    <SectionLabel text="Session summary" />
+    <div class="g4">
+      <MetricCard
+        value={avgTrustDisplay}
+        label="Avg trust gained"
+        sub="Net movement across the tracked cats"
+      />
+      <MetricCard
+        value={cats[summary.primary_bond ?? '']?.name ?? summary.primary_bond ?? '—'}
+        label="Primary bond"
+        sub={`Most time shared · ended at ${cats[summary.primary_bond ?? '']?.trust_arc?.at(-1) ?? '—'}`}
+      />
+      <MetricCard
+        value={`${summary.avg_reaction_latency_s ?? '—'}s`}
+        label="Reaction latency"
+        sub="Avg time before a cat first responded to you"
+      />
+      <MetricCard
+        value={`${summary.patience_pct ?? '—'}%`}
+        label="Patience score"
+        sub="Top 18% of all users"
+      />
+    </div>
+  </section>
+
+  <section class="report-widget">
+    <SectionLabel text="Per-cat relationship" />
+    <CatSwitcher catsJson={catsJson} sessionCount={sessionCount} />
+  </section>
+
+  <section class="report-widget" id="trust">
+    <SectionLabel text="Trust across all cats — session by session" />
+    <TrustChart catsJson={catsJson} sessionCount={sessionCount} />
+  </section>
+
+  <section class="report-widget" id="patterns">
+    <SectionLabel text="Player-cat action signature" />
+    <ActionSignature signatureJson={signatureJson} chainsJson={chainsJson} />
+  </section>
+
+  <section class="report-widget">
+    <SectionLabel text={`Behavioral sequence log · ${primaryCatData.name} · peak session`} />
+    <SequenceLog
+      events={primaryCatData.sequence_log ?? []}
+      catName={primaryCatData.name}
+      catAccent={primaryCatData.accent}
+    />
+  </section>
+
+  <section class="report-widget">
+    <SectionLabel text="Attention distribution across cats" />
+    <div class="att-bars">
+      {attentionRows.map(row => (
+        <BarRow
+          label={row.label}
+          value={row.value}
+          color={row.color}
+        />
+      ))}
+    </div>
+  </section>
+
+  <section class="report-widget" id="encounters">
+    <SectionLabel text="Multi-cat encounter log" />
+    <div class="raised table-wrap">
+      <table class="enc-table">
+        <thead>
+          <tr>
+            <th>Situation</th>
+            <th>Your choice</th>
+            <th>Freq.</th>
+            <th>Outcome</th>
+          </tr>
+        </thead>
+        <tbody>
+          {encounterRows.map(enc => (
+            <tr>
+              <td>{enc.situation}</td>
+              <td>{enc.choice}</td>
+              <td class="freq">{enc.freq}</td>
+              <td>{enc.outcome}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="report-widget" id="profile">
+    <SectionLabel text={attachmentSectionLabel} />
+    <div class="att-bars">
+      {attachmentRows.map(d => (
+        <BarRow label={d.label} value={d.value} color={d.color} />
+      ))}
+    </div>
+
+    <div class="arch-box raised profile-card" data-profile-switcher>
+      <div class="profile-tabs" role="tablist" aria-label="Attachment interpretation">
+        <button type="button" class="profile-tab is-active" data-profile-tab="attachment" aria-selected="true">
+          Attachment theory
+        </button>
+        <button type="button" class="profile-tab" data-profile-tab="archetype" aria-selected="false">
+          Narrative archetype
+        </button>
+      </div>
+
+      <div class="profile-panel is-active" data-profile-panel="attachment">
+        <div class="arch-head">
+          <span class="arch-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3.5 19 6v5.2c0 4.4-2.9 8.3-7 9.3-4.1-1-7-4.9-7-9.3V6l7-2.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+              <path d="M8.4 11.6c0-1.1.8-1.9 1.8-1.9.8 0 1.4.4 1.8 1 .4-.6 1-1 1.8-1 1 0 1.8.8 1.8 1.9 0 1.9-2.4 3.4-3.6 4.2-1.2-.8-3.6-2.3-3.6-4.2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <div>
+            <div class="label arch-tag">Attachment theory type</div>
+            <div class="arch-name serif">{attachmentAnalysis.type ?? 'Secure-leaning attachment'}</div>
+            <div class="arch-modifier">{attachmentAnalysis.modifier ?? 'patient, selective attunement'}</div>
+          </div>
+        </div>
+
+        <p class="arch-desc">{attachmentAnalysis.summary}</p>
+
+        <div class="attachment-evidence">
+          {attachmentEvidence.map((item: any) => (
+            <div class="evidence-item">
+              <div class="label evidence-label">{item.label}</div>
+              <p>{item.detail}</p>
+            </div>
+          ))}
+        </div>
+
+        <div class="score-strip" aria-label="Attachment style score comparison">
+          <span>Secure <b>{attachmentScores.secure ?? '—'}</b></span>
+          <span>Anxious <b>{attachmentScores.anxious ?? '—'}</b></span>
+          <span>Avoidant <b>{attachmentScores.avoidant ?? '—'}</b></span>
+          <span>Fearful <b>{attachmentScores.fearful_avoidant ?? '—'}</b></span>
+        </div>
+
+        <p class="arch-note">{attachmentAnalysis.caveat}</p>
+      </div>
+
+      <div class="profile-panel" data-profile-panel="archetype" hidden>
+        <div class="label arch-tag">Derived archetype</div>
+        <div class="arch-name serif">{narrativeArchetypeName}</div>
+        <p class="arch-desc">
+          {featureSummary}. {familySummary}. {actionSummarySentence}
+        </p>
+        <p class="arch-desc">
+          {chainSummary} With limited delivered-response evidence, the reading stays conservative
+          and leans on the balance between distance, investigation, and direct bids.
+        </p>
+        <p class="arch-desc">
+          The trace does not prove intention. It names rhythm, pressure, repair, and the kind of
+          space the player-cat left around the other cats.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="report-widget">
+    <SectionLabel text="Key moments across sessions" />
+    <Timeline items={timeline} />
+  </section>
+
+</Base>
+
+<script>
+document.querySelectorAll('[data-profile-switcher]').forEach(root => {
+  const tabs = root.querySelectorAll('[data-profile-tab]');
+  const panels = root.querySelectorAll('[data-profile-panel]');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-profile-tab');
+
+      tabs.forEach(item => {
+        const isActive = item === tab;
+        item.classList.toggle('is-active', isActive);
+        item.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+
+      panels.forEach(panel => {
+        const isActive = panel.getAttribute('data-profile-panel') === target;
+        panel.classList.toggle('is-active', isActive);
+        panel.toggleAttribute('hidden', !isActive);
+      });
+    });
+  });
+});
+</script>
+
+<style>
+.rpt-header { padding: 2rem 0 1.5rem; border-bottom: 0.5px solid var(--border); margin-bottom: 0; }
+.rpt-label  { margin-bottom: .5rem; }
+.rpt-title  {
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  font-weight: 400; line-height: 1.15;
+  color: var(--ink); margin-bottom: .35rem;
+}
+.rpt-sub {
+  font-size: 13px; color: var(--ink2);
+  line-height: 1.7; max-width: 460px; margin-bottom: 1rem;
+}
+.rpt-meta {
+  display: flex; gap: 1.5rem; flex-wrap: wrap;
+  font-size: 11px; color: var(--ink3);
+}
+.rpt-meta b { color: var(--ink2); font-weight: 400; }
+.nav-link {
+  font-size: 11px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink3);
+  transition: color var(--transition);
+}
+.nav-link:hover { color: var(--ink); }
+.g4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.report-widget {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.1rem 1.15rem;
+  margin-top: 1rem;
+  box-shadow: 0 10px 30px rgba(26, 23, 20, .035);
+}
+:global(.report-widget .section-label) {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+.att-bars { display: flex; flex-direction: column; gap: 2px; }
+.raised {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+.table-wrap { overflow-x: auto; }
+.enc-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12px; table-layout: fixed;
+}
+.enc-table th {
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink3); font-weight: 400;
+  padding: .45rem .7rem;
+  border-bottom: 0.5px solid var(--border);
+  text-align: left;
+}
+.enc-table td {
+  padding: .45rem .7rem;
+  border-bottom: 0.5px solid var(--border);
+  color: var(--ink2); font-size: 12px;
+}
+.enc-table tr:last-child td { border-bottom: none; }
+.enc-table tr:hover td { background: var(--bg2); }
+.freq { color: var(--ink3); }
+.arch-box { margin-top: 1.2rem; }
+.profile-tabs {
+  display: inline-flex;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.profile-tab {
+  background: transparent;
+  border: 0;
+  border-right: 0.5px solid var(--border);
+  color: var(--ink3);
+  font-size: 11px;
+  padding: .42rem .7rem;
+  transition: background var(--transition), color var(--transition);
+}
+.profile-tab:last-child { border-right: 0; }
+.profile-tab:hover,
+.profile-tab.is-active {
+  background: var(--bg2);
+  color: var(--ink);
+}
+.profile-panel[hidden] { display: none; }
+.arch-head {
+  display: flex;
+  gap: .8rem;
+  align-items: flex-start;
+  margin-bottom: .8rem;
+}
+.arch-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--accent-miso);
+  background: var(--bg2);
+  flex: 0 0 auto;
+}
+.arch-tag { margin-bottom: .35rem; }
+.arch-name {
+  font-size: 1.5rem; font-weight: 400;
+  color: var(--ink); margin-bottom: .2rem;
+}
+.arch-modifier {
+  font-size: 11px;
+  color: var(--ink3);
+  line-height: 1.5;
+}
+.arch-desc {
+  font-size: 12px; color: var(--ink2);
+  line-height: 1.9; margin-bottom: .75rem;
+}
+.arch-desc:last-child { margin-bottom: 0; }
+.attachment-evidence {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 1rem 0;
+}
+.evidence-item {
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: .75rem;
+  background: var(--bg);
+}
+.evidence-label { margin-bottom: .35rem; }
+.evidence-item p {
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--ink2);
+}
+.score-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: .85rem;
+}
+.score-strip span {
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: .35rem .5rem;
+  color: var(--ink3);
+  font-size: 11px;
+}
+.score-strip b {
+  color: var(--ink2);
+  font-weight: 400;
+}
+.arch-note {
+  margin-top: .85rem;
+  color: var(--ink3);
+  font-size: 10px;
+  line-height: 1.6;
+}
+@media (max-width: 640px) {
+  .attachment-evidence { grid-template-columns: 1fr; }
+}
+</style>

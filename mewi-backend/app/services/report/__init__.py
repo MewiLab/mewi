@@ -1,18 +1,17 @@
-"""Report ingestion + processing service (ADR-014).
+"""Report ingestion service.
 
-Owns the raw→value report pipeline that the backend exposes at
+Owns the raw-session ingestion path that the backend exposes at
 ``POST /api/v1/report/session``:
 
     route -> ReportIngestionService.ingest(payload)
                -> RawSessionStore.put / count        (store.py)
                -> ProcessingTrigger.maybe_run        (trigger.py)
-                    -> process_report(...)            (processor.py)
-                    -> ProcessedReportStore.write     (store.py)
+                    -> enqueue/noop; Lambda owns report generation
 
-``mewi-report`` is render-only: it reads the processed JSON this service writes.
+``mewi-report`` is render-only: it reads processed JSON exposed by the backend
+read gateway after the Lambda writes it to S3.
 """
 
-from app.services.report.processor import process_report
 from app.services.report.service import IngestResult, ReportIngestionService
 
-__all__ = ["IngestResult", "ReportIngestionService", "process_report"]
+__all__ = ["IngestResult", "ReportIngestionService"]

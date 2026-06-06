@@ -2,7 +2,25 @@ from langchain_core.messages import AIMessage
 
 from app.agent.memory import memory_consolidate
 from app.agent.memory.memory_manager import MemoryManager
-from app.agent.memory.memory_models import AspectMemory
+from app.agent.memory.memory_models import AspectMemory, RawMemoryEvent
+
+
+class FakeStore:
+    def __init__(self) -> None:
+        self.writes = []
+
+    async def record_turn(self, write) -> None:
+        self.writes.append(write)
+
+    async def search(
+        self,
+        query: str,
+        *,
+        creature_id: str,
+        limit: int = 5,
+        now_tick: int | None = None,
+    ):
+        return []
 
 
 class FakeLLM:
@@ -71,3 +89,31 @@ async def test_entries_appended_during_summary_are_preserved(monkeypatch) -> Non
     texts = [m.text for m in mem._short_term["action"]]
     assert "late arrival" in texts  # not lost in the swap
     assert texts[0].startswith("Recap")  # summary still at the front
+
+
+async def test_consolidation_persists_only_summary_write() -> None:
+    store = FakeStore()
+    mem = MemoryManager(store=store)
+    mem.record_raw_event(
+        RawMemoryEvent(
+            creature_id="cat",
+            tick=7,
+            request_id="r7",
+            source="python",
+            event_type="planning_turn",
+            payload={},
+        )
+    )
+    _fill(mem, "action", 8)
+
+    folded = await mem.consolidate(FakeLLM(), threshold=6, keep_recent=2)
+
+    assert folded == 1
+    assert len(store.writes) == 1
+    write = store.writes[0]
+    assert write.raw_event.event_type == "memory_consolidation"
+    assert [memory.memory_kind for memory in write.aspect_memories] == ["summary"]
+    summary = write.aspect_memories[0]
+    assert summary.evidence["source_count"] == 6
+    assert summary.evidence["tick_start"] == 0
+    assert summary.evidence["tick_end"] == 5
