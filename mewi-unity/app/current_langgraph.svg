@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1026" height="1026" viewBox="0 0 1026 1026">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#50458f"/>
+    </marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="513" y="42" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="22" font-weight="700" fill="#171527">Current LangGraph</text>
+  <text x="513" y="67" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="13" fill="#646174">app.agent.behavior_graph</text>
+  <path d="M 513 150 L 513 180" stroke="#50458f" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 513 450 L 513 480" stroke="#50458f" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 513 650 L 513 680" stroke="#50458f" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 513 250 L 513 280" stroke="#50458f" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 513 550 L 513 580" stroke="#50458f" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 513 350 L 513 380" stroke="#50458f" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 513 750 L 513 780" stroke="#50458f" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 513 850 L 513 880" stroke="#50458f" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <rect x="298" y="90" width="430" height="58" rx="10" fill="#ffffff" stroke="#7a6bd6" stroke-width="2"/>
+  <text x="513" y="125" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="18" fill="#211f33">__start__</text>
+  <rect x="298" y="190" width="430" height="58" rx="10" fill="#f2f0ff" stroke="#8e84d9" stroke-width="1.6"/>
+  <text x="513" y="225" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="18" fill="#211f33">context_builder</text>
+  <rect x="298" y="290" width="430" height="58" rx="10" fill="#f2f0ff" stroke="#8e84d9" stroke-width="1.6"/>
+  <text x="513" y="325" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="18" fill="#211f33">retrieve_memory</text>
+  <rect x="298" y="390" width="430" height="58" rx="10" fill="#f2f0ff" stroke="#8e84d9" stroke-width="1.6"/>
+  <text x="513" y="425" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="18" fill="#211f33">call_domain_intents</text>
+  <rect x="298" y="490" width="430" height="58" rx="10" fill="#f2f0ff" stroke="#8e84d9" stroke-width="1.6"/>
+  <text x="513" y="525" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="18" fill="#211f33">select_intent</text>
+  <rect x="298" y="590" width="430" height="58" rx="10" fill="#f2f0ff" stroke="#8e84d9" stroke-width="1.6"/>
+  <text x="513" y="625" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="18" fill="#211f33">execute_intent_effects</text>
+  <rect x="298" y="690" width="430" height="58" rx="10" fill="#f2f0ff" stroke="#8e84d9" stroke-width="1.6"/>
+  <text x="513" y="725" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="18" fill="#211f33">collect_response</text>
+  <rect x="298" y="790" width="430" height="58" rx="10" fill="#f2f0ff" stroke="#8e84d9" stroke-width="1.6"/>
+  <text x="513" y="825" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="18" fill="#211f33">persist_memory</text>
+  <rect x="298" y="890" width="430" height="58" rx="10" fill="#bfb6fc" stroke="#5e50b5" stroke-width="2"/>
+  <text x="513" y="925" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="18" fill="#211f33">__end__</text>
+</svg>

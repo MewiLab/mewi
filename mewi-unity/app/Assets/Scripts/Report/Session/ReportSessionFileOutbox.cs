@@ -19,7 +19,7 @@ public class ReportSessionFileOutbox : MonoBehaviour
     [SerializeField] ReportSessionSender sender;
 
     [Header("Storage")]
-    [Tooltip("Optional absolute root folder. Empty uses the OS temp dir/mewi_report_sessions.")]
+    [Tooltip("Optional absolute root folder. Empty uses /tmp/mewi_report_sessions (Linux target).")]
     [SerializeField] string rootDirectory = "";
     [Tooltip("Fallback user folder when a payload has no user_id.")]
     [SerializeField] string defaultUserId = "local_user";
@@ -39,6 +39,7 @@ public class ReportSessionFileOutbox : MonoBehaviour
     void Awake()
     {
         ResolveDefaults();
+        EnsureUserDirectories(defaultUserId);
         RefreshCounts();
     }
 
@@ -51,7 +52,7 @@ public class ReportSessionFileOutbox : MonoBehaviour
     public string ResolveRootDirectory()
     {
         return string.IsNullOrWhiteSpace(rootDirectory)
-            ? Path.Combine(Path.GetTempPath(), "mewi_report_sessions")
+            ? Path.Combine("/tmp", "mewi_report_sessions")
             : rootDirectory.Trim();
     }
 
@@ -64,8 +65,8 @@ public class ReportSessionFileOutbox : MonoBehaviour
         }
 
         string userId = SafePathSegment(string.IsNullOrWhiteSpace(payload.user_id) ? defaultUserId : payload.user_id);
+        EnsureUserDirectories(userId);
         string dir = UserStatusDirectory(userId, PendingStatus);
-        Directory.CreateDirectory(dir);
 
         string fileName = $"{SafePathSegment(payload.session.session_id)}.json";
         string path = UniquePath(Path.Combine(dir, fileName));
@@ -133,24 +134,42 @@ public class ReportSessionFileOutbox : MonoBehaviour
 
     public void SendFile(string path)
     {
+        SendFile(path, null);
+    }
+
+    public void SendFile(string path, Action<ReportSessionSendResult> onComplete)
+    {
         if (!CanSendNow())
+        {
+            if (onComplete != null)
+                onComplete(null);
             return;
+        }
 
         ResolveDefaults();
         if (sender == null)
         {
             Debug.LogWarning("[ReportSessionFileOutbox] missing ReportSessionSender.");
+            if (onComplete != null)
+                onComplete(null);
             return;
         }
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
             Debug.LogWarning($"[ReportSessionFileOutbox] missing report session file: {path}");
+            if (onComplete != null)
+                onComplete(null);
             return;
         }
 
         string json = File.ReadAllText(path);
         string label = Path.GetFileName(path);
-        sender.SendJson(json, label, result => HandleSendResult(path, result));
+        sender.SendJson(json, label, result =>
+        {
+            HandleSendResult(path, result);
+            if (onComplete != null)
+                onComplete(result);
+        });
     }
 
     [ContextMenu("Report Outbox/Move Failed Back To Pending")]
@@ -253,6 +272,14 @@ public class ReportSessionFileOutbox : MonoBehaviour
     string UserStatusDirectory(string userId, string status)
     {
         return Path.Combine(ResolveRootDirectory(), SafePathSegment(userId), status);
+    }
+
+    void EnsureUserDirectories(string userId)
+    {
+        string safeUserId = SafePathSegment(string.IsNullOrWhiteSpace(userId) ? defaultUserId : userId);
+        Directory.CreateDirectory(UserStatusDirectory(safeUserId, PendingStatus));
+        Directory.CreateDirectory(UserStatusDirectory(safeUserId, SentStatus));
+        Directory.CreateDirectory(UserStatusDirectory(safeUserId, FailedStatus));
     }
 
     static string UniquePath(string path)

@@ -108,8 +108,8 @@ public class SnapshotTicker : MonoBehaviour
 
         // Collect what the cat did since the last send.
         _motorWorker?.FlushReport();
-        if (_board.TryPopPlanExecutionReport(out var report))
-            _pendingReport = report;
+        while (_board.TryPopPlanExecutionReport(out var report))
+            _pendingReport = PlanExecutionReport.Merge(_pendingReport, report);
 
         // Backend still chewing on the last snapshot; the cat keeps moving meanwhile.
         if (_hub.IsRequestInFlight(_board.CreatureId)) return;

@@ -67,5 +67,6 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "app.slnx"
+    "dotnet.defaultSolution": "app.slnx",
+    "python-envs.defaultEnvManager": "ms-python.python:system"
 }

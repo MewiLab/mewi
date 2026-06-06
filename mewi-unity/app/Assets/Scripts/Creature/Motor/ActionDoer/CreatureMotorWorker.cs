@@ -714,7 +714,10 @@ public class CreatureMotorWorker : MonoBehaviour
     /// <summary>Emit the accumulated plan steps as one report and reset plan state.</summary>
     void FlushPlan()
     {
-        if (_currentPlanSteps.Count == 0) return;
+        PlanMicroActionEvent[] liveEvents = _board != null
+            ? LiveMicroActionReportEmitter.DrainEvents(_board.CreatureId)
+            : Array.Empty<PlanMicroActionEvent>();
+        if (_currentPlanSteps.Count == 0 && liveEvents.Length == 0) return;
 
         var report = new PlanExecutionReport
         {
@@ -722,9 +725,10 @@ public class CreatureMotorWorker : MonoBehaviour
             requestId   = _planRequestId,
             planId      = _planId,
             correlationId = _planCorrelationId,
-            status      = BuildPlanStatus(),
-            startedAt   = _planStartedAt,
+            status      = _currentPlanSteps.Count > 0 ? BuildPlanStatus() : "observed",
+            startedAt   = _planStartedAt > 0f ? _planStartedAt : Time.time,
             completedAt = Time.time,
+            events      = liveEvents,
             steps       = _currentPlanSteps.ToArray(),
         };
 
@@ -733,6 +737,7 @@ public class CreatureMotorWorker : MonoBehaviour
         _planRequestId = "";
         _planId = "";
         _planCorrelationId = "";
+        _planStartedAt = 0f;
     }
 
     void RecordStep(IntentMessage intent, string status, string reason, float startedAt, float endedAt)

@@ -82,6 +82,7 @@ public class ReportSessionLogger : MonoBehaviour
     int _nextEventIndex = 1;
 
     bool _sessionActive;
+    string _lastSendStatus = "";
     int _nextSessionIndex = 1;
     float _sessionStartedAt;
     string _sessionId = "";
@@ -159,6 +160,9 @@ public class ReportSessionLogger : MonoBehaviour
             : "Send last report";
         if (GUI.Button(rect, label))
             SendCurrentSession();
+
+        if (!string.IsNullOrEmpty(_lastSendStatus))
+            GUI.Label(new Rect(pad, pad + h + 4f, w + 160f, h), _lastSendStatus);
     }
 
     void OnApplicationQuit()
@@ -272,20 +276,36 @@ public class ReportSessionLogger : MonoBehaviour
         if (fileOutbox != null)
         {
             string path = fileOutbox.SavePending(payload);
-            fileOutbox.SendFile(path);
+            _lastSendStatus = "sending...";
+            fileOutbox.SendFile(path, UpdateSendStatus);
             Debug.Log($"[ReportSessionLogger] sent current session {payload.session.session_id} " +
                       $"({payload.session.events.Length} events) via outbox.");
         }
         else if (sender != null)
         {
-            sender.Send(payload);
+            _lastSendStatus = "sending...";
+            sender.Send(payload, UpdateSendStatus);
             Debug.Log($"[ReportSessionLogger] sent current session {payload.session.session_id} " +
                       $"({payload.session.events.Length} events) directly.");
         }
         else
         {
+            _lastSendStatus = "no sender or outbox assigned";
             Debug.LogWarning("[ReportSessionLogger] no sender or outbox assigned; cannot send.");
         }
+    }
+
+    void UpdateSendStatus(ReportSessionSendResult result)
+    {
+        if (result == null)
+        {
+            _lastSendStatus = "send skipped (not playing / no transport)";
+            return;
+        }
+
+        _lastSendStatus = result.success
+            ? $"sent OK ({result.responseCode}) at {DateTime.Now:HH:mm:ss}"
+            : $"send FAILED ({result.responseCode}) {result.error}";
     }
 
     public void RecordHumanAction(string action)
@@ -570,15 +590,21 @@ public class ReportSessionLogger : MonoBehaviour
 
     public void RecordMultiCatEncounter(string[] catsPresent, string humanAction, string outcome)
     {
+        string[] normalizedCats = NormalizeCatsPresent(catsPresent);
+        string normalizedAction = ReportActionClassifier.ToSnakeCase(humanAction);
+        string normalizedOutcome = ReportActionClassifier.ToSnakeCase(outcome);
+        if (normalizedCats.Length < 2 || string.IsNullOrEmpty(normalizedAction) || string.IsNullOrEmpty(normalizedOutcome))
+            return;
+
         if (!_sessionActive)
             StartSession();
 
         _encounters.Add(new ReportMultiCatEncounter
         {
             t = EventTime(),
-            cats_present = catsPresent ?? Array.Empty<string>(),
-            human_action = ReportActionClassifier.ToSnakeCase(humanAction),
-            outcome = ReportActionClassifier.ToSnakeCase(outcome),
+            cats_present = normalizedCats,
+            human_action = normalizedAction,
+            outcome = normalizedOutcome,
         });
     }
 
@@ -637,7 +663,7 @@ public class ReportSessionLogger : MonoBehaviour
         return new ReportSessionPayload
         {
             schema_version = string.IsNullOrWhiteSpace(schemaVersion)
-                ? ReportSessionPayload.RawSchemaV1
+                ? ReportSessionPayload.RawSchemaV2
                 : schemaVersion.Trim(),
             user_id = string.IsNullOrWhiteSpace(userId) ? "local_user" : userId.Trim(),
             source = BuildSource(),
@@ -726,6 +752,8 @@ public class ReportSessionLogger : MonoBehaviour
         {
             ReportCatBinding cat = reportCats[i];
             if (cat == null || cat.blackboard == null || string.IsNullOrWhiteSpace(cat.catId))
+                continue;
+            if (cat.blackboard == humanBlackboard || IsSameActor(humanActor, cat.Transform))
                 continue;
 
             IntentMessage active = cat.blackboard.ResolveActiveMicroAction();
@@ -955,6 +983,36 @@ public class ReportSessionLogger : MonoBehaviour
     static float MissingIfInvalid(float value)
     {
         return float.IsNaN(value) || float.IsInfinity(value) ? -1f : value;
+    }
+
+    static string[] NormalizeCatsPresent(string[] catsPresent)
+    {
+        if (catsPresent == null || catsPresent.Length == 0)
+            return Array.Empty<string>();
+
+        var normalized = new List<string>();
+        for (int i = 0; i < catsPresent.Length; i++)
+        {
+            string catId = catsPresent[i];
+            if (string.IsNullOrWhiteSpace(catId))
+                continue;
+
+            string cleaned = catId.Trim().ToLowerInvariant();
+            if (!ContainsCatId(normalized, cleaned))
+                normalized.Add(cleaned);
+        }
+
+        return normalized.ToArray();
+    }
+
+    static bool ContainsCatId(List<string> cats, string catId)
+    {
+        for (int i = 0; i < cats.Count; i++)
+        {
+            if (string.Equals(cats[i], catId, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 
     static string SafePathSegment(string value)

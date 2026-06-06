@@ -125,8 +125,13 @@ public class MultiCatCameraManager : MonoBehaviour
 
     void SetCameraTargets(Transform cat)
     {
-        Transform camTarget = cat.Find(cameraTargetPath);
-        Transform headBone = cat.Find(headBonePath);
+        Transform camTarget = FindTargetAtOrBelow(cat, cameraTargetPath);
+        if (camTarget == null)
+            camTarget = FindDescendantNamed(cat, GetPathLeafName(cameraTargetPath));
+
+        Transform headBone = FindTargetAtOrBelow(cat, headBonePath);
+        if (headBone == null)
+            headBone = FindDescendantNamed(cat, GetPathLeafName(headBonePath));
 
         if (backCam == null)
         {
@@ -166,7 +171,9 @@ public class MultiCatCameraManager : MonoBehaviour
             if (cat == null)
                 continue;
 
-            MInput mInput = cat.GetComponent<MInput>();
+            MInput mInput = cat.GetComponent<MInput>()
+                ?? cat.GetComponentInChildren<MInput>(true)
+                ?? cat.GetComponentInParent<MInput>();
             if (mInput == null)
                 continue;
 
@@ -203,6 +210,71 @@ public class MultiCatCameraManager : MonoBehaviour
     private int GetAvailableViewCount()
     {
         return demoGodCam == null ? 2 : ViewCount;
+    }
+
+    static Transform FindTargetAtOrBelow(Transform source, string relativePath)
+    {
+        if (source == null || string.IsNullOrWhiteSpace(relativePath))
+            return null;
+
+        relativePath = relativePath.Trim('/');
+        Transform direct = source.Find(relativePath);
+        if (direct != null)
+            return direct;
+
+        string[] parts = relativePath.Split('/');
+        if (parts.Length == 0)
+            return null;
+
+        string firstSegment = parts[0];
+        string remainingPath = parts.Length > 1
+            ? string.Join("/", parts, 1, parts.Length - 1)
+            : "";
+
+        Transform[] descendants = source.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < descendants.Length; i++)
+        {
+            Transform descendant = descendants[i];
+            if (descendant == source || descendant.name != firstSegment)
+                continue;
+
+            if (string.IsNullOrEmpty(remainingPath))
+                return descendant;
+
+            Transform nested = descendant.Find(remainingPath);
+            if (nested != null)
+                return nested;
+        }
+
+        return null;
+    }
+
+    static Transform FindDescendantNamed(Transform source, string targetName)
+    {
+        if (source == null || string.IsNullOrWhiteSpace(targetName))
+            return null;
+
+        Transform[] descendants = source.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < descendants.Length; i++)
+        {
+            Transform descendant = descendants[i];
+            if (descendant.name == targetName)
+                return descendant;
+        }
+
+        return null;
+    }
+
+    static string GetPathLeafName(string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+            return "";
+
+        relativePath = relativePath.Trim('/');
+        int separatorIndex = relativePath.LastIndexOf('/');
+        return separatorIndex >= 0
+            ? relativePath.Substring(separatorIndex + 1)
+            : relativePath;
     }
 
     private void SetPriority(CinemachineCamera camera, int priority)

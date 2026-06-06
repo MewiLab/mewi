@@ -12,7 +12,7 @@ public class ReportSessionPayload
     public const string RawSchemaV1 = "mewi.report.raw.v1";
     public const string RawSchemaV2 = "mewi.report.raw.v2";
 
-    public string schema_version = RawSchemaV1;
+    public string schema_version = RawSchemaV2;
     public string user_id;
     public ReportSource source;
     public ReportSession session;
