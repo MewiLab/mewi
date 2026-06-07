@@ -133,8 +133,8 @@ public class CreatureBlackboard : MonoBehaviour
         get
         {
             if (string.IsNullOrWhiteSpace(creatureId))
-                creatureId = gameObject.name;
-            return creatureId;
+                creatureId = NormalizeCreatureId(gameObject.name);
+            return NormalizeCreatureId(creatureId);
         }
     }
 
@@ -143,7 +143,19 @@ public class CreatureBlackboard : MonoBehaviour
         if (string.IsNullOrWhiteSpace(id))
             return;
 
-        creatureId = id.Trim();
+        creatureId = NormalizeCreatureId(id);
+    }
+
+    static string NormalizeCreatureId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "";
+
+        string trimmed = value.Trim();
+        return !string.Equals(trimmed, "player_cat", StringComparison.OrdinalIgnoreCase)
+            && trimmed.EndsWith("_cat", StringComparison.OrdinalIgnoreCase)
+            ? trimmed.Substring(0, trimmed.Length - 4)
+            : trimmed;
     }
 
     // -------------------------------------------------------------------------

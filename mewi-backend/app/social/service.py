@@ -186,6 +186,8 @@ class SocialService:
         room = self._open_room(presence, peers, when)
 
         words = " ".join(str(say).split()) if say else ""
+        if words and self._is_recent_repeat(room, creature_id, words):
+            words = ""  # ADR-039 anti-loop: never re-publish our own recent line.
         if words:
             decision = self._author_utterance(
                 creature_id,
@@ -312,6 +314,43 @@ class SocialService:
             now=now,
         )
 
+    @staticmethod
+    def _resolve_member(target: str, members: tuple[str, ...]) -> str:
+        """Map a semantic/affordance target id onto a real room member (ADR-039).
+
+        Unity affordances use ids like ``kosto_cat`` / ``cat_kosto`` while rooms
+        key on creature ids like ``kosto``. Resolve aliases so a directed line is
+        not silently downgraded to a broadcast.
+        """
+        if not _clean_text(target):
+            return ""
+        if target in members:
+            return target
+        base = _creature_base(target)
+        for member in members:
+            if member == target or _creature_base(member) == base:
+                return member
+        return ""
+
+    def _is_recent_repeat(
+        self,
+        room: SocialRoom,
+        speaker_id: str,
+        text: str,
+        *,
+        lookback: int = 3,
+    ) -> bool:
+        """True if ``text`` matches one of the speaker's last lines (ADR-039)."""
+        norm = _clean_text(text).lower()
+        if not norm:
+            return False
+        own_lines = [
+            _clean_text(row.get("text")).lower()
+            for row in self._transcripts.get(room.room_key)
+            if isinstance(row, dict) and _clean_text(row.get("from")) == speaker_id
+        ]
+        return norm in own_lines[-lookback:]
+
     def _author_utterance(
         self,
         speaker_id: str,
@@ -325,7 +364,8 @@ class SocialService:
         expects_reply: bool,
     ) -> ModeratorDecision:
         """Turn agent-authored words into a routable utterance + bonds."""
-        recipient = target if target in room.members and target != speaker_id else ""
+        resolved = self._resolve_member(target, room.members)
+        recipient = resolved if resolved and resolved != speaker_id else ""
         addressees = (
             [recipient]
             if recipient
@@ -436,6 +476,17 @@ def _pair(a: str, b: str) -> tuple[str, str]:
     return (a, b) if a <= b else (b, a)
 
 
+def _creature_base(value: Any) -> str:
+    """Strip cat/kitten affixes so ``kosto_cat``/``cat_kosto``/``kosto`` align."""
+    text = _clean_text(value).lower()
+    for affix in ("_cat", "cat_", "_kitten", "kitten_"):
+        if text.startswith(affix):
+            text = text[len(affix):]
+        if text.endswith(affix):
+            text = text[: -len(affix)]
+    return text
+
+
 def _bid_outcome(
     *,
     intent: str,
@@ -444,7 +495,7 @@ def _bid_outcome(
     responder_id: str,
     spoke: bool,
 ) -> tuple[str, str]:
-    if intent == "SOCIALIZE" and target_id == sender_id:
+    if intent == "SOCIALIZE" and _creature_base(target_id) == _creature_base(sender_id):
         if spoke:
             return "replied", f"{responder_id} replied to the social bid."
         return "acknowledged", f"{responder_id} acknowledged the social bid with body language."

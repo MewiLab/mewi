@@ -4475,9 +4475,8 @@ GameObject:
   - component: {fileID: 1321700310045973134}
   - component: {fileID: 2054775165696908671}
   - component: {fileID: 5344306491007167889}
-  - component: {fileID: 1426042800858297916}
   m_Layer: 20
-  m_Name: sasha_cat
+  m_Name: sasha
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -14988,50 +14987,6 @@ MonoBehaviour:
   sampleRadius: 1
   logChanges: 1
   scanAllLayersFallback: 1
---- !u!114 &1426042800858297916
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3449741133682570916}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3fd39ee2bde314009a74a516f22fe9f6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NeutralIntentSource
-  enableNeutralOutput: 1
-  allowWhenNoRequestInFlight: 0
-  outputChance: 0.8
-  cooldownSeconds: 3
-  cooldownJitterSeconds: {x: 0.25, y: 1.25}
-  maxFear: 0.65
-  localWalkMinRadius: 2.5
-  localWalkMaxRadius: 5
-  navMeshSampleRadius: 1.25
-  destinationSampleAttempts: 10
-  requireSamePlace: 1
-  fallbackToNonMovingAction: 1
-  maxConsecutiveLocalWalkEpisodes: 1
-  repeatedLocalWalkWeightScale: 0
-  postLocalWalkCooldownMultiplier: 1.5
-  episodes:
-  - id: sniff_shift
-    weight: 35
-    nodes: 0100000000000000
-  - id: small_walk
-    weight: 25
-    nodes: 0000000001000000
-  - id: sit_pause
-    weight: 20
-    nodes: 0200000001000000
-  - id: rest_shift
-    weight: 10
-    nodes: 03000000
-  - id: soft_call
-    weight: 10
-    nodes: 04000000
-  logNeutralOutput: 0
 --- !u!1 &3577027285866129646
 GameObject:
   m_ObjectHideFlags: 0

@@ -51,16 +51,28 @@ class PlaceMemoryStore(Protocol):
 
 _PLACE_SUMMARY_PROMPT = """You write one cat's memory of one place.
 
-Use only the clean facts below. Summarize what actually happened in this place
-as ONE short sentence useful for future decisions. Mention actors/targets when
-they are present. Do not invent motives, emotions, or outcomes. Do not describe
-future plans.
+Use only the clean fact schema below. Summarize what actually happened in this
+place as ONE short sentence useful for future decisions. Mention actors/targets
+when they are present. Do not invent motives, emotions, or outcomes. Do not
+describe future plans. Do not mention backend systems, adapters, reports, or
+integration details.
 
 PLACE: {place}
 FACTS:
 {facts}
 
 Return only the sentence, with no label or quote marks."""
+
+_PLACE_RELEVANT_EVENT_PHASES = {
+    "committed",
+    "completed",
+    "delivered",
+    "observed",
+}
+_PLACE_RELEVANT_STEP_STATUSES = {
+    "completed",
+    "completed_with_recoveries",
+}
 
 
 class PlaceMemoryService:
@@ -431,10 +443,6 @@ def _place_summary_facts(snapshot: dict[str, Any]) -> list[str]:
     if not isinstance(action_result, dict):
         return facts
 
-    status = _clean_text(action_result.get("status"))
-    if status:
-        facts.append(f"previous Unity report status: {status}")
-
     for event in _dicts(action_result.get("events"))[:6]:
         action = _clean_text(event.get("action")) or _clean_text(event.get("kind")) or "event"
         actor_type = _clean_text(event.get("actor_type")) or _clean_text(event.get("actorType"))
@@ -442,22 +450,20 @@ def _place_summary_facts(snapshot: dict[str, Any]) -> list[str]:
         target_type = _clean_text(event.get("target_type")) or _clean_text(event.get("targetType"))
         target_id = _clean_text(event.get("target_id")) or _clean_text(event.get("targetId"))
         phase = _clean_text(event.get("phase")) or _clean_text(event.get("status"))
+        if phase.lower() not in _PLACE_RELEVANT_EVENT_PHASES:
+            continue
         relation = _actor_relation(actor_type, actor_id, target_type, target_id)
-        suffix = f"; phase={phase}" if phase else ""
-        facts.append(f"live event: {action}{relation}{suffix}")
+        facts.append(f"kind=live_event action={action}{relation} outcome={phase}")
 
     for step in _dicts(action_result.get("steps"))[:6]:
         action = _clean_text(step.get("action")) or "unknown_action"
         target = _clean_text(step.get("target"))
         step_status = _clean_text(step.get("status"))
-        reason = _clean_text(step.get("reason"))
-        text = f"body step: {action}"
+        if step_status.lower() not in _PLACE_RELEVANT_STEP_STATUSES:
+            continue
+        text = f"kind=body_step action={action} outcome={step_status}"
         if target:
             text += f" target={target}"
-        if step_status:
-            text += f" status={step_status}"
-        if reason:
-            text += f" reason={reason}"
         facts.append(text)
 
     return facts
@@ -489,15 +495,16 @@ def _actor_relation(
     target_type: str,
     target_id: str,
 ) -> str:
-    actor = " ".join(part for part in (actor_type, actor_id) if part)
-    target = " ".join(part for part in (target_type, target_id) if part)
-    if actor and target:
-        return f"; actor={actor}; target={target}"
-    if actor:
-        return f"; actor={actor}"
-    if target:
-        return f"; target={target}"
-    return ""
+    parts: list[str] = []
+    if actor_type:
+        parts.append(f"actor_type={actor_type}")
+    if actor_id:
+        parts.append(f"actor_id={actor_id}")
+    if target_type:
+        parts.append(f"target_type={target_type}")
+    if target_id:
+        parts.append(f"target_id={target_id}")
+    return f" {' '.join(parts)}" if parts else ""
 
 
 def _clean_text(value: Any) -> str:

@@ -23364,9 +23364,8 @@ GameObject:
   - component: {fileID: 8789609408650879373}
   - component: {fileID: 2484120568394497149}
   - component: {fileID: 8396982906652281123}
-  - component: {fileID: 30242011271275094}
   m_Layer: 20
-  m_Name: miso_cat
+  m_Name: miso
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -33870,24 +33869,6 @@ MonoBehaviour:
   sampleRadius: 1
   logChanges: 1
   scanAllLayersFallback: 1
---- !u!114 &30242011271275094
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4054532358259010640}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5c88e2ddcc276407e85d75338f351607, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CreatureOffMeshLinkTraversal
-  animal: {fileID: 7982346068080888016}
-  aiControl: {fileID: 6081589020030012944}
-  agent: {fileID: 3978870027666199179}
-  configureAgentForMalbers: 1
-  resnapAgentOnExit: 1
-  logTransitions: 1
 --- !u!1 &4124548475763630666
 GameObject:
   m_ObjectHideFlags: 0

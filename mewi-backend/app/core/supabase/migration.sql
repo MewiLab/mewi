@@ -194,6 +194,18 @@ $$;
 
 
 -- ============================================================================
+-- Reload PostgREST schema cache.
+--   Must be the LAST statement. After `ADD COLUMN IF NOT EXISTS` lands new
+--   columns (e.g. agent_place_memories.summary), PostgREST keeps serving its
+--   stale schema cache and rejects writes with PGRST204 ("Could not find the
+--   '<col>' column ... in the schema cache"). This NOTIFY tells PostgREST to
+--   reload so freshly migrated columns are immediately writable.
+-- ============================================================================
+
+NOTIFY pgrst, 'reload schema';
+
+
+-- ============================================================================
 -- Manual cleanup (legacy tables — run if you want to drop them from an
 -- existing database; nothing in current app/ references them):
 --

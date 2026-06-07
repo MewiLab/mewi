@@ -6918,9 +6918,8 @@ GameObject:
   - component: {fileID: 4368342944708581257}
   - component: {fileID: 5083268794983146264}
   - component: {fileID: 2401076533060473310}
-  - component: {fileID: 4232838335974826214}
   m_Layer: 20
-  m_Name: mewi_cat
+  m_Name: mewi
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -17424,24 +17423,6 @@ MonoBehaviour:
   sampleRadius: 1
   logChanges: 1
   scanAllLayersFallback: 1
---- !u!114 &4232838335974826214
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1425589271117867104}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5c88e2ddcc276407e85d75338f351607, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CreatureOffMeshLinkTraversal
-  animal: {fileID: 539946678855502672}
-  aiControl: {fileID: 7660189767374858031}
-  agent: {fileID: 238392882008688624}
-  configureAgentForMalbers: 1
-  resnapAgentOnExit: 1
-  logTransitions: 1
 --- !u!1 &1883572998249037315
 GameObject:
   m_ObjectHideFlags: 0

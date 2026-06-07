@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.agent.mind.experience import sanitize_agent_text
 from app.agent.schemas.place_memory_schema import PlaceMemoryContextDict
 
 
@@ -41,7 +42,7 @@ def short_term_memory_lines(memory_context: dict[str, Any] | None) -> list[str]:
 
     lines = memory_context.get("short_term_lines")
     if isinstance(lines, list):
-        return [str(line).strip() for line in lines if str(line).strip()]
+        return _dedupe_lines(sanitize_agent_text(line) for line in lines)
 
     short_term = memory_context.get("short_term")
     if not isinstance(short_term, dict):
@@ -56,8 +57,8 @@ def short_term_memory_lines(memory_context: dict[str, Any] | None) -> list[str]:
                 continue
             text = str(item.get("text") or "").strip()
             if text:
-                result.append(f"{aspect}: {text}")
-    return result
+                result.append(sanitize_agent_text(f"{aspect}: {text}"))
+    return _dedupe_lines(result)
 
 
 def related_memory_lines(memory_context: dict[str, Any] | None) -> list[str]:
@@ -71,11 +72,12 @@ def related_memory_lines(memory_context: dict[str, Any] | None) -> list[str]:
         if not isinstance(row, dict):
             continue
         text = clean_text(row.get("text"))
+        text = sanitize_agent_text(text)
         if not text:
             continue
         aspect = clean_text(row.get("aspect")) or "memory"
         lines.append(f"{aspect}: {text}")
-    return lines
+    return _dedupe_lines(lines)
 
 
 def world_view_lines(world_view: dict[str, Any] | None) -> list[str]:
@@ -148,7 +150,7 @@ def social_context_lines(social_context: dict[str, Any] | None) -> list[str]:
                 lines.append(line)
 
     if lines:
-        return lines
+        return _dedupe_lines(lines)
 
     room = social_context.get("room")
     if isinstance(room, dict):
@@ -183,6 +185,21 @@ def render_block(header: str, lines: Any) -> str:
         return ""
     rendered = "\n".join(f"  - {item}" for item in items)
     return f"\n# {header}\n{rendered}\n"
+
+
+def _dedupe_lines(lines: Any) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in lines or []:
+        text = clean_text(raw)
+        if not text:
+            continue
+        key = text.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(text)
+    return out
 
 
 # Per-line prefixes used by app/agent/memory/place_memory_service._build_prompt_lines.
@@ -225,13 +242,14 @@ def build_dynamic_section(
     social_context: dict[str, Any] | None = None,
     previous_action_result: str,
     extra_prefix: str = "",
+    view: str = "full",
 ) -> str:
     """
     Assemble the per-tick context as a sequence of typed need-blocks.
     Empty blocks are omitted so the model only sees signal it can act on.
 
     Block order is deliberate:
-      WHERE -> BODY -> typed affordances/social -> SENSORY -> diff -> LAST TICK -> STM -> focus.
+      WHERE -> BODY -> typed affordances/social -> SENSORY -> diff -> recent memory -> focus.
 
     extra_prefix lets callers paste a selector-specific block above the shared
     context without duplicating the rest of the layout.
@@ -240,22 +258,32 @@ def build_dynamic_section(
     body_lines = context.get("body_lines") or []
     if not body_lines and context.get("body_state"):
         body_lines = [context.get("body_state")]
-    food_nearby = context.get("food_nearby") or []
-    social_cues = context.get("social_cues") or []
-    other_cats = world_view_lines(world_view)
-    social_exchange = social_context_lines(social_context)
-    objects_nearby = context.get("objects_nearby") or _meaningful_targets(context.get("relevant_targets"))
-    explore_frontiers = explore_frontier_lines(place_memory_context)
-    sensory_world = context.get("sensory_world") or []
-    whats_changed = context.get("whats_changed") or []
-    decision_focus = context.get("decision_focus") or []
+    food_nearby = _dedupe_lines(context.get("food_nearby") or [])
+    social_cues = _dedupe_lines(context.get("social_cues") or [])
+    other_cats = _dedupe_lines(world_view_lines(world_view))
+    social_exchange = _dedupe_lines(social_context_lines(social_context))
+    objects_nearby = _dedupe_lines(context.get("objects_nearby") or _meaningful_targets(context.get("relevant_targets")))
+    objects_nearby = _remove_social_duplicates(objects_nearby, [*social_cues, *other_cats])
+    explore_frontiers = _dedupe_lines(explore_frontier_lines(place_memory_context))
+    sensory_world = _dedupe_lines(context.get("sensory_world") or [])
+    whats_changed = _dedupe_lines(context.get("whats_changed") or [])
+    decision_focus = _dedupe_lines(context.get("decision_focus") or [])
 
     current_place = current_place_line(place_memory_context)
     where_block = situation
     if current_place:
         where_block = f"{situation}\n{current_place}"
 
-    last_tick_block = (previous_action_result or "").rstrip() or "  - no previous action report"
+    view_key = (view or "full").lower()
+    include_food = view_key in {"full", "need", "exploration"}
+    include_social = view_key in {"full", "social"}
+    include_explore = view_key in {"full", "exploration"}
+    include_objects = view_key in {"full", "exploration"}
+    include_sensory = view_key in {"full", "need", "exploration"}
+    include_changed = view_key in {"full", "need"}
+    include_recent = view_key == "full"
+
+    last_tick_lines = _prompt_lines(previous_action_result)
     short_term_lines = short_term_memory_lines(memory_context)
     related_lines = related_memory_lines(memory_context)
 
@@ -263,19 +291,72 @@ def build_dynamic_section(
         f"{extra_prefix}"
         f"\n# WHERE SHE IS\n{where_block}\n"
         f"{render_block('BODY', body_lines)}"
-        f"{render_block('FOOD NEARBY', food_nearby)}"
-        f"{render_block('SOCIAL CUES', social_cues)}"
-        f"{render_block('OTHER CATS HERE', other_cats)}"
-        f"{render_block('SOCIAL EXCHANGE', social_exchange)}"
-        f"{render_block('EXPLORE FRONTIERS', explore_frontiers)}"
-        f"{render_block('OBJECTS NEARBY', objects_nearby)}"
-        f"{render_block('SENSORY CUES (this tick)', sensory_world)}"
-        f"{render_block('WHAT CHANGED', whats_changed)}"
-        f"\n# LAST TICK\n{last_tick_block}\n"
-        f"{render_block('SHORT TERM MEMORY', short_term_lines)}"
+        f"{render_block('FOOD NEARBY', food_nearby) if include_food else ''}"
+        f"{render_block('SOCIAL OPTIONS', social_cues) if include_social else ''}"
+        f"{render_block('OTHER CATS HERE', other_cats) if include_social else ''}"
+        f"{render_block('SOCIAL EXCHANGE', social_exchange) if include_social else ''}"
+        f"{render_block('EXPLORE FRONTIERS', explore_frontiers) if include_explore else ''}"
+        f"{render_block('OBJECTS NEARBY', objects_nearby) if include_objects else ''}"
+        f"{render_block('SENSORY CUES (this tick)', sensory_world) if include_sensory else ''}"
+        f"{render_block('WHAT CHANGED', whats_changed) if include_changed else ''}"
+        f"{render_block('LAST TICK', last_tick_lines) if include_recent else ''}"
+        f"{render_block('SHORT TERM MEMORY', short_term_lines) if include_recent else ''}"
         f"{render_block('RELATED MEMORY', related_lines)}"
         f"{render_block('DECISION FOCUS', decision_focus)}"
     )
+
+
+def _prompt_lines(value: Any) -> list[str]:
+    if isinstance(value, str):
+        raw_lines = value.splitlines()
+    elif isinstance(value, list):
+        raw_lines = [str(item) for item in value]
+    else:
+        raw_lines = []
+    cleaned: list[str] = []
+    for raw in raw_lines:
+        text = clean_text(raw)
+        while text.startswith("-"):
+            text = text[1:].strip()
+        sanitized = sanitize_agent_text(text)
+        if sanitized:
+            cleaned.append(sanitized)
+    return _dedupe_lines(cleaned)
+
+
+def _remove_social_duplicates(objects: list[str], social_lines: list[str]) -> list[str]:
+    targets = _target_ids_from_lines(social_lines)
+    if not targets:
+        return objects
+    return [
+        line for line in objects
+        if not (
+            "cat" in line.lower()
+            and any(target.lower() in line.lower() for target in targets)
+        )
+    ]
+
+
+def _target_ids_from_lines(lines: list[str]) -> set[str]:
+    targets: set[str] = set()
+    for line in lines:
+        for match in _target_ids_in_line(line):
+            targets.add(match)
+    return targets
+
+
+def _target_ids_in_line(line: str) -> list[str]:
+    out: list[str] = []
+    marker = "target:"
+    lowered = line.lower()
+    if marker not in lowered:
+        return out
+    tail = line[lowered.index(marker) + len(marker):]
+    for raw in tail.replace(".", "").split(","):
+        text = clean_text(raw)
+        if text:
+            out.append(text)
+    return out
 
 
 def _utterance_line(value: Any, *, prefix: str) -> str:

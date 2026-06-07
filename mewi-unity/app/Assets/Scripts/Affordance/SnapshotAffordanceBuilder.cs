@@ -224,7 +224,14 @@ public static class SnapshotAffordanceBuilder
 
     static string Clean(string value)
     {
-        return string.IsNullOrWhiteSpace(value) ? "" : value.Trim();
+        if (string.IsNullOrWhiteSpace(value))
+            return "";
+
+        string trimmed = value.Trim();
+        return !string.Equals(trimmed, "player_cat", StringComparison.OrdinalIgnoreCase)
+            && trimmed.EndsWith("_cat", StringComparison.OrdinalIgnoreCase)
+            ? trimmed.Substring(0, trimmed.Length - 4)
+            : trimmed;
     }
 
     static int CompareDrafts(TargetDraft a, TargetDraft b)

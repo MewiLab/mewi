@@ -7,6 +7,7 @@ from langchain_core.messages import HumanMessage
 
 from app.agent.mind.affordances import IntentAffordances, build_intent_affordances
 from app.agent.mind.context import clean_text, normalize_target, parse_llm_json_object
+from app.agent.mind.experience import sanitize_agent_text
 from app.agent.mind.intents import INTENT_IDLE, normalize_intent
 from app.agent.prompts.sections import build_dynamic_section, relationship_memory_line
 
@@ -15,7 +16,13 @@ def build_domain_message(prompt: str) -> HumanMessage:
     return HumanMessage(content=prompt)
 
 
-def format_domain_context(state: dict[str, Any], *, heading: str, focus_lines: list[str] | None = None) -> str:
+def format_domain_context(
+    state: dict[str, Any],
+    *,
+    heading: str,
+    focus_lines: list[str] | None = None,
+    view: str = "full",
+) -> str:
     structured = state.get("structured_context") if isinstance(state, dict) else {}
     if not isinstance(structured, dict):
         structured = {}
@@ -30,7 +37,7 @@ def format_domain_context(state: dict[str, Any], *, heading: str, focus_lines: l
         f"\n# PERSONA\n{_persona_text(state)}\n"
         f"\n# DOMAIN\n{heading}\n"
         f"{_render_block('PROCESSED SNAPSHOT CONTEXT', _processed_snapshot_lines(structured))}"
-        f"{_render_block('MEMORY STATE', _memory_state_lines(state.get('memory_state')))}"
+        f"{_render_block('MEMORY STATE', _memory_state_lines(state.get('memory_state'), view=view))}"
         f"\n# AVAILABLE INTENT AFFORDANCES\n{_format_affordances(state.get('intent_affordances'))}\n"
         + build_dynamic_section(
             context=semantic_context,
@@ -39,6 +46,7 @@ def format_domain_context(state: dict[str, Any], *, heading: str, focus_lines: l
             world_view=state.get("world_view"),
             social_context=state.get("social_context"),
             previous_action_result=clean_text(structured.get("previous_action_result")),
+            view=view,
         )
     )
 
@@ -141,30 +149,27 @@ def _processed_snapshot_lines(structured: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _memory_state_lines(memory_state: Any) -> list[str]:
+def _memory_state_lines(memory_state: Any, *, view: str = "full") -> list[str]:
     if not isinstance(memory_state, dict):
         return []
 
+    view_key = (view or "full").lower()
     lines: list[str] = []
     recent = memory_state.get("recent")
     if isinstance(recent, dict):
         for line in _string_list(recent.get("short_term_lines"))[:5]:
-            lines.append(f"recent: {line}")
+            text = sanitize_agent_text(line)
+            if text and _line_fits_view(text, view_key):
+                lines.append(f"recent: {text}")
         for row in recent.get("longterm") or []:
             if isinstance(row, dict):
-                text = clean_text(row.get("text"))
+                text = sanitize_agent_text(row.get("text"))
                 aspect = clean_text(row.get("aspect")) or "memory"
-                if text:
+                if text and _line_fits_view(f"{aspect}: {text}", view_key):
                     lines.append(f"past related {aspect}: {text}")
 
-    working = memory_state.get("working")
-    if isinstance(working, dict):
-        aspects = [clean_text(key) for key in working.keys() if clean_text(key)]
-        if aspects:
-            lines.append(f"working aspects: {', '.join(aspects[:6])}")
-
     episodic = memory_state.get("episodic")
-    if isinstance(episodic, list):
+    if view_key in {"full", "need"} and isinstance(episodic, list):
         for event in episodic[-3:]:
             if isinstance(event, dict):
                 payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
@@ -173,14 +178,16 @@ def _memory_state_lines(memory_state: Any) -> list[str]:
                     lines.append(f"episodic: tick {event.get('tick')} had intent {intent}")
 
     spatial = memory_state.get("spatial")
-    if isinstance(spatial, dict):
+    if view_key in {"full", "exploration"} and isinstance(spatial, dict):
         place = spatial.get("place_memory")
         if isinstance(place, dict):
             for line in _string_list(place.get("lines"))[:4]:
-                lines.append(f"spatial: {line}")
+                text = sanitize_agent_text(line)
+                if text:
+                    lines.append(f"spatial: {text}")
 
     relationship = memory_state.get("relationship")
-    if isinstance(relationship, dict):
+    if view_key in {"full", "social"} and isinstance(relationship, dict):
         social_context = relationship.get("social_context")
         if isinstance(social_context, dict):
             room = social_context.get("room")
@@ -191,7 +198,7 @@ def _memory_state_lines(memory_state: Any) -> list[str]:
                     line = relationship_memory_line(item)
                     if line:
                         lines.append(f"relationship: {line}")
-    return lines
+    return _dedupe(lines)
 
 
 def _render_block(header: str, lines: list[str]) -> str:
@@ -200,6 +207,19 @@ def _render_block(header: str, lines: list[str]) -> str:
         return ""
     rendered = "\n".join(f"  - {line}" for line in clean_lines)
     return f"\n# {header}\n{rendered}\n"
+
+
+def _line_fits_view(line: str, view: str) -> bool:
+    if view == "full":
+        return True
+    lowered = line.lower()
+    if view == "need":
+        return any(word in lowered for word in ("body", "rest", "sleep", "bite", "drink", "food", "energy", "intention"))
+    if view == "exploration":
+        return any(word in lowered for word in ("place", "explore", "investigate", "walk", "frontier", "visited", "intention"))
+    if view == "social":
+        return any(word in lowered for word in ("social", "said", "heard", "sound", "looked", "cat", "bond", "intention"))
+    return True
 
 
 def _string_list(value: Any) -> list[str]:

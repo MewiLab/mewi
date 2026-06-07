@@ -29729,9 +29729,8 @@ GameObject:
   - component: {fileID: 3059149227844331958}
   - component: {fileID: 924940523405051425}
   - component: {fileID: 8021032499974796554}
-  - component: {fileID: 59342927591638817}
   m_Layer: 20
-  m_Name: haru_cat
+  m_Name: haru
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -40235,24 +40234,6 @@ MonoBehaviour:
   sampleRadius: 1
   logChanges: 1
   scanAllLayersFallback: 1
---- !u!114 &59342927591638817
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8584564066462547993}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5c88e2ddcc276407e85d75338f351607, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CreatureOffMeshLinkTraversal
-  animal: {fileID: 1698661538131244857}
-  aiControl: {fileID: 4119895336953450353}
-  agent: {fileID: 1115002199889798143}
-  configureAgentForMalbers: 1
-  resnapAgentOnExit: 1
-  logTransitions: 1
 --- !u!1 &8809111412366220508
 GameObject:
   m_ObjectHideFlags: 0

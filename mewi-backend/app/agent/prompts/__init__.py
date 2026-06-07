@@ -25,7 +25,7 @@ Temperament: {temperament}. Trust cue: {trust}.
 - SOCIALIZE: the cat wants gentle contact with a nearby cat.
 - INVESTIGATE: the cat wants to inspect a nearby cue, object, smell, or sound.
 - REST: low energy or comfort guides stillness, sitting, lying, or sleep.
-- SAFETY: fear, danger, or failed movement guides distance or alertness.
+- SAFETY: fear, danger, or a visible movement block guides distance or alertness.
 - IDLE: no available intent is strong enough yet.
 
 # ARBITRATION RULES
@@ -37,7 +37,7 @@ Temperament: {temperament}. Trust cue: {trust}.
 - Prefer EXPLORE when curiosity and energy are available, fullness is not urgent, and fear is low.
 - Prefer SOCIALIZE when a nearby peer is viable, fear is low, and recent memory does not show social looping.
 - Prefer REST when energy is low.
-- Prefer SAFETY when fear or recent failed/rejected movement matters.
+- Prefer SAFETY when fear or a recent visible movement block matters.
 - Let mood and style describe the physical flavor Unity should bias toward.
 - Do not invent coordinates, hidden objects, unsupported target ids, or motor actions.
 

@@ -62,6 +62,10 @@ fully built) · `Superseded` (replaced — kept for history).
 | [033](ADR-033-astro-report-frontend-data-source.md) | Astro Report Frontend Data Source | Proposed | Thin swappable `ReportSource` seam (local files in dev, read endpoint/presigned in prod); site renders one merged `ProcessedReport`, never touches S3 or merges itself. |
 | [034](ADR-034-live-micro-action-memory-pipeline.md) | Live Micro-Action Memory Pipeline | Proposed | Normalize Unity live reports into typed micro-action events; dedicated `agent_micro_action_events` table for recall/audit, Neo4j owns causal chains + trust edges (events carry `trust_delta`, not before/after). |
 | [035](ADR-035-player-action-attachment-analysis.md) | Player Action Attachment Analysis | Proposed | Replace six-axis legacy report scoring for raw v2 with player-action interaction signatures, causal gesture-response chains, and attachment features grounded in the 24-action player-cat vocabulary. |
+| [036](ADR-036-cat-navmesh-corridor-stability.md) | Cat NavMesh Corridor Stability | Proposed | Keep the visible Malbers cat reconciled to the intended NavMesh corridor so routes, body position, fallback movement, and debug traces agree. |
+| [037](ADR-037-agent-prompt-memory-hygiene.md) | Agent Prompt And Memory Hygiene | Proposed | Hide technical telemetry from agent prompts; convert reports into semantic experience, dedupe context, and make reflection evidence-backed. |
+| [040](ADR-040-reflective-memory-consolidation-prompt.md) | Reflective Memory Consolidation Prompt | Proposed | Rewrite the consolidation prompt: privilege the newest intention, extract-then-generate for faithfulness, single-event truthfulness, and a hard compactness budget. |
+| [041](ADR-041-ambient-wander-and-exploration-zones.md) | Ambient Drive + Exploration Zones | Proposed | Cat is never idle: a local Ambient Drive feeds the same intent queue as the LLM (LLM preempts); forward-projected wander kills circling; authored/seeded wander zones give large-area explore with enforced walk–stop–think dwell cadence. |
 
 ## How the decisions relate
 
@@ -86,6 +90,8 @@ flowchart TD
         A027[027 Malbers action vocabulary]
         A028[028 Cat social FSM split]
         A029[029 PlayerCat action FSM]
+        A036[036 Cat navmesh corridor]
+        A041[041 Ambient drive + wander zones]
         A005 --> A008
         A021 -. superseded by .-> A022
         A022 --> A023
@@ -99,7 +105,14 @@ flowchart TD
         A022 --> A029
         A027 --> A029
         A028 --> A029
+        A005 --> A036
+        A022 --> A036
+        A027 --> A036
         A010 --> A026
+        A022 --> A041
+        A025 --> A041
+        A027 --> A041
+        A005 --> A041
     end
 
     subgraph Mind["Mind, memory & behaviour"]
@@ -111,6 +124,8 @@ flowchart TD
         A018[018 Proposal–arbiter graph]
         A020[020 Thin memory layers]
         A034[034 Live micro-action memory]
+        A037[037 Prompt/memory hygiene]
+        A040[040 Consolidation prompt]
         A003 --> A006
         A006 --> A015
         A006 --> A009
@@ -125,6 +140,11 @@ flowchart TD
         A017 --> A034
         A020 --> A034
         A029 --> A034
+        A015 --> A037
+        A018 --> A037
+        A034 --> A037
+        A037 --> A040
+        A034 --> A040
     end
 
     subgraph World["World & social"]

@@ -1,5 +1,11 @@
 from app.agent.mind.context import format_previous_action_result
+from app.agent.mind.experience import TECHNICAL_PROMPT_TOKENS
 from app.agent.prompts import format_intent_selection_prompt, format_strategic_prompt
+
+
+def _assert_no_technical_leak(text: str) -> None:
+    for token in TECHNICAL_PROMPT_TOKENS:
+        assert token not in text
 
 
 def test_strategic_prompt_includes_feeling_cues():
@@ -136,7 +142,6 @@ def test_intent_selection_prompt_outputs_directive_not_action_sequence():
     assert "# BODY" in prompt
     assert "# EXPLORE FRONTIERS" in prompt
     assert "# SHORT TERM MEMORY" in prompt
-    assert "# LAST TICK" in prompt
     assert '"intent": "<EXPLORE | SEEK_FOOD' in prompt
     assert '"style": "short ActionFSM style hint' in prompt
     assert '"plan_steps"' not in prompt
@@ -145,7 +150,7 @@ def test_intent_selection_prompt_outputs_directive_not_action_sequence():
     assert "Bamboo Boardwalk feels overvisited" in prompt
     # Empty blocks are omitted entirely — fewer tokens, clearer signal.
     assert "# FOOD NEARBY" not in prompt
-    assert "# SOCIAL CUES" not in prompt
+    assert "# SOCIAL OPTIONS" not in prompt
     assert "# OBJECTS NEARBY" not in prompt
     assert "# WHAT CHANGED" not in prompt
 
@@ -265,6 +270,8 @@ def test_previous_action_result_uses_semantic_step_recap():
     # The recovery detail is not surfaced to the LLM.
     assert "not by walking" not in feedback
     assert "had to be forced" not in feedback
+    assert "recovered" not in feedback
+    _assert_no_technical_leak(feedback)
     # No raw function-status leakage.
     assert "go_to on" not in feedback
 
@@ -291,3 +298,86 @@ def test_previous_action_result_marks_eat_failure_semantically():
     assert "Your last plan partly worked." in feedback
     assert "You walked to SM_Fish_1." in feedback
     assert "couldn't reach it" in feedback
+    assert "failed" not in feedback
+    _assert_no_technical_leak(feedback)
+
+
+def test_previous_action_result_hides_adapter_only_rejection():
+    feedback = format_previous_action_result({
+        "status": "rejected",
+        "steps": [
+            {
+                "action": "sleep",
+                "status": "rejected",
+                "reason": "adapter_refused",
+            }
+        ],
+    })
+
+    assert feedback == ""
+    _assert_no_technical_leak(feedback)
+
+
+def test_previous_action_result_ignores_adapter_rejection_inside_working_plan():
+    feedback = format_previous_action_result({
+        "status": "completed_with_rejections",
+        "steps": [
+            {
+                "action": "vocalize",
+                "target": "miso_cat",
+                "status": "completed",
+                "reason": "Completed",
+            },
+            {
+                "action": "look_at",
+                "target": "mewi_cat",
+                "status": "completed",
+                "reason": "FaceTargetAligned",
+            },
+            {
+                "action": "vocalize",
+                "target": "mewi_cat",
+                "status": "rejected",
+                "reason": "adapter_refused",
+            },
+        ],
+    })
+
+    assert "Your last small plan worked." in feedback
+    assert "You made a small sound toward miso_cat." in feedback
+    assert "You looked toward mewi_cat." in feedback
+    assert "mewi_cat)=rejected" not in feedback
+    _assert_no_technical_leak(feedback)
+
+
+def test_intent_prompt_sanitizes_old_technical_short_term_memory():
+    prompt = format_intent_selection_prompt(
+        temperament="curious",
+        trust="unknown",
+        semantic_context={
+            "situation": "The cat is idle on the dock.",
+            "body_lines": ["energy: energy is low, so rest or stillness fits"],
+            "social_cues": [
+                "a miso cat; target: miso_cat.",
+                "a miso cat; target: miso_cat.",
+            ],
+            "objects_nearby": [
+                "a miso cat; target: miso_cat.",
+                "a rope coil; target: rope_1.",
+            ],
+        },
+        memory_context={
+            "short_term_lines": [
+                "action: Unity reported previous execution status completed_with_rejections. Executed steps: vocalize(miso_cat)=completed because Completed; vocalize(mewi_cat)=rejected because adapter_refused. Selected next intent SOCIALIZE toward miso_cat; Unity will execute the directive after this tick.",
+                'social: You said "mrrp?"',
+                'social: You said "mrrp?"',
+            ],
+        },
+    )
+
+    _assert_no_technical_leak(prompt)
+    assert "# SOCIAL OPTIONS" in prompt
+    assert "Current intention: SOCIALIZE near miso_cat." in prompt
+    assert prompt.count('social: You said "mrrp?"') == 1
+    assert prompt.count("a miso cat; target: miso_cat.") == 1
+    assert "a rope coil; target: rope_1." in prompt

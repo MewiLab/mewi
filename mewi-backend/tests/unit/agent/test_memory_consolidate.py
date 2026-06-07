@@ -70,7 +70,7 @@ def test_turn_memory_write_captures_unity_result_and_python_plan() -> None:
     assert {memory.aspect for memory in write.aspect_memories} == {"action"} or \
         {memory.aspect for memory in write.aspect_memories} == {"action", "social"}
     assert runtime.memory.raw_event_count == 1
-    assert any("Selected next intent SEEK_FOOD" in line for line in recall["short_term_lines"])
+    assert any("Current intention: SEEK_FOOD" in line for line in recall["short_term_lines"])
 
 
 def test_turn_memory_remembers_words_said_and_heard_from_inbox() -> None:

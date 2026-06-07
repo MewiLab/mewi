@@ -589,16 +589,19 @@ class SemanticService:
             if target_id and target_id not in group["ids"]:
                 group["ids"].append(target_id)
 
+        social_groups: list[dict[str, Any]] = []
         for group in groups.values():
+            if group["bucket"] == "social":
+                social_groups.append(group)
+                continue
             line = self._format_target_line(group)
             if not line:
                 continue
             if group["bucket"] == "food":
                 food.append(line)
-            elif group["bucket"] == "social":
-                social.append(line)
             else:
                 other.append(line)
+        social.extend(self._format_social_target_lines(social_groups))
 
         return {
             "food_nearby": food[:MAX_OBSERVATIONS],
@@ -684,6 +687,23 @@ class SemanticService:
             return f"{count_prefix}; {target_text}."
         return f"{count_prefix}."
 
+    def _format_social_target_lines(self, groups: list[dict[str, Any]]) -> list[str]:
+        ids: list[str] = []
+        for group in groups:
+            for target_id in group.get("ids") or []:
+                text = self._clean_text(target_id)
+                if text and text not in ids:
+                    ids.append(text)
+        if not ids:
+            return []
+
+        limited = ids[:MAX_OBSERVATIONS]
+        noun = "option" if len(limited) == 1 else "options"
+        return [
+            "Nearby social "
+            f"{noun} for SOCIALIZE or INVESTIGATE; targets: {', '.join(limited)}."
+        ]
+
     def _semantic_whats_changed(self, snapshot: Snapshot) -> list[str]:
         """Surface signals that 'something happened since last tick' so the
         model doesn't have to compute the diff. Today: just_ate + just_drank.
@@ -699,7 +719,7 @@ class SemanticService:
         if recently_fled(action_text):
             lines.append("she just fled from something")
         if recently_failed_to_reach(action_text):
-            lines.append("she just failed to reach a target — try a smaller step")
+            lines.append("she could not reach a target — try a smaller step")
         return lines
 
     def _fear_meaning(self, value: float) -> str:

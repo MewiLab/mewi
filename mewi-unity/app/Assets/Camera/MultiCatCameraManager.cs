@@ -10,7 +10,6 @@ public class MultiCatCameraManager : MonoBehaviour
     [Tooltip("Off by default because Malbers MInput/MInputLink should own player input. Enable only for legacy possession/debug switching.")]
     [SerializeField] bool manageCatMInputStates;
     [SerializeField] bool disableMInputOnNpcCats = true;
-    [SerializeField] bool handleKeyboardInput = true;
     [Tooltip("Legacy/debug only. Keep false for ADR-029 report sessions so Tab never changes actorId.")]
     [SerializeField] bool possessCatWhenFraming = false;
 
@@ -57,23 +56,10 @@ public class MultiCatCameraManager : MonoBehaviour
         }
     }
 
-    void Update()
-    {
-#if ENABLE_LEGACY_INPUT_MANAGER
-        if (!handleKeyboardInput)
-            return;
-
-        if (Input.GetKeyDown(KeyCode.Tab))
-            FrameNextCat();
-
-        if (Input.GetKeyDown(KeyCode.V))
-            CycleView();
-#endif
-    }
-
     public void SetKeyboardInputEnabled(bool enabled)
     {
-        handleKeyboardInput = enabled;
+        // Keyboard input is owned by PlayerCatCameraModeController.
+        _ = enabled;
     }
 
     public void SetPlayerControlEnabled(bool enabled)

@@ -27,7 +27,8 @@ from app.agent.memory.memory_models import (
     RawMemoryEvent,
     TurnMemoryWrite,
 )
-from app.agent.mind.context import clean_text, format_previous_action_result
+from app.agent.mind.context import clean_text
+from app.agent.mind.experience import semantic_experience_events, semantic_experience_lines
 from app.services.perception.semantic_service import SemanticService
 
 if TYPE_CHECKING:  # avoid a runtime import cycle via creature_runtime -> memory
@@ -454,12 +455,12 @@ def _action_memory(
         proposal for proposal in state.get("intent_proposals") or []
         if isinstance(proposal, dict)
     ]
-    if intent and plan_steps:
-        text_parts.append(f"Selected next intent {intent}; planned body steps: {_plan_text(plan_steps)}.")
-    elif intent:
+    if intent:
         target = clean_text((state.get("intent_decision") or {}).get("target_id"))
-        suffix = f" toward {target}" if target else ""
-        text_parts.append(f"Selected next intent {intent}{suffix}; Unity will execute the directive after this tick.")
+        suffix = f" near {target}" if target else ""
+        text_parts.append(f"Current intention: {intent}{suffix}.")
+    elif plan_steps:
+        text_parts.append(f"Current intended body outline: {_plan_text(plan_steps)}.")
     elif proposals:
         text_parts.append(f"Domain proposals collected: {_proposal_text(proposals)}.")
     else:
@@ -592,35 +593,17 @@ def _proposal_text(proposals: list[dict[str, Any]]) -> str:
 
 
 def _action_salience(action_result: Any) -> float:
-    if not isinstance(action_result, dict):
+    events = semantic_experience_events(action_result)
+    if not events:
         return 0.2
-    status = clean_text(action_result.get("status")).lower()
-    if status in {"failed", "rejected", "completed_with_failures", "completed_with_rejections"}:
-        return 0.9
-    if status == "completed_with_recoveries":
-        return 0.6
-    return 0.4
+    visible = [event for event in events if event.memory_policy != "audit_only"]
+    if not visible:
+        return 0.0
+    return max((event.salience for event in visible), default=0.3)
 
 
 def _previous_action_fact(action_result: Any) -> str:
-    if not isinstance(action_result, dict):
-        return ""
-    status = clean_text(action_result.get("status"))
-    parts: list[str] = []
-    if status:
-        parts.append(f"Unity reported previous execution status {status}.")
-
-    step_facts = _step_facts(action_result.get("steps"))
-    if step_facts:
-        parts.append("Executed steps: " + "; ".join(step_facts[:5]) + ".")
-
-    event_facts = _event_facts(action_result.get("events"))
-    if event_facts:
-        parts.append("Live events: " + "; ".join(event_facts[:5]) + ".")
-
-    if not parts:
-        return format_previous_action_result(action_result)
-    return " ".join(parts)
+    return " ".join(semantic_experience_lines(action_result))
 
 
 def _step_facts(value: Any) -> list[str]:
@@ -671,20 +654,69 @@ def _float_or_none(value: Any) -> float | None:
         return None
 
 
-# ─── Consolidation: many AspectMemory -> one recap ───────────────────────────
+# ─── Consolidation: memory context -> one recap ──────────────────────────────
 
 
-_CONSOLIDATION_PROMPT = """You compress one cat's short-term memory so it stays small but useful.
+_CONSOLIDATION_PROMPT = """You maintain one cat's reflective long-term memory.
 
-Below are the older "{aspect}" memories for this cat, oldest first. Rewrite them
-as ONE compact recap (1-2 short sentences) that keeps what still matters for the
-cat's next decision — who and what it dealt with, how things went, and any
-recent pattern — and drops repetition and stale detail.
+You are given this cat's recent short-term memories (ordered oldest->newest)
+and any long-term memories recalled this tick. Produce ONE compact reflective
+memory for the cat's next decision.
 
-Return only the recap text, with no quotes, labels, or extra lines.
+Follow these steps internally, then output only the final memory:
 
-MEMORIES:
-{memories}"""
+1. EVIDENCE: From the memories, pick the 2-4 facts most relevant to the next
+   decision. Use only stated facts. The cat's CURRENT directive is shown below
+   and MUST be reflected in the output.
+2. INSIGHT: State one grounded, decision-relevant pattern, preference,
+   constraint, or lesson supported by those facts. You may infer cautious
+   meaning from REPEATED facts, but do not invent events, motives, emotions,
+   hesitation, failure, or outcomes not explicitly stated. A fact that appears
+   once is a single event - do not pluralize or generalize it.
+3. WRITE: Compress into at most 2 sentences, 35 words total. No hedging or
+   filler clauses (e.g. "which may influence my next actions"). Every clause
+   must carry a fact or the insight.
+
+Treat "selected next intent" as a future directive, not an attempted action.
+If the new memories merely repeat a recalled long-term memory, add only what is
+new.
+
+Return only the memory text - no quotes, labels, citations, or extra lines.
+
+CURRENT INTENTION (must appear in output):
+{current_intention}
+
+SHORT-TERM MEMORY (oldest->newest):
+{short_term}
+
+RELATED LONG-TERM MEMORY:
+{related_memory}"""
+
+
+async def consolidate_memory_llm(
+    llm,
+    memories: list[AspectMemory],
+    *,
+    related_memories: list[dict[str, Any]] | None = None,
+) -> str:
+    """Summarize all current Python-side short-term memory with recalled context."""
+    if llm is None:
+        return ""
+    short_term_lines = "\n".join(
+        f"- {memory.aspect} t={memory.tick}: {clean_text(memory.text)}"
+        for memory in memories
+        if memory.text.strip()
+    )
+    related_lines = _related_memory_lines(related_memories or [])
+    if not short_term_lines and not related_lines:
+        return ""
+    prompt = _CONSOLIDATION_PROMPT.format(
+        current_intention=_current_intention_line(memories),
+        short_term=short_term_lines or "- (none)",
+        related_memory=related_lines or "- (none)",
+    )
+    response = await llm.ainvoke([HumanMessage(content=prompt)])
+    return clean_text(getattr(response, "content", ""))
 
 
 async def consolidate_aspect_llm(
@@ -703,6 +735,53 @@ async def consolidate_aspect_llm(
     lines = "\n".join(f"- {clean_text(m.text)}" for m in memories if m.text.strip())
     if not lines:
         return ""
-    prompt = _CONSOLIDATION_PROMPT.format(aspect=aspect, memories=lines)
+    prompt = _CONSOLIDATION_PROMPT.format(
+        current_intention="- (not applicable for this aspect recap)",
+        short_term=lines,
+        related_memory="- (none)",
+    )
     response = await llm.ainvoke([HumanMessage(content=prompt)])
     return clean_text(getattr(response, "content", ""))
+
+
+def _current_intention_line(memories: list[AspectMemory]) -> str:
+    """Hoist the newest action memory's intention so the prompt privileges it.
+
+    ADR-040: recency weighting. The current directive is the intention carried by
+    the most recent ``action`` memory. We prefer the structured ``evidence.intent``
+    and fall back to the ``Current intention: ...`` clause in the text. When no
+    action memory carries an intention, the field renders ``- (unknown)`` and the
+    prompt's "must appear" clause is satisfied vacuously.
+    """
+    for memory in reversed(memories):
+        if memory.aspect != "action":
+            continue
+        intent = clean_text((memory.evidence or {}).get("intent"))
+        if intent:
+            return f"- {intent}"
+        clause = _intention_clause(memory.text)
+        if clause:
+            return f"- {clause}"
+    return "- (unknown)"
+
+
+def _intention_clause(text: str) -> str:
+    marker = "Current intention:"
+    idx = text.find(marker)
+    if idx == -1:
+        return ""
+    clause = text[idx + len(marker):].strip().rstrip(".")
+    return clean_text(clause)
+
+
+def _related_memory_lines(rows: list[dict[str, Any]]) -> str:
+    lines: list[str] = []
+    for row in rows[:8]:
+        if not isinstance(row, dict):
+            continue
+        text = clean_text(row.get("text"))
+        if not text:
+            continue
+        aspect = clean_text(row.get("aspect")) or "memory"
+        lines.append(f"- {aspect}: {text}")
+    return "\n".join(lines)

@@ -239,7 +239,14 @@ def make_persist_memory(llm):
         state: CreatureRuntimeState,
     ) -> dict[str, Any]:
         result = await persist_memory(state)
-        _runtime(state).memory.schedule_consolidation(llm, threshold=6, keep_recent=2)
+        memory_context = state.get("memory_context") if isinstance(state.get("memory_context"), dict) else {}
+        _runtime(state).memory.schedule_consolidation(
+            llm,
+            threshold=3,
+            keep_recent=2,
+            min_turns=4,
+            related_memories=memory_context.get("longterm") or [],
+        )
         return result
 
     return persist_memory_with_consolidation

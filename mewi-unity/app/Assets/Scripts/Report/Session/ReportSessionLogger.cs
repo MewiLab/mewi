@@ -66,7 +66,7 @@ public class ReportSessionLogger : MonoBehaviour
 
     [Header("In-Game Send")]
     [Tooltip("Show an on-screen button during play to send the current (still running) session without quitting.")]
-    [SerializeField] bool showInGameSendButton = true;
+    [SerializeField] bool showInGameSendButton = false;
     [Tooltip("Optional hotkey that also sends the current session while playing.")]
     [SerializeField] KeyCode sendCurrentSessionKey = KeyCode.F9;
 

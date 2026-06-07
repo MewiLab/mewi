@@ -11,7 +11,7 @@ public sealed class PlayerCatUserConfig : MonoBehaviour
 
     [Header("Player Cat")]
     [SerializeField] string playerCreatureId = "vanillaSky00";
-    [SerializeField] string playerPrefabAlias = "vanillaSky00_cat";
+    [SerializeField] string playerPrefabAlias = "vanillaSky00";
     [SerializeField] Transform playerCatRoot;
     [SerializeField] CreatureBlackboard playerBlackboard;
     [SerializeField] SmartObject playerSmartObject;
@@ -40,7 +40,7 @@ public sealed class PlayerCatUserConfig : MonoBehaviour
             if (string.IsNullOrWhiteSpace(playerCreatureId))
                 playerCreatureId = userName;
             if (string.IsNullOrWhiteSpace(playerPrefabAlias))
-                playerPrefabAlias = $"{userName}_cat";
+                playerPrefabAlias = userName;
         }
 
         ResolveReferences();

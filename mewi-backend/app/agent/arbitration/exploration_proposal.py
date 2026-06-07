@@ -59,6 +59,7 @@ async def propose_exploration_intent(llm: Any, state: dict[str, Any]) -> dict[st
         state,
         heading="Exploration domain: curiosity, objects, frontiers, novelty, place memory.",
         focus_lines=exploration_proposal_lines(state.get("place_memory_context")),
+        view="exploration",
     )
     message = build_domain_message(prompt)
     response = await llm.ainvoke([message])

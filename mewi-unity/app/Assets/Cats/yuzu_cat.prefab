@@ -417,9 +417,8 @@ GameObject:
   - component: {fileID: 5990590317787160040}
   - component: {fileID: 2684974014105032113}
   - component: {fileID: 2329654895883626359}
-  - component: {fileID: 6060048434795627998}
   m_Layer: 20
-  m_Name: yuzu_cat
+  m_Name: yuzu
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -10923,24 +10922,6 @@ MonoBehaviour:
   sampleRadius: 1
   logChanges: 1
   scanAllLayersFallback: 1
---- !u!114 &6060048434795627998
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 572002746509188150}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5c88e2ddcc276407e85d75338f351607, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CreatureOffMeshLinkTraversal
-  animal: {fileID: 5548263794706710751}
-  aiControl: {fileID: 2587981473794470920}
-  agent: {fileID: 5482620436985322724}
-  configureAgentForMalbers: 1
-  resnapAgentOnExit: 1
-  logTransitions: 1
 --- !u!1 &647553151294884880
 GameObject:
   m_ObjectHideFlags: 0

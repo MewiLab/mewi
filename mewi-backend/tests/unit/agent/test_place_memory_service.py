@@ -175,5 +175,34 @@ async def test_reflect_tick_schedules_place_llm_summary() -> None:
     assert llm.calls
     assert "Boat 2" in llm.calls[0]
     assert "player_cat" in llm.calls[0]
+    assert "kind=live_event" in llm.calls[0]
+    assert "previous Unity report status" not in llm.calls[0]
     assert store.summaries[0]["zone_id"] == "Boat_2"
     assert store.entries["Boat_2"].summary == "The cat was scratched by player_cat near the boat."
+
+
+async def test_reflect_tick_skips_rejected_body_adapter_place_summary() -> None:
+    store = FakePlaceStore()
+    llm = FakeLLM("House 2's integration attempt failed because the body rejected the sleep adapter.")
+    service = PlaceMemoryService(store, llm=llm)
+
+    await service.reflect_tick("cat", {
+        "requestId": "t0005",
+        "tick": 5,
+        "place_context": {"current_zone_id": "House_2"},
+        "action_result": {
+            "status": "rejected",
+            "steps": [
+                {
+                    "action": "sleep",
+                    "status": "rejected",
+                    "reason": "adapter_refused",
+                }
+            ],
+        },
+    })
+
+    assert not service._summary_tasks
+    assert llm.calls == []
+    assert store.summaries == []
+    assert store.entries["House_2"].summary == ""
