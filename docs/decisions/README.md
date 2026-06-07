@@ -40,7 +40,7 @@ fully built) · `Superseded` (replaced — kept for history).
 | [011](ADR-011-tick-graph-and-social-service.md) | Tick Graph + Social Service | Accepted (descriptive) | The as-built 8-node graph; exactly where the LLM fires vs. pure code. |
 | [012](ADR-012-mewi-report-raw-to-value-data-contract.md) | Report Raw→Value Data Contract | Proposed | Unity exports raw facts; Python owns derived report values. |
 | [013](ADR-013-mewi-report-auto-pipeline.md) | Report Ingestion + Processing Pipeline | Proposed | `POST /report/session` → immutable per-session files → Python processor → site. |
-| [014](ADR-014-report-ingestion-service-boundary.md) | Report Ingestion Service Boundary | Accepted | Thin service + storage port so local-disk → S3/Lambda swaps behind the route. |
+| [014](ADR-014-report-ingestion-service-boundary.md) | Report Ingestion Service Boundary | Proposed | Thin service + storage port so local-disk → S3/Lambda swaps behind the route. |
 | [015](ADR-015-place-memory-and-prompt-cache-cleanup.md) | Place Memory + Prompt-Cache Cleanup | Accepted | Static/dynamic Slow Mind prompt split for Anthropic cache (~900 → ~340+60 tokens). |
 | [016](ADR-016-agent-behavioral-optimization-toolkit.md) | Agent Behavioral-Optimization Toolkit | Proposed (not yet wired) | Opt-in helpers (CoT, query-expansion, multi-intent, plan-diversity, life-balance) to widen behaviour. |
 | [017](ADR-017-mem0-style-memory-add-retrieve-graph.md) | Mem0-Style Memory (ADD/Retrieve/Graph) | Proposed | Append-only writes; hybrid recall (recent + pgvector); property-graph edges in Postgres — no new infra. |
@@ -52,20 +52,6 @@ fully built) · `Superseded` (replaced — kept for history).
 | [023](ADR-023-shared-unity-agent-websocket.md) | Shared Unity Agent WebSocket | Accepted | One Unity websocket carries many per-cat ticks, routed by `creature_id + requestId`. |
 | [024](ADR-024-backend-makefile-and-graph-db-workflow.md) | Backend Makefile + Graph DB Workflow | Accepted | Backend Make targets for full Docker stack, Redis, Neo4j graph memory, testing, and app URLs. |
 | [025](ADR-025-world-authored-interaction-fsm.md) | World-Authored Interaction FSM | Accepted | Scene objects own local interaction recipes; the graph coordinates and the motor executes. |
-| [026](ADR-026-fishing-village-prop-catalog.md) | Fishing Village Prop Catalog | Accepted | Canonical id/label/tags/feelings/recipe for the interactable fishing-village props; pots are containers with food inside. |
-| [027](ADR-027-malbers-action-vocabulary-and-micro-action-matching.md) | Malbers Action Vocabulary | Proposed | Canonical Malbers action inventory plus micro-action string/alias matching rules. |
-| [028](ADR-028-cat-social-fsm-split.md) | Cat Social FSM Split | Accepted | Separate NPC cat-player and cat-cat social FSMs with stable authored motion keys. |
-| [029](ADR-029-player-cat-action-fsm-proposal.md) | PlayerCat Action FSM | Proposed | Player-to-NPC-cat social actions emit observable stimuli into a target cat reaction lane and report pipeline. |
-| [030](ADR-030-post-session-report-processing.md) | Post-Session Report Processing | Proposed | Thin closed-session ingest: HTTP upload stores/enqueues only; out-of-band stats/narrative job; raw v2 causal schema. |
-| [031](ADR-031-report-end-to-end-workflow.md) | Report End-To-End Production Workflow | Proposed | Full production path past FastAPI: two report-product Lambdas (attachment → recommendation) chained by an S3 `attachment.json` notification; Lambda-only Anthropic/RAGFlow secrets; per-product `results/{user_id}/*.json` → Astro fetch. |
-| [032](ADR-032-sqs-first-hop-report-ingestion.md) | SQS First Hop For Report Processing | Proposed | First-hop production bridge: FastAPI stores raw sessions in S3, sends compact SQS jobs, and SQS triggers `attachment-report`; ADR-031's S3 notification remains the second hop. |
-| [033](ADR-033-astro-report-frontend-data-source.md) | Astro Report Frontend Data Source | Proposed | Thin swappable `ReportSource` seam (local files in dev, read endpoint/presigned in prod); site renders one merged `ProcessedReport`, never touches S3 or merges itself. |
-| [034](ADR-034-live-micro-action-memory-pipeline.md) | Live Micro-Action Memory Pipeline | Proposed | Normalize Unity live reports into typed micro-action events; dedicated `agent_micro_action_events` table for recall/audit, Neo4j owns causal chains + trust edges (events carry `trust_delta`, not before/after). |
-| [035](ADR-035-player-action-attachment-analysis.md) | Player Action Attachment Analysis | Proposed | Replace six-axis legacy report scoring for raw v2 with player-action interaction signatures, causal gesture-response chains, and attachment features grounded in the 24-action player-cat vocabulary. |
-| [036](ADR-036-cat-navmesh-corridor-stability.md) | Cat NavMesh Corridor Stability | Proposed | Keep the visible Malbers cat reconciled to the intended NavMesh corridor so routes, body position, fallback movement, and debug traces agree. |
-| [037](ADR-037-agent-prompt-memory-hygiene.md) | Agent Prompt And Memory Hygiene | Proposed | Hide technical telemetry from agent prompts; convert reports into semantic experience, dedupe context, and make reflection evidence-backed. |
-| [040](ADR-040-reflective-memory-consolidation-prompt.md) | Reflective Memory Consolidation Prompt | Proposed | Rewrite the consolidation prompt: privilege the newest intention, extract-then-generate for faithfulness, single-event truthfulness, and a hard compactness budget. |
-| [041](ADR-041-ambient-wander-and-exploration-zones.md) | Ambient Drive + Exploration Zones | Proposed | Cat is never idle: a local Ambient Drive feeds the same intent queue as the LLM (LLM preempts); forward-projected wander kills circling; authored/seeded wander zones give large-area explore with enforced walk–stop–think dwell cadence. |
 
 ## How the decisions relate
 
@@ -86,33 +72,11 @@ flowchart TD
         A021[021 Directive motor FSM]
         A022[022 Dispatcher + intent/motor workers]
         A025[025 World-authored interaction FSM]
-        A026[026 Fishing village prop catalog]
-        A027[027 Malbers action vocabulary]
-        A028[028 Cat social FSM split]
-        A029[029 PlayerCat action FSM]
-        A036[036 Cat navmesh corridor]
-        A041[041 Ambient drive + wander zones]
         A005 --> A008
         A021 -. superseded by .-> A022
         A022 --> A023
         A022 --> A025
         A008 --> A025
-        A025 --> A026
-        A025 --> A027
-        A025 --> A028
-        A026 --> A027
-        A027 --> A028
-        A022 --> A029
-        A027 --> A029
-        A028 --> A029
-        A005 --> A036
-        A022 --> A036
-        A027 --> A036
-        A010 --> A026
-        A022 --> A041
-        A025 --> A041
-        A027 --> A041
-        A005 --> A041
     end
 
     subgraph Mind["Mind, memory & behaviour"]
@@ -123,9 +87,6 @@ flowchart TD
         A017[017 Mem0-style memory]
         A018[018 Proposal–arbiter graph]
         A020[020 Thin memory layers]
-        A034[034 Live micro-action memory]
-        A037[037 Prompt/memory hygiene]
-        A040[040 Consolidation prompt]
         A003 --> A006
         A006 --> A015
         A006 --> A009
@@ -137,14 +98,6 @@ flowchart TD
         A016 --> A018
         A017 --> A018
         A017 --> A020
-        A017 --> A034
-        A020 --> A034
-        A029 --> A034
-        A015 --> A037
-        A018 --> A037
-        A034 --> A037
-        A037 --> A040
-        A034 --> A040
     end
 
     subgraph World["World & social"]
@@ -159,18 +112,7 @@ flowchart TD
         A012[012 Raw→value contract]
         A013[013 Ingestion pipeline]
         A014[014 Service boundary]
-        A030[030 Post-session report processing]
-        A031[031 End-to-end production workflow]
-        A032[032 SQS first hop]
-        A033[033 Astro frontend data source]
-        A035[035 Player action attachment analysis]
-        A012 --> A013 --> A014 --> A030
-        A030 --> A031
-        A031 --> A032
-        A031 --> A033
-        A030 --> A035
-        A031 --> A035
-        A033 --> A035
+        A012 --> A013 --> A014
     end
 
     subgraph Research["Player attachment"]
@@ -189,11 +131,6 @@ flowchart TD
     A011 --> A016
     A011 --> A018
     A018 --> A019
-    A019 --> A029
-    A029 --> A030
-    A029 --> A035
-    A034 --> A035
-    A007 --> A030
     A018 --> A021
     A004 --> A022
     A021 --> A022

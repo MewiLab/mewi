@@ -9,7 +9,6 @@
 //   - Take the top N after capping.
 //   - Project world position to cat-relative distance + 8-way direction bucket.
 /// </summary>
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -49,14 +48,9 @@ public sealed class EntitiesChannel : ISnapshotChannel
             perCat[cat] = count + 1;
 
             Vector3 local = self.InverseTransformPoint(evt.position);
-            string id = ResolveEntityId(evt);
-            RememberTargetAlias(board, id, evt.source, evt.position);
-            RememberTargetAlias(board, evt.label, evt.source, evt.position);
-            if (evt.source != null)
-            {
-                RememberTargetAlias(board, evt.source.name, evt.source, evt.position);
-                RememberTargetAlias(board, evt.source.root.name, evt.source, evt.position);
-            }
+            string id = evt.label;
+            if (!string.IsNullOrWhiteSpace(id) && evt.source != null)
+                board.RememberPerceivedTarget(id, evt.source, evt.position);
 
             result.Add(new EntityData
             {
@@ -86,44 +80,5 @@ public sealed class EntitiesChannel : ISnapshotChannel
         if (abs <= 67.5f)  return "front_left";
         if (abs <= 112.5f) return "left";
         return "back_left";
-    }
-
-    static string ResolveEntityId(SensoryEvent evt)
-    {
-        Transform source = evt.source;
-        if (source != null)
-        {
-            CreatureBlackboard sourceBoard = source.GetComponent<CreatureBlackboard>()
-                ?? source.GetComponentInParent<CreatureBlackboard>()
-                ?? source.GetComponentInChildren<CreatureBlackboard>();
-            if (sourceBoard != null)
-                return NormalizeTargetId(sourceBoard.CreatureId);
-        }
-
-        return NormalizeTargetId(evt.label);
-    }
-
-    static void RememberTargetAlias(
-        CreatureBlackboard board,
-        string id,
-        Transform target,
-        Vector3 perceivedPosition)
-    {
-        if (board == null || target == null || string.IsNullOrWhiteSpace(id))
-            return;
-
-        board.RememberPerceivedTarget(id.Trim(), target, perceivedPosition);
-    }
-
-    static string NormalizeTargetId(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "";
-
-        string trimmed = value.Trim();
-        return !string.Equals(trimmed, "player_cat", StringComparison.OrdinalIgnoreCase)
-            && trimmed.EndsWith("_cat", StringComparison.OrdinalIgnoreCase)
-            ? trimmed.Substring(0, trimmed.Length - 4)
-            : trimmed;
     }
 }

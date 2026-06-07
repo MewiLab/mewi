@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any
 from app.agent.memory.memory_models import (
     AspectMemory,
     MemoryRecall,
-    MicroActionEvent,
     RawMemoryEvent,
     SpatialRecord,
     TurnMemoryWrite,
@@ -52,18 +51,11 @@ class MemoryManager:
         self._perception_history: deque[PerceptionSummary] = deque(maxlen=max_ticks)
         self._spatial_log: deque[SpatialRecord] = deque(maxlen=max_ticks * 2)
         self._raw_events: deque[RawMemoryEvent] = deque(maxlen=max_ticks * 2)
-        self._micro_action_events: deque[MicroActionEvent] = deque(maxlen=max_ticks * 4)
         self._short_term: dict[str, deque[AspectMemory]] = {}
 
         # Consolidation bookkeeping
         self._consolidating: set[str] = set()
         self._consolidation_tasks: set[asyncio.Task] = set()
-        # Monotonic count of raw turns ever recorded. The cadence gate compares
-        # against this rather than len(self._raw_events): the latter is a bounded
-        # deque that pins at maxlen, which would freeze the gate at 0 and stop
-        # consolidation forever once the buffer saturates.
-        self._raw_event_total = 0
-        self._last_consolidated_raw_count = 0
 
         # Background durable-write tasks (kept referenced so they aren't GC'd)
         self._store_tasks: set[asyncio.Task] = set()
@@ -102,17 +94,11 @@ class MemoryManager:
     def record_turn_memory(self, write: TurnMemoryWrite) -> None:
         """Store an authoritative raw turn event and its short-term summaries."""
         self.record_raw_event(write.raw_event)
-        for event in write.micro_action_events:
-            self.record_micro_action_event(event)
         for memory in write.aspect_memories:
             self.record_short_term(memory)
 
     def record_raw_event(self, event: RawMemoryEvent) -> None:
         self._raw_events.append(event)
-        self._raw_event_total += 1
-
-    def record_micro_action_event(self, event: MicroActionEvent) -> None:
-        self._micro_action_events.append(event)
 
     def record_short_term(self, memory: AspectMemory) -> None:
         aspect = memory.aspect.strip().lower() or "general"
@@ -127,11 +113,8 @@ class MemoryManager:
         self._perception_history.clear()
         self._spatial_log.clear()
         self._raw_events.clear()
-        self._micro_action_events.clear()
         self._short_term.clear()
         self._consolidating.clear()
-        self._raw_event_total = 0
-        self._last_consolidated_raw_count = 0
 
     # ─── Short-term consolidation ─────────────────────────────────────────
 
@@ -141,49 +124,19 @@ class MemoryManager:
         *,
         threshold: int = 6,
         keep_recent: int = 2,
-        min_turns: int = 10,
-        related_memories: list[dict[str, Any]] | None = None,
     ) -> None:
         """Run :meth:`consolidate` in the background; never blocks the tick."""
         if llm is None:
             return
-        if self._consolidation_tasks:
-            return
-        if not self._has_consolidation_work(
-            threshold=threshold,
-            keep_recent=keep_recent,
-            min_turns=min_turns,
-        ):
-            return
         task = asyncio.create_task(
-            self._run_consolidation(
-                llm,
-                threshold=threshold,
-                keep_recent=keep_recent,
-                min_turns=min_turns,
-                related_memories=list(related_memories or []),
-            )
+            self._run_consolidation(llm, threshold=threshold, keep_recent=keep_recent)
         )
         self._consolidation_tasks.add(task)
         task.add_done_callback(self._consolidation_tasks.discard)
 
-    async def _run_consolidation(
-        self,
-        llm,
-        *,
-        threshold: int,
-        keep_recent: int,
-        min_turns: int,
-        related_memories: list[dict[str, Any]],
-    ) -> None:
+    async def _run_consolidation(self, llm, *, threshold: int, keep_recent: int) -> None:
         try:
-            await self.consolidate(
-                llm,
-                threshold=threshold,
-                keep_recent=keep_recent,
-                min_turns=min_turns,
-                related_memories=related_memories,
-            )
+            await self.consolidate(llm, threshold=threshold, keep_recent=keep_recent)
         except Exception:
             logger.warning("STM consolidation failed", exc_info=True)
 
@@ -193,108 +146,49 @@ class MemoryManager:
         *,
         threshold: int = 6,
         keep_recent: int = 2,
-        min_turns: int = 10,
-        related_memories: list[dict[str, Any]] | None = None,
     ) -> int:
-        """Fold current Python-side short-term memory into one reflective recap.
+        """Fold every overflowing aspect bucket into a single recap.
 
-        Keeps the ``keep_recent`` newest entries per aspect verbatim and
-        replaces the older short-term notes with one LLM reflection. The write-back is
+        Keeps the ``keep_recent`` newest entries of a bucket verbatim and
+        replaces the older ones with one LLM recap. The write-back is
         synchronous (so it is atomic relative to other coroutines on the loop),
-        and entries appended while the LLM call awaits are preserved. ``min_turns``
-        uses backend raw-turn count, so this cadence has no Unity payload dependency.
+        and entries appended while the LLM call awaits are preserved. Returns
+        the number of aspects consolidated.
         """
         if llm is None:
             return 0
         # Local import keeps the consolidate tool out of the package import
         # cycle (memory_consolidate -> creature_runtime -> app.agent.memory).
-        from app.agent.memory.memory_consolidate import consolidate_memory_llm
+        from app.agent.memory.memory_consolidate import consolidate_aspect_llm
 
-        if not self._has_consolidation_work(
-            threshold=threshold,
-            keep_recent=keep_recent,
-            min_turns=min_turns,
-        ):
-            return 0
-        prompt_memories, originals = self._consolidation_memories(keep_recent=keep_recent)
-        if not prompt_memories or not originals:
-            return 0
+        done = 0
+        for aspect in list(self._short_term):
+            bucket = self._short_term.get(aspect)
+            if bucket is None or aspect in self._consolidating or len(bucket) <= threshold:
+                continue
+            items = list(bucket)
+            originals = items[:-keep_recent] if keep_recent > 0 else items
+            if len(originals) < 2:
+                continue
 
-        self._consolidating.add("memory")
-        try:
-            recap = await consolidate_memory_llm(
-                llm,
-                prompt_memories,
-                related_memories=related_memories or [],
-            )
-            if not recap:
-                return 0
-            ticks = [memory.tick for memory in originals]
-            summary = AspectMemory(
-                aspect="reflection",
-                text=recap,
-                tick=max(ticks, default=0),
-                salience=max((m.salience for m in originals), default=0.3),
-                memory_kind="summary",
-                evidence={
-                    "consolidated_from": len(originals),
-                    "source_count": len(prompt_memories),
-                    "related_count": len(related_memories or []),
-                    "tick_start": min(ticks, default=0),
-                    "tick_end": max(ticks, default=0),
-                    "summary_style": "reflective",
-                },
-            )
-            self._replace_consolidated_short_term(originals, summary)
-            await self._persist_summaries([summary])
-            self._last_consolidated_raw_count = self._raw_event_total
-            return 1
-        finally:
-            self._consolidating.discard("memory")
-
-    def _has_consolidation_work(
-        self,
-        *,
-        threshold: int,
-        keep_recent: int,
-        min_turns: int,
-    ) -> bool:
-        if "memory" in self._consolidating:
-            return False
-        if min_turns > 0 and self._raw_event_total - self._last_consolidated_raw_count < min_turns:
-            return False
-        prompt_memories, originals = self._consolidation_memories(keep_recent=keep_recent)
-        return len(prompt_memories) > threshold and len(originals) >= 2
-
-    def _consolidation_memories(
-        self,
-        *,
-        keep_recent: int,
-    ) -> tuple[list[AspectMemory], list[AspectMemory]]:
-        prompt_memories: list[AspectMemory] = []
-        originals: list[AspectMemory] = []
-        for items in self._short_term.values():
-            memories = [
-                memory for memory in items
-                if memory.memory_kind != "summary" and memory.text.strip()
-            ]
-            prompt_memories.extend(memories)
-            originals.extend(memories[:-keep_recent] if keep_recent > 0 else memories)
-        prompt_memories.sort(key=lambda memory: (memory.tick, memory.aspect))
-        originals.sort(key=lambda memory: (memory.tick, memory.aspect))
-        return prompt_memories, originals
-
-    def _replace_consolidated_short_term(
-        self,
-        originals: list[AspectMemory],
-        summary: AspectMemory,
-    ) -> None:
-        folded = {id(memory) for memory in originals}
-        for bucket in self._short_term.values():
-            remaining = [memory for memory in bucket if id(memory) not in folded]
-            bucket.clear()
-            bucket.extend(remaining)
-        self.record_short_term(summary)
+            self._consolidating.add(aspect)
+            try:
+                recap = await consolidate_aspect_llm(llm, aspect, originals)
+                if not recap:
+                    continue
+                summary = AspectMemory(
+                    aspect=aspect,
+                    text=recap,
+                    tick=originals[-1].tick,
+                    salience=max((m.salience for m in originals), default=0.3),
+                    memory_kind="summary",
+                    evidence={"consolidated_from": len(originals)},
+                )
+                self._replace_short_term(aspect, originals, summary)
+                done += 1
+            finally:
+                self._consolidating.discard(aspect)
+        return done
 
     def _replace_short_term(
         self,
@@ -340,45 +234,17 @@ class MemoryManager:
         except Exception:
             logger.warning("Durable memory write failed", exc_info=True)
 
-    async def _persist_summaries(self, summaries: list[AspectMemory]) -> None:
-        if self._store is None or not summaries:
-            return
-        last = self._raw_events[-1] if self._raw_events else None
-        creature_id = last.creature_id if last is not None else ""
-        request_id = last.request_id if last is not None else ""
-        tick = max((summary.tick for summary in summaries), default=0)
-        raw_event = RawMemoryEvent(
-            creature_id=creature_id,
-            tick=tick,
-            request_id=request_id,
-            source="python",
-            event_type="memory_consolidation",
-            payload={
-                "summary_count": len(summaries),
-                "aspects": [summary.aspect for summary in summaries],
-            },
-        )
-        await self._safe_store_write(
-            TurnMemoryWrite(raw_event=raw_event, aspect_memories=summaries)
-        )
-
     async def recall_longterm(
         self,
         query: str,
         *,
         creature_id: str,
         limit: int = 5,
-        now_tick: int | None = None,
     ) -> list[dict[str, Any]]:
         """Semantic/keyword/graph recall via the durable store, if attached."""
         if self._store is None:
             return []
-        return await self._store.search(
-            query,
-            creature_id=creature_id,
-            limit=limit,
-            now_tick=now_tick,
-        )
+        return await self._store.search(query, creature_id=creature_id, limit=limit)
 
     # ─── Read API ────────────────────────────────────────────────────────
 
@@ -412,7 +278,6 @@ class MemoryManager:
             # the prompt, but need assessment reads intents from it
             # and needs more than a couple of ticks to detect neglect.
             recent_raw_events=list(self._raw_events)[-max(last_n or 5, 10):],
-            recent_micro_actions=list(self._micro_action_events)[-max(last_n or 5, 10):],
             short_term={
                 aspect: list(items)[-(last_n or 5):]
                 for aspect, items in self._short_term.items()
@@ -460,10 +325,6 @@ class MemoryManager:
     @property
     def short_term_count(self) -> int:
         return sum(len(items) for items in self._short_term.values())
-
-    @property
-    def micro_action_event_count(self) -> int:
-        return len(self._micro_action_events)
 
     # ─── Internal ────────────────────────────────────────────────────────
 

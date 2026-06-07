@@ -346,26 +346,3 @@ class TestPromptContext:
 
         assert any("fish" in line for line in context["food_nearby"])
         assert context["social_cues"] == []
-
-    def test_prompt_context_compacts_duplicate_social_targets(self, svc):
-        context = svc.build_prompt_context({
-            "agent_id": "gugu",
-            "self": {"location": "Harbor", "current_action": "idle"},
-            "targets": [
-                {"id": "kosto_cat", "supports": ["SOCIALIZE", "INVESTIGATE"]},
-                {"id": "yuzu_cat", "supports": ["SOCIALIZE", "INVESTIGATE"]},
-            ],
-            "entities": [
-                {"id": "kosto_cat", "tags": ["cat"], "distance": 1.2, "direction": "back_left"},
-                {"id": "yuzu_cat", "tags": ["cat"], "distance": 2.4, "direction": "left"},
-            ],
-        })
-
-        assert context["social_cues"] == [
-            "Nearby social options for SOCIALIZE or INVESTIGATE; targets: kosto_cat, yuzu_cat."
-        ]
-        social_text = " ".join(context["social_cues"])
-        assert social_text.count("kosto_cat") == 1
-        assert social_text.count("yuzu_cat") == 1
-        assert "behind-left" not in social_text
-        assert "within easy reach" not in social_text

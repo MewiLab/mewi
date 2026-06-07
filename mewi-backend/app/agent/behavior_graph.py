@@ -60,10 +60,7 @@ def make_retrieve_memory(
 
         memory_context = _runtime(state).remember(last_n=5).to_prompt_context()
         longterm = await _runtime(state).memory.recall_longterm(
-            _recall_query(structured, raw),
-            creature_id=creature_id,
-            limit=5,
-            now_tick=int(state.get("tick", raw.get("tick", 0)) or 0),
+            _recall_query(structured, raw), creature_id=creature_id, limit=5
         )
         if longterm:
             memory_context = {**memory_context, "longterm": longterm}
@@ -234,24 +231,6 @@ async def persist_memory(state: CreatureRuntimeState) -> dict[str, Any]:
     return {"memory_write": write.to_prompt_context()}
 
 
-def make_persist_memory(llm):
-    async def persist_memory_with_consolidation(
-        state: CreatureRuntimeState,
-    ) -> dict[str, Any]:
-        result = await persist_memory(state)
-        memory_context = state.get("memory_context") if isinstance(state.get("memory_context"), dict) else {}
-        _runtime(state).memory.schedule_consolidation(
-            llm,
-            threshold=3,
-            keep_recent=2,
-            min_turns=4,
-            related_memories=memory_context.get("longterm") or [],
-        )
-        return result
-
-    return persist_memory_with_consolidation
-
-
 def _recall_query(structured: dict[str, Any], raw: dict[str, Any]) -> str:
     """A short query for long-term recall: where the cat is + who's relevant."""
     parts: list[str] = []
@@ -297,7 +276,7 @@ def build_behavior_graph(
     graph.add_node("select_intent", select_intent)
     graph.add_node("execute_intent_effects", make_execute_intent_effects(social))
     graph.add_node("collect_response", collect_response)
-    graph.add_node("persist_memory", make_persist_memory(llm))
+    graph.add_node("persist_memory", persist_memory)
     graph.set_entry_point("context_builder")
     graph.add_edge("context_builder", "retrieve_memory")
     graph.add_edge("retrieve_memory", "call_domain_intents")

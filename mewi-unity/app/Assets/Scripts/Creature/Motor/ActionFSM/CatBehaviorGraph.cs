@@ -67,7 +67,6 @@ public sealed class CatBehaviorGraph : MonoBehaviour
     string _goalKey = "";
     string _goalSource = "";
     string _goalRequestId = "";
-    string _goalCorrelationId = "";
     bool _usesInteractionSequence;
 
     public CatBehaviorNode CurrentNode => currentNode;
@@ -132,10 +131,9 @@ public sealed class CatBehaviorGraph : MonoBehaviour
         string directive = board.MindDirectiveIntent ?? "";
         string focus = board.MindFocusTarget ?? "";
         string requestId = board.MindDirectiveRequestId ?? "";
-        string correlationId = board.MindDirectiveCorrelationId ?? "";
         string mood = board.MindDirectiveMood ?? "";
         string style = board.MindDirectiveStyle ?? "";
-        return $"{node}|{directive}|{focus}|{requestId}|{correlationId}|{mood}|{style}";
+        return $"{node}|{directive}|{focus}|{requestId}|{mood}|{style}";
     }
 
     void ResetGoalState(CreatureBlackboard board, CatBehaviorNode node)
@@ -146,7 +144,6 @@ public sealed class CatBehaviorGraph : MonoBehaviour
         _goalKey = BuildGoalKey(board, node);
         _goalSource = "";
         _goalRequestId = board != null ? board.MindDirectiveRequestId ?? "" : "";
-        _goalCorrelationId = board != null ? board.MindDirectiveCorrelationId ?? "" : "";
         _usesInteractionSequence = false;
 
         if (board == null || !board.HasActiveMindDirective)
@@ -355,8 +352,7 @@ public sealed class CatBehaviorGraph : MonoBehaviour
             directionHint,
             $"graph:{_commandSeq++:X6}",
             _goalRequestId,
-            targetKey ?? "",
-            _goalCorrelationId);
+            targetKey ?? "");
     }
 
     struct ScoredNode

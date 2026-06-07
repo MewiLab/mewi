@@ -43,7 +43,6 @@ public class CreatureMotorWorker : MonoBehaviour
     bool _hasActiveIntent;
     string _planRequestId = "";
     string _planId = "";
-    string _planCorrelationId = "";
     bool _warnedUninitialized;
 
     public bool IsBusy => _adapter != null && _adapter.IsBusy;
@@ -500,8 +499,7 @@ public class CreatureMotorWorker : MonoBehaviour
             climbTarget.position,
             BuildAutoCommandId(sourceIntent, "climb"),
             sourceIntent.RequestId ?? "",
-            climbKey,
-            sourceIntent.CorrelationId ?? ""));
+            climbKey));
 
         if (autoClimb.TryGetExitTarget(out Transform exitTarget, out string exitKey))
         {
@@ -513,8 +511,7 @@ public class CreatureMotorWorker : MonoBehaviour
                 exitTarget.position,
                 BuildAutoCommandId(sourceIntent, "climb-exit"),
                 sourceIntent.RequestId ?? "",
-                exitKey,
-                sourceIntent.CorrelationId ?? ""));
+                exitKey));
         }
 
         if (logWorkerDispatch)
@@ -535,7 +532,6 @@ public class CreatureMotorWorker : MonoBehaviour
             return;
 
         _planRequestId = intent.RequestId ?? "";
-        _planCorrelationId = intent.CorrelationId ?? "";
         _planId = string.IsNullOrWhiteSpace(_planRequestId)
             ? $"{(_board != null ? _board.CreatureId : name)}:{Time.frameCount}"
             : _planRequestId;
@@ -714,21 +710,16 @@ public class CreatureMotorWorker : MonoBehaviour
     /// <summary>Emit the accumulated plan steps as one report and reset plan state.</summary>
     void FlushPlan()
     {
-        PlanMicroActionEvent[] liveEvents = _board != null
-            ? LiveMicroActionReportEmitter.DrainEvents(_board.CreatureId)
-            : Array.Empty<PlanMicroActionEvent>();
-        if (_currentPlanSteps.Count == 0 && liveEvents.Length == 0) return;
+        if (_currentPlanSteps.Count == 0) return;
 
         var report = new PlanExecutionReport
         {
             agent_id    = _board != null ? _board.CreatureId : name,
             requestId   = _planRequestId,
             planId      = _planId,
-            correlationId = _planCorrelationId,
-            status      = _currentPlanSteps.Count > 0 ? BuildPlanStatus() : "observed",
-            startedAt   = _planStartedAt > 0f ? _planStartedAt : Time.time,
+            status      = BuildPlanStatus(),
+            startedAt   = _planStartedAt,
             completedAt = Time.time,
-            events      = liveEvents,
             steps       = _currentPlanSteps.ToArray(),
         };
 
@@ -736,8 +727,6 @@ public class CreatureMotorWorker : MonoBehaviour
         _currentPlanSteps.Clear();
         _planRequestId = "";
         _planId = "";
-        _planCorrelationId = "";
-        _planStartedAt = 0f;
     }
 
     void RecordStep(IntentMessage intent, string status, string reason, float startedAt, float endedAt)
@@ -746,13 +735,10 @@ public class CreatureMotorWorker : MonoBehaviour
             return;
 
         _board?.RecordMicroActionOutcome(intent, status, reason);
-        if (string.IsNullOrWhiteSpace(_planCorrelationId) && !string.IsNullOrWhiteSpace(intent.CorrelationId))
-            _planCorrelationId = intent.CorrelationId;
         _currentPlanSteps.Add(new PlanStepExecutionReport
         {
             commandId = intent.CommandId ?? "",
             requestId = intent.RequestId ?? "",
-            correlationId = intent.CorrelationId ?? "",
             action    = intent.Intent ?? "",
             target    = intent.TargetKey ?? "",
             status    = status ?? "",

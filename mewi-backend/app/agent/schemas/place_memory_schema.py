@@ -14,9 +14,6 @@ class PlaceMemoryEntry:
     last_seen_at: float = 0.0
     familiarity: float = 0.0
     last_arrival_request_id: str = ""
-    summary: str = ""
-    summary_updated_at: float = 0.0
-    summary_evidence: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "PlaceMemoryEntry":
@@ -33,13 +30,6 @@ class PlaceMemoryEntry:
             last_seen_at=last_seen_at,
             familiarity=max(0.0, min(1.0, float(data.get("familiarity") or 0.0))),
             last_arrival_request_id=str(data.get("last_arrival_request_id") or ""),
-            summary=str(data.get("summary") or ""),
-            summary_updated_at=float(data.get("summary_updated_at") or 0.0),
-            summary_evidence=(
-                data.get("summary_evidence")
-                if isinstance(data.get("summary_evidence"), dict)
-                else {}
-            ),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -50,9 +40,6 @@ class PlaceMemoryEntry:
             "last_seen_at": self.last_seen_at,
             "familiarity": self.familiarity,
             "last_arrival_request_id": self.last_arrival_request_id,
-            "summary": self.summary,
-            "summary_updated_at": self.summary_updated_at,
-            "summary_evidence": self.summary_evidence,
         }
 
 

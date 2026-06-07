@@ -6,9 +6,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Closed-session behavioral report logger for mewi-report raw JSON.
-/// It records factual player/cat session events only; Python owns all report
-/// values. Live cat micro-action feedback uses PlanExecutionReport instead.
+/// Offline behavioral report logger for mewi-report raw JSON.
+/// It records factual session events only; Python owns all report values.
 /// </summary>
 public class ReportSessionLogger : MonoBehaviour
 {
@@ -56,7 +55,6 @@ public class ReportSessionLogger : MonoBehaviour
 
     [Header("Session")]
     [SerializeField] bool startSessionOnStart = true;
-    [SerializeField] string schemaVersion = ReportSessionPayload.RawSchemaV2;
     [SerializeField] bool saveLocalOnSessionEnd = true;
     [SerializeField] bool sendToBackendOnSessionEnd = false;
     [SerializeField] string sessionIdPrefix = "unity-session";
@@ -66,7 +64,7 @@ public class ReportSessionLogger : MonoBehaviour
 
     [Header("In-Game Send")]
     [Tooltip("Show an on-screen button during play to send the current (still running) session without quitting.")]
-    [SerializeField] bool showInGameSendButton = false;
+    [SerializeField] bool showInGameSendButton = true;
     [Tooltip("Optional hotkey that also sends the current session while playing.")]
     [SerializeField] KeyCode sendCurrentSessionKey = KeyCode.F9;
 
@@ -79,10 +77,8 @@ public class ReportSessionLogger : MonoBehaviour
     readonly List<ReportEvent> _events = new List<ReportEvent>();
     readonly List<ReportMultiCatEncounter> _encounters = new List<ReportMultiCatEncounter>();
     ReportSessionPayload _lastPayload;
-    int _nextEventIndex = 1;
 
     bool _sessionActive;
-    string _lastSendStatus = "";
     int _nextSessionIndex = 1;
     float _sessionStartedAt;
     string _sessionId = "";
@@ -110,20 +106,6 @@ public class ReportSessionLogger : MonoBehaviour
         ResolveActorDefaults();
     }
 
-    void OnEnable()
-    {
-        PlayerCatActionEmitter.GlobalActionEmitted += RecordPlayerCatActionEvent;
-        CreatureSocialStimulusBus.GlobalStimulusDelivered += RecordSocialStimulusDelivered;
-        CreatureSocialStimulusPolicy.GlobalReactionDirectiveChosen += RecordNpcReactionDirectiveChosen;
-    }
-
-    void OnDisable()
-    {
-        PlayerCatActionEmitter.GlobalActionEmitted -= RecordPlayerCatActionEvent;
-        CreatureSocialStimulusBus.GlobalStimulusDelivered -= RecordSocialStimulusDelivered;
-        CreatureSocialStimulusPolicy.GlobalReactionDirectiveChosen -= RecordNpcReactionDirectiveChosen;
-    }
-
     void Start()
     {
         if (startSessionOnStart)
@@ -132,10 +114,8 @@ public class ReportSessionLogger : MonoBehaviour
 
     void Update()
     {
-#if ENABLE_LEGACY_INPUT_MANAGER
         if (sendCurrentSessionKey != KeyCode.None && Input.GetKeyDown(sendCurrentSessionKey))
             SendCurrentSession();
-#endif
 
         if (!_sessionActive)
             return;
@@ -160,9 +140,6 @@ public class ReportSessionLogger : MonoBehaviour
             : "Send last report";
         if (GUI.Button(rect, label))
             SendCurrentSession();
-
-        if (!string.IsNullOrEmpty(_lastSendStatus))
-            GUI.Label(new Rect(pad, pad + h + 4f, w + 160f, h), _lastSendStatus);
     }
 
     void OnApplicationQuit()
@@ -170,22 +147,6 @@ public class ReportSessionLogger : MonoBehaviour
         _isQuitting = true;
         if (_sessionActive)
             EndSession(saveLocalOnSessionEnd);
-    }
-
-    public void ConfigurePlayerIdentity(
-        string nextUserId,
-        Transform actor,
-        CreatureBlackboard actorBlackboard,
-        string nextSessionIdPrefix = "")
-    {
-        if (!string.IsNullOrWhiteSpace(nextUserId))
-            userId = nextUserId.Trim();
-        if (!string.IsNullOrWhiteSpace(nextSessionIdPrefix))
-            sessionIdPrefix = nextSessionIdPrefix.Trim();
-        if (actor != null)
-            humanActor = actor;
-        if (actorBlackboard != null)
-            humanBlackboard = actorBlackboard;
     }
 
     [ContextMenu("Report/Start Session")]
@@ -209,7 +170,6 @@ public class ReportSessionLogger : MonoBehaviour
         _stationarySince = -1f;
         _lastNearestCatId = "";
         _lastDerivedAction = "";
-        _nextEventIndex = 1;
 
         _lastCatSampleAt = -1f;
         _catState.Clear();
@@ -231,8 +191,6 @@ public class ReportSessionLogger : MonoBehaviour
             session_id = _sessionId,
             session_index = _nextSessionIndex,
             timestamp_start = _timestampStart,
-            timestamp_end = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
-            close_reason = "game_session_closed",
             duration_seconds = Mathf.Max(0f, Time.time - _sessionStartedAt),
             events = _events.ToArray(),
             multi_cat_encounters = _encounters.ToArray(),
@@ -276,36 +234,20 @@ public class ReportSessionLogger : MonoBehaviour
         if (fileOutbox != null)
         {
             string path = fileOutbox.SavePending(payload);
-            _lastSendStatus = "sending...";
-            fileOutbox.SendFile(path, UpdateSendStatus);
+            fileOutbox.SendFile(path);
             Debug.Log($"[ReportSessionLogger] sent current session {payload.session.session_id} " +
                       $"({payload.session.events.Length} events) via outbox.");
         }
         else if (sender != null)
         {
-            _lastSendStatus = "sending...";
-            sender.Send(payload, UpdateSendStatus);
+            sender.Send(payload);
             Debug.Log($"[ReportSessionLogger] sent current session {payload.session.session_id} " +
                       $"({payload.session.events.Length} events) directly.");
         }
         else
         {
-            _lastSendStatus = "no sender or outbox assigned";
             Debug.LogWarning("[ReportSessionLogger] no sender or outbox assigned; cannot send.");
         }
-    }
-
-    void UpdateSendStatus(ReportSessionSendResult result)
-    {
-        if (result == null)
-        {
-            _lastSendStatus = "send skipped (not playing / no transport)";
-            return;
-        }
-
-        _lastSendStatus = result.success
-            ? $"sent OK ({result.responseCode}) at {DateTime.Now:HH:mm:ss}"
-            : $"send FAILED ({result.responseCode}) {result.error}";
     }
 
     public void RecordHumanAction(string action)
@@ -322,23 +264,16 @@ public class ReportSessionLogger : MonoBehaviour
         if (string.IsNullOrEmpty(canonical))
             return;
 
-        ReportEventParams eventParams = paramsData ?? BuildHumanParams(null, "");
         _events.Add(new ReportEvent
         {
-            event_id = NextEventId(),
-            correlation_id = "",
             t = EventTime(),
             actor = "human",
-            actor_id = HumanActorId(),
             action = canonical,
             cat_id = "",
-            target_id = eventParams.target_id ?? "",
-            phase = "completed",
-            status = "",
             trust_before = 0,
             trust_after = 0,
             trigger = "",
-            @params = eventParams,
+            @params = paramsData ?? BuildHumanParams(null, ""),
             meta = meta ?? BuildMeta("manual", ""),
         });
     }
@@ -391,165 +326,13 @@ public class ReportSessionLogger : MonoBehaviour
         RecordHumanAction(ReportActionClassifier.CallOut, paramsData, BuildMeta("manual_call", ""));
     }
 
-    public void RecordPlayerCatActionEvent(PlayerCatActionEvent actionEvent)
-    {
-        if (string.IsNullOrWhiteSpace(actionEvent.Kind))
-            return;
-
-        if (!_sessionActive)
-            StartSession();
-
-        string targetId = actionEvent.TargetCatId ?? "";
-        var paramsData = new ReportEventParams
-        {
-            zone_id = CurrentZoneId(humanBlackboard),
-            target_id = targetId,
-            item_id = "",
-            subtype = "",
-            initiated_by = "player_cat_social_fsm",
-            behavior_key = actionEvent.BehaviorKey,
-            motor_action = actionEvent.MotorAction,
-            social_act_kind = "",
-            source_event_id = "",
-            distance_to_player_m = -1f,
-            distance_to_nearest_cat_m = MissingIfInvalid(actionEvent.DistanceMeters),
-            facing_dot = MissingIfInvalid(actionEvent.FacingDot),
-            confidence = MissingIfInvalid(actionEvent.Confidence),
-            speed_mps = -1f,
-        };
-
-        _events.Add(new ReportEvent
-        {
-            event_id = string.IsNullOrWhiteSpace(actionEvent.EventId) ? NextEventId() : actionEvent.EventId,
-            correlation_id = actionEvent.CorrelationId ?? "",
-            t = EventTime(),
-            actor = "player_cat",
-            actor_id = string.IsNullOrWhiteSpace(actionEvent.ActorId) ? HumanActorId() : actionEvent.ActorId,
-            action = ReportActionClassifier.ToSnakeCase(actionEvent.Kind),
-            cat_id = "",
-            target_id = targetId,
-            phase = string.IsNullOrWhiteSpace(actionEvent.Phase) ? "completed" : actionEvent.Phase,
-            status = "",
-            trust_before = 0,
-            trust_after = 0,
-            trigger = "",
-            @params = paramsData,
-            meta = BuildMeta("player_cat_social_fsm", ""),
-        });
-    }
-
-    public void RecordSocialStimulusDelivered(SocialStimulus stimulus)
-    {
-        if (!stimulus.IsValid)
-            return;
-
-        if (!_sessionActive)
-            StartSession();
-
-        var paramsData = new ReportEventParams
-        {
-            zone_id = "",
-            target_id = stimulus.TargetCatId ?? "",
-            item_id = "",
-            subtype = "",
-            initiated_by = "creature_social_stimulus_bus",
-            behavior_key = "",
-            motor_action = "",
-            social_act_kind = "",
-            source_event_id = stimulus.SourceEventId ?? "",
-            distance_to_player_m = -1f,
-            distance_to_nearest_cat_m = MissingIfInvalid(stimulus.DistanceMeters),
-            facing_dot = MissingIfInvalid(stimulus.FacingDot),
-            confidence = MissingIfInvalid(stimulus.Confidence),
-            speed_mps = -1f,
-        };
-
-        _events.Add(new ReportEvent
-        {
-            event_id = stimulus.EventId,
-            correlation_id = stimulus.CorrelationId ?? "",
-            t = EventTime(),
-            actor = "system",
-            actor_id = "",
-            action = "social_stimulus_delivered",
-            cat_id = "",
-            target_id = stimulus.TargetCatId ?? "",
-            phase = "delivered",
-            status = "",
-            trust_before = 0,
-            trust_after = 0,
-            trigger = "",
-            @params = paramsData,
-            meta = BuildMeta("creature_social_stimulus_bus", ""),
-        });
-    }
-
-    public void RecordNpcReactionDirectiveChosen(
-        CreatureBlackboard board,
-        SocialStimulus stimulus,
-        CreatureBlackboard.MindDirective directive)
-    {
-        if (board == null || !stimulus.IsValid || !directive.IsValid)
-            return;
-
-        if (!_sessionActive)
-            StartSession();
-
-        string catId = board.CreatureId.Trim().ToLowerInvariant();
-        string socialKind = directive.SocialAct.kind ?? "";
-        var paramsData = new ReportEventParams
-        {
-            zone_id = CurrentZoneId(board),
-            target_id = stimulus.ActorId ?? "",
-            item_id = "",
-            subtype = "",
-            initiated_by = "creature_social_stimulus_policy",
-            behavior_key = socialKind,
-            motor_action = "",
-            social_act_kind = socialKind,
-            source_event_id = stimulus.SourceEventId ?? "",
-            distance_to_player_m = MissingIfInvalid(stimulus.DistanceMeters),
-            distance_to_nearest_cat_m = -1f,
-            facing_dot = MissingIfInvalid(stimulus.FacingDot),
-            confidence = MissingIfInvalid(stimulus.Confidence),
-            speed_mps = -1f,
-        };
-
-        _events.Add(new ReportEvent
-        {
-            event_id = NextEventId(),
-            correlation_id = stimulus.CorrelationId ?? "",
-            t = EventTime(),
-            actor = "cat",
-            actor_id = catId,
-            action = ReportActionClassifier.ToSnakeCase(socialKind),
-            cat_id = catId,
-            target_id = stimulus.ActorId ?? "",
-            phase = "chosen",
-            status = "",
-            trust_before = TrustScore(board),
-            trust_after = TrustScore(board),
-            trigger = "social_stimulus",
-            @params = paramsData,
-            meta = BuildMeta("creature_social_stimulus_policy", directive.Reason),
-        });
-    }
-
     public void RecordCatActionById(string catId, string action, int trustBefore, int trustAfter, string trigger)
     {
         ReportCatBinding cat = FindCatBinding(catId);
         RecordCatAction(cat, action, trustBefore, trustAfter, trigger, null, null);
     }
 
-    public void RecordCatAction(
-        ReportCatBinding cat,
-        string action,
-        int trustBefore,
-        int trustAfter,
-        string trigger,
-        ReportEventParams paramsData,
-        ReportEventMeta meta,
-        string correlationId = "")
+    public void RecordCatAction(ReportCatBinding cat, string action, int trustBefore, int trustAfter, string trigger, ReportEventParams paramsData, ReportEventMeta meta)
     {
         if (cat == null || string.IsNullOrWhiteSpace(cat.catId))
             return;
@@ -557,23 +340,16 @@ public class ReportSessionLogger : MonoBehaviour
         if (!_sessionActive)
             StartSession();
 
-        ReportEventParams eventParams = paramsData ?? BuildCatParams(cat);
         _events.Add(new ReportEvent
         {
-            event_id = NextEventId(),
-            correlation_id = correlationId ?? "",
             t = EventTime(),
             actor = "cat",
-            actor_id = cat.catId.Trim().ToLowerInvariant(),
             action = ReportActionClassifier.ToSnakeCase(action),
             cat_id = cat.catId.Trim().ToLowerInvariant(),
-            target_id = eventParams.target_id ?? "",
-            phase = "completed",
-            status = "",
             trust_before = Mathf.Clamp(trustBefore, 0, 100),
             trust_after = Mathf.Clamp(trustAfter, 0, 100),
             trigger = ReportActionClassifier.ToSnakeCase(trigger),
-            @params = eventParams,
+            @params = paramsData ?? BuildCatParams(cat),
             meta = meta ?? BuildMeta("manual_cat", ""),
         });
     }
@@ -590,21 +366,15 @@ public class ReportSessionLogger : MonoBehaviour
 
     public void RecordMultiCatEncounter(string[] catsPresent, string humanAction, string outcome)
     {
-        string[] normalizedCats = NormalizeCatsPresent(catsPresent);
-        string normalizedAction = ReportActionClassifier.ToSnakeCase(humanAction);
-        string normalizedOutcome = ReportActionClassifier.ToSnakeCase(outcome);
-        if (normalizedCats.Length < 2 || string.IsNullOrEmpty(normalizedAction) || string.IsNullOrEmpty(normalizedOutcome))
-            return;
-
         if (!_sessionActive)
             StartSession();
 
         _encounters.Add(new ReportMultiCatEncounter
         {
             t = EventTime(),
-            cats_present = normalizedCats,
-            human_action = normalizedAction,
-            outcome = normalizedOutcome,
+            cats_present = catsPresent ?? Array.Empty<string>(),
+            human_action = ReportActionClassifier.ToSnakeCase(humanAction),
+            outcome = ReportActionClassifier.ToSnakeCase(outcome),
         });
     }
 
@@ -662,9 +432,7 @@ public class ReportSessionLogger : MonoBehaviour
     {
         return new ReportSessionPayload
         {
-            schema_version = string.IsNullOrWhiteSpace(schemaVersion)
-                ? ReportSessionPayload.RawSchemaV2
-                : schemaVersion.Trim(),
+            schema_version = "mewi.report.raw.v1",
             user_id = string.IsNullOrWhiteSpace(userId) ? "local_user" : userId.Trim(),
             source = BuildSource(),
             session = session,
@@ -681,8 +449,6 @@ public class ReportSessionLogger : MonoBehaviour
             session_id = _sessionId,
             session_index = _nextSessionIndex,
             timestamp_start = _timestampStart,
-            timestamp_end = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
-            close_reason = "in_progress_snapshot",
             duration_seconds = Mathf.Max(0f, Time.time - _sessionStartedAt),
             events = _events.ToArray(),
             multi_cat_encounters = _encounters.ToArray(),
@@ -753,11 +519,8 @@ public class ReportSessionLogger : MonoBehaviour
             ReportCatBinding cat = reportCats[i];
             if (cat == null || cat.blackboard == null || string.IsNullOrWhiteSpace(cat.catId))
                 continue;
-            if (cat.blackboard == humanBlackboard || IsSameActor(humanActor, cat.Transform))
-                continue;
 
-            IntentMessage active = cat.blackboard.ResolveActiveMicroAction();
-            string action = ReportActionClassifier.ToSnakeCase(active.Intent);
+            string action = ReportActionClassifier.ToSnakeCase(cat.blackboard.ResolveActiveMicroAction().Intent);
             if (string.IsNullOrEmpty(action))
                 continue;
             int trust = TrustScore(cat.blackboard);
@@ -771,10 +534,7 @@ public class ReportSessionLogger : MonoBehaviour
 
             int trustBefore = seen ? last.trust : trust;
             string trigger = actionChanged ? "action_changed" : "trust_changed";
-            ReportEventParams paramsData = BuildCatParams(cat);
-            paramsData.behavior_key = action;
-            paramsData.motor_action = action;
-            RecordCatAction(cat, action, trustBefore, trust, trigger, paramsData, BuildMeta("cat_state_sampler", trigger), active.CorrelationId);
+            RecordCatAction(cat, action, trustBefore, trust, trigger, null, BuildMeta("cat_state_sampler", trigger));
             _catState[key] = new CatStateSample { action = action, trust = trust };
         }
     }
@@ -812,14 +572,8 @@ public class ReportSessionLogger : MonoBehaviour
             item_id = "",
             subtype = "",
             initiated_by = "",
-            behavior_key = "",
-            motor_action = "",
-            social_act_kind = "",
-            source_event_id = "",
             distance_to_player_m = -1f,
             distance_to_nearest_cat_m = -1f,
-            facing_dot = -1f,
-            confidence = -1f,
             speed_mps = -1f,
         };
 
@@ -839,14 +593,8 @@ public class ReportSessionLogger : MonoBehaviour
             item_id = "",
             subtype = "",
             initiated_by = "",
-            behavior_key = "",
-            motor_action = "",
-            social_act_kind = "",
-            source_event_id = "",
             distance_to_player_m = -1f,
             distance_to_nearest_cat_m = -1f,
-            facing_dot = -1f,
-            confidence = -1f,
             speed_mps = -1f,
         };
 
@@ -943,20 +691,6 @@ public class ReportSessionLogger : MonoBehaviour
         return _sessionActive ? Mathf.Max(0f, Time.time - _sessionStartedAt) : 0f;
     }
 
-    string NextEventId()
-    {
-        return $"evt-{_nextEventIndex++:000000}";
-    }
-
-    string HumanActorId()
-    {
-        if (humanBlackboard != null && !string.IsNullOrWhiteSpace(humanBlackboard.CreatureId))
-            return humanBlackboard.CreatureId.Trim();
-        if (humanActor != null && !string.IsNullOrWhiteSpace(humanActor.name))
-            return humanActor.name.Trim();
-        return "player";
-    }
-
     static bool IsSameActor(Transform a, Transform b)
     {
         if (a == null || b == null)
@@ -983,36 +717,6 @@ public class ReportSessionLogger : MonoBehaviour
     static float MissingIfInvalid(float value)
     {
         return float.IsNaN(value) || float.IsInfinity(value) ? -1f : value;
-    }
-
-    static string[] NormalizeCatsPresent(string[] catsPresent)
-    {
-        if (catsPresent == null || catsPresent.Length == 0)
-            return Array.Empty<string>();
-
-        var normalized = new List<string>();
-        for (int i = 0; i < catsPresent.Length; i++)
-        {
-            string catId = catsPresent[i];
-            if (string.IsNullOrWhiteSpace(catId))
-                continue;
-
-            string cleaned = catId.Trim().ToLowerInvariant();
-            if (!ContainsCatId(normalized, cleaned))
-                normalized.Add(cleaned);
-        }
-
-        return normalized.ToArray();
-    }
-
-    static bool ContainsCatId(List<string> cats, string catId)
-    {
-        for (int i = 0; i < cats.Count; i++)
-        {
-            if (string.Equals(cats[i], catId, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
     }
 
     static string SafePathSegment(string value)

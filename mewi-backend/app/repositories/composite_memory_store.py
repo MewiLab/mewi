@@ -41,16 +41,10 @@ class CompositeMemoryStore:
         *,
         creature_id: str,
         limit: int = 5,
-        now_tick: int | None = None,
     ) -> list[dict[str, Any]]:
         results = await asyncio.gather(
             *(
-                store.search(
-                    query,
-                    creature_id=creature_id,
-                    limit=limit,
-                    now_tick=now_tick,
-                )
+                store.search(query, creature_id=creature_id, limit=limit)
                 for store in self._stores
             ),
             return_exceptions=True,

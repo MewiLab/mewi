@@ -17,7 +17,6 @@ public struct InteractionContext
     public string Style => Directive.Style ?? "";
     public string Reason => Directive.Reason ?? "";
     public string RequestId => Directive.RequestId ?? "";
-    public string CorrelationId => Directive.CorrelationId ?? "";
     public SocialAct SocialAct => Directive.SocialAct;
 
     public InteractionContext(

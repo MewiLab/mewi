@@ -54,26 +54,6 @@ class PlaceMemoryRepository:
             request_id,
         )
 
-    async def record_place_summary(
-        self,
-        creature_id: str,
-        zone_id: str,
-        *,
-        summary: str,
-        evidence: dict[str, Any],
-        observed_at: float,
-        request_id: str = "",
-    ) -> None:
-        await asyncio.to_thread(
-            self._record_place_summary_sync,
-            creature_id,
-            zone_id,
-            summary,
-            evidence,
-            observed_at,
-            request_id,
-        )
-
     async def load_overlay(self, creature_id: str) -> PlaceMemoryOverlay:
         rows = await asyncio.to_thread(self._load_rows_sync, creature_id)
         entries = {
@@ -150,39 +130,6 @@ class PlaceMemoryRepository:
                     "last_arrival_request_id": request_id,
                 }
             self._upsert_entry_sync(row)
-
-    def _record_place_summary_sync(
-        self,
-        creature_id: str,
-        zone_id: str,
-        summary: str,
-        evidence: dict[str, Any],
-        observed_at: float,
-        request_id: str,
-    ) -> None:
-        creature_id = _clean_text(creature_id)
-        zone_id = _clean_text(zone_id)
-        summary = _clean_text(summary)
-        if not creature_id or not zone_id or not summary:
-            return
-
-        current = self._load_entry_sync(creature_id, zone_id)
-        row = {
-            **current,
-            "creature_id": creature_id,
-            "zone_id": zone_id,
-            "visit_count": int(current.get("visit_count") or 0),
-            "last_visited_at": current.get("last_visited_at"),
-            "last_seen_at": max(float(current.get("last_seen_at") or 0.0), observed_at),
-            "familiarity": float(current.get("familiarity") or 0.0),
-            "last_arrival_request_id": (
-                current.get("last_arrival_request_id") or request_id
-            ),
-            "summary": summary,
-            "summary_evidence": evidence if isinstance(evidence, dict) else {},
-            "summary_updated_at": observed_at,
-        }
-        self._upsert_entry_sync(row)
 
     def _load_entry_sync(self, creature_id: str, zone_id: str) -> dict[str, Any]:
         try:

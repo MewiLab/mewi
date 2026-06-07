@@ -9,10 +9,9 @@ processing are implemented — only the ports.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
-from app.models.report import ReportCardResponse, ReportProduct, ReportSessionPayload
-from app.services.report.store import ReportResultStore, RawSessionStore, safe_segment
+from app.models.report import ReportSessionPayload
+from app.services.report.store import RawSessionStore
 from app.services.report.trigger import ProcessingTrigger
 
 
@@ -51,56 +50,3 @@ class ReportIngestionService:
             session_count=count,
             processing_queued=processed,
         )
-
-
-class ReportReadService:
-    """Read finished report products from the result store.
-
-    This service is deliberately read-only. It does not enqueue jobs, run
-    processors, call LLMs, or compose new report products.
-    """
-
-    def __init__(self, store: ReportResultStore) -> None:
-        self._store = store
-
-    def load(self, user_id: str, product: ReportProduct = "attachment") -> dict[str, Any]:
-        return self._store.get(user_id, product)
-
-    def list_cards(self, product: ReportProduct = "attachment") -> list[ReportCardResponse]:
-        cards = [_card_from_report(report, product) for report in self._store.list(product)]
-        return sorted(cards, key=lambda card: card.last_seen, reverse=True)
-
-    def card_for(self, user_id: str, product: ReportProduct = "attachment") -> ReportCardResponse:
-        return _card_from_report(self.load(user_id, product), product)
-
-
-def _card_from_report(report: dict[str, Any], product: ReportProduct) -> ReportCardResponse:
-    user = report.get("user") if isinstance(report.get("user"), dict) else {}
-    meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}
-    summary = report.get("summary") if isinstance(report.get("summary"), dict) else {}
-
-    user_id = str(report.get("user_id") or user.get("id") or "").strip()
-    if not user_id:
-        user_id = "unknown"
-
-    route_source = user.get("handle") or user.get("report_slug") or user_id
-    display_name = str(user.get("display_name") or user.get("handle") or user_id)
-
-    return ReportCardResponse(
-        user_id=user_id,
-        data_file_id=user_id,
-        route_id=safe_segment(str(route_source)),
-        display_name=display_name,
-        product=product,
-        last_seen=str(meta.get("last_seen") or ""),
-        sessions=_int_or_zero(meta.get("sessions")),
-        total_events=_int_or_zero(meta.get("total_events")),
-        primary_bond=str(summary.get("primary_bond") or ""),
-    )
-
-
-def _int_or_zero(value: Any) -> int:
-    try:
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0

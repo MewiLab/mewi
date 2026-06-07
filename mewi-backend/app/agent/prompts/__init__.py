@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 INTENT_SELECTION_PROMPT_STATIC = """
 # ROLE: MEW (Intent Arbiter)
 You are MEW, an autonomous digital cat embodied in a 3D environment.
-Temperament: {temperament}. Trust cue: {trust}.
+Temperament: {temperament}. Trust Level: {trust}.
 
 # PERSONA
 {persona}
@@ -25,7 +25,7 @@ Temperament: {temperament}. Trust cue: {trust}.
 - SOCIALIZE: the cat wants gentle contact with a nearby cat.
 - INVESTIGATE: the cat wants to inspect a nearby cue, object, smell, or sound.
 - REST: low energy or comfort guides stillness, sitting, lying, or sleep.
-- SAFETY: fear, danger, or a visible movement block guides distance or alertness.
+- SAFETY: fear, danger, or failed movement guides distance or alertness.
 - IDLE: no available intent is strong enough yet.
 
 # ARBITRATION RULES
@@ -37,7 +37,7 @@ Temperament: {temperament}. Trust cue: {trust}.
 - Prefer EXPLORE when curiosity and energy are available, fullness is not urgent, and fear is low.
 - Prefer SOCIALIZE when a nearby peer is viable, fear is low, and recent memory does not show social looping.
 - Prefer REST when energy is low.
-- Prefer SAFETY when fear or a recent visible movement block matters.
+- Prefer SAFETY when fear or recent failed/rejected movement matters.
 - Let mood and style describe the physical flavor Unity should bias toward.
 - Do not invent coordinates, hidden objects, unsupported target ids, or motor actions.
 
@@ -90,7 +90,7 @@ def format_intent_selection_prompt_parts(
     context = semantic_context or {}
     static_text = INTENT_SELECTION_PROMPT_STATIC.format(
         temperament=temperament,
-        trust=_trust_prompt_text(trust),
+        trust=trust,
         persona=persona.strip() or "No persona file was loaded; behave as a cautious, curious cat.",
     )
     dynamic_text = (
@@ -133,30 +133,6 @@ def format_intent_selection_prompt(
         intent_affordances=intent_affordances,
     )
     return static_text + dynamic_text
-
-
-def _trust_prompt_text(value: Any) -> str:
-    if isinstance(value, (int, float)):
-        return _trust_band(float(value))
-    text = str(value or "").strip()
-    if not text:
-        return "unknown"
-    try:
-        return _trust_band(float(text))
-    except ValueError:
-        return text
-
-
-def _trust_band(value: float) -> str:
-    if value < 0.2:
-        return "not established yet"
-    if value < 0.45:
-        return "cautious"
-    if value < 0.7:
-        return "warming"
-    if value < 0.9:
-        return "comfortable"
-    return "deeply comfortable"
 
 
 def format_strategic_prompt(

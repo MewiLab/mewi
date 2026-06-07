@@ -1,132 +1,80 @@
 ---
 // src/components/RadarChart.astro
-export interface Props {
-  radarJson: string;
-}
-
+export interface Props { radarJson: string; }
 const { radarJson } = Astro.props;
-
-function parseRadar(raw: string): Record<string, number> {
-  try {
-    const parsed = JSON.parse(raw);
-    return typeof parsed === 'object' && parsed !== null ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-const radar = parseRadar(radarJson);
-const labels = ['Approach', 'Retreat', 'Offer item', 'Wait / dwell', 'Call out', 'Pet attempt'];
-const values = labels.map(label => Number(radar[label] ?? 0));
-const width = 340;
-const height = 280;
-const cx = width / 2;
-const cy = 132;
-const maxRadius = 88;
-
-function polarPoint(index: number, value: number) {
-  const angle = -Math.PI / 2 + index * (Math.PI * 2 / labels.length);
-  const radius = maxRadius * (value / 100);
-  return {
-    x: cx + Math.cos(angle) * radius,
-    y: cy + Math.sin(angle) * radius,
-  };
-}
-
-function ringPoints(percent: number) {
-  return labels.map((_, index) => {
-    const point = polarPoint(index, percent);
-    return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
-  }).join(' ');
-}
-
-const dataPoints = values.map((value, index) => {
-  const point = polarPoint(index, Math.max(0, Math.min(100, value)));
-  return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
-}).join(' ');
 ---
 
-<div class="radar-chart">
-  <div class="legend" aria-hidden="true">
-    {labels.map((label, index) => (
-      <span class="leg-item">
-        <span class="leg-swatch" style={`opacity:${0.4 + index * 0.1}`}></span>
-        {label} {values[index]}%
-      </span>
-    ))}
-  </div>
-
+<div class="radar-chart" data-radar={radarJson}>
+  <div class="legend" aria-hidden="true"></div>
   <div class="chart-wrap">
-    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Hexagonal radar chart of human action distribution across six categories">
-      {[25, 50, 75, 100].map(percent => (
-        <polygon points={ringPoints(percent)} class="radar-ring" />
-      ))}
-
-      {labels.map((label, index) => {
-        const axisEnd = polarPoint(index, 100);
-        const labelPoint = polarPoint(index, 118);
-        const anchor = labelPoint.x < cx - 20 ? 'end' : labelPoint.x > cx + 20 ? 'start' : 'middle';
-
-        return (
-          <g>
-            <line x1={cx} y1={cy} x2={axisEnd.x} y2={axisEnd.y} class="radar-axis" />
-            <text x={labelPoint.x} y={labelPoint.y} text-anchor={anchor} class="radar-label">{label}</text>
-          </g>
-        );
-      })}
-
-      <polygon points={dataPoints} class="radar-area" />
-      <polyline points={`${dataPoints} ${dataPoints.split(' ')[0] ?? ''}`} class="radar-line" />
-      {values.map((value, index) => {
-        const point = polarPoint(index, Math.max(0, Math.min(100, value)));
-        return <circle cx={point.x} cy={point.y} r="3.2" class="radar-point" />;
-      })}
-    </svg>
+    <canvas role="img"
+      aria-label="Hexagonal radar chart of human action distribution across six categories">
+      Human action distribution radar.
+    </canvas>
   </div>
-  <p class="chart-caption">Human action distribution radar.</p>
 </div>
 
+<script>
+import Chart from 'chart.js/auto';
+
+document.querySelectorAll('.radar-chart').forEach(root => {
+  const radar = JSON.parse(root.dataset.radar || '{}');
+  const labels = ['Approach', 'Retreat', 'Offer item', 'Wait / dwell', 'Call out', 'Pet attempt'];
+  const values = labels.map(l => radar[l] ?? 0);
+  const legEl = root.querySelector('.legend');
+  const ctx = root.querySelector('canvas')?.getContext('2d');
+  const styles = getComputedStyle(document.documentElement);
+  const axisColor = styles.getPropertyValue('--ink2').trim() || '#5F5E5A';
+  const gridColor = styles.getPropertyValue('--border').trim() || 'rgba(128,128,128,.12)';
+
+  if (!legEl || !ctx) return;
+
+  labels.forEach((label, i) => {
+    const span = document.createElement('span');
+    span.className = 'leg-item';
+    span.innerHTML = `<span class="leg-swatch" style="background:#888780;opacity:${0.4 + i * 0.1}"></span>${label} ${values[i]}%`;
+    legEl.appendChild(span);
+  });
+
+  new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: '#888780',
+        backgroundColor: 'rgba(136,135,128,.08)',
+        borderWidth: 1.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#888780',
+        pointBorderColor: 'transparent',
+        label: 'You',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        r: {
+          ticks: { display: false, stepSize: 25 },
+          grid: { circular: false, color: gridColor },
+          angleLines: { color: gridColor },
+          pointLabels: { font: { size: 11 }, color: axisColor },
+          suggestedMin: 0, suggestedMax: 100,
+        }
+      }
+    }
+  });
+});
+</script>
+
 <style is:global>
-.radar-chart .chart-wrap { position: relative; width: 100%; min-height: 280px; }
-.radar-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.radar-chart .chart-wrap { position: relative; width: 100%; height: 280px; }
+.radar-chart .chart-wrap canvas { position: absolute; inset: 0; }
 .radar-chart .legend {
   display: flex; gap: 10px; flex-wrap: wrap;
   margin-bottom: 8px; font-size: 11px; color: var(--ink2);
 }
 .radar-chart .leg-item { display: flex; align-items: center; gap: 4px; }
-.radar-chart .leg-swatch {
-  display: inline-block; width: 10px; height: 10px;
-  border-radius: 2px; background: #888780;
-}
-.radar-chart .radar-ring {
-  fill: none;
-  stroke: var(--border);
-  stroke-width: 1;
-}
-.radar-chart .radar-axis {
-  stroke: var(--border);
-  stroke-width: 1;
-}
-.radar-chart .radar-area {
-  fill: rgba(136,135,128,.10);
-  stroke: none;
-}
-.radar-chart .radar-line {
-  fill: none;
-  stroke: #888780;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.radar-chart .radar-point { fill: #888780; }
-.radar-chart .radar-label {
-  fill: var(--ink2);
-  font-size: 10px;
-}
-.radar-chart .chart-caption {
-  margin-top: .5rem;
-  color: var(--ink3);
-  font-size: 11px;
-  line-height: 1.5;
-}
+.radar-chart .leg-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
 </style>

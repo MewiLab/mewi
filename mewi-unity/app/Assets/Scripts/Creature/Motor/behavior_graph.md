@@ -6,9 +6,7 @@ This documents the Unity-side graph stack:
 - `AgentWebSocketDispatcher` parses shared websocket replies and buffers
   directives by creature id.
 - `AgentMessageDispatcher` is the thin per-cat delivery step.
-- `SnapshotTicker` sends snapshots and prior live execution reports
-  (`PlanExecutionReport`). These are backend feedback for the next mind tick,
-  not persisted mewi-report session analytics.
+- `SnapshotTicker` sends snapshots and prior execution reports.
 - `CreatureIntentWorker` consumes high-level `MindDirective`s, owns the active
   goal lifecycle, and asks `CatBehaviorGraph` for the next micro-action only
   when the motor is no longer executing.
@@ -29,7 +27,7 @@ flowchart TD
     Dispatcher -->|EnqueueMindDirective| IntentQueue[Blackboard IntentQueue]
 
     SnapshotTicker -->|FlushReport| Worker[CreatureMotorWorker]
-    Worker --> ReportQueue[Blackboard completed live plan reports]
+    Worker --> ReportQueue[Blackboard completed plan reports]
     ReportQueue --> SnapshotTicker
     SnapshotTicker -->|snapshot + last report| Backend
 
@@ -62,16 +60,11 @@ recipe is used before the graph's built-in fallback sequence.
 | --- | --- | --- | --- |
 | IntentQueue | `AgentMessageDispatcher` | `CreatureIntentWorker` | `MindDirective` (`Intent`, `FocusTarget`, mood/style/social render hints) |
 | MicroActionQueue | `CreatureIntentWorker` or tests | `CreatureMotorWorker` | `IntentMessage` body actions |
-| ReportQueue | `CreatureMotorWorker` | `SnapshotTicker` | `PlanExecutionReport` live tick feedback |
+| ReportQueue | `CreatureMotorWorker` | `SnapshotTicker` | `PlanExecutionReport` |
 
 The names matter: a high-level intent is a policy choice, not something the body
 can execute. A micro-action is the body-level vocabulary handled by
 `CreatureMotorWorker.TryBuildCommand`.
-
-This `ReportQueue` is not the closed-session report pipeline. The persisted
-behavioral analytics payload is `ReportSessionPayload`, written by
-`ReportSessionLogger` and sent through `ReportSessionSender` to
-`POST /api/v1/report/session`.
 
 ## Goal Lifecycle
 
@@ -181,20 +174,17 @@ Current graph-emitted intent names:
 - `investigate`
 - `look_at`
 - `eat`
-- `drink`
 - `vocalize`
 - `sit`
 - `sleep`
 - `lie`
 - `groom`
-- `smell`
 - `flee`
 - `alert`
 
 Additional Malbers Action-mode strings accepted by `CreatureMotorWorker` for
-authored social recipes include `meow`, `flinch`, `stun`, `startle`, `dig`,
-`crawl`, `open_chest`, `shake`, `nod_head`, `yes`, `no`, `push`, `poop`, and
-`pee`.
+authored social recipes include `meow`, `stun`, `dig`, `crawl`, `open_chest`,
+`shake`, `yes`, `no`, `push`, `poop`, and `pee`.
 
 `CreatureMotorWorker` remains the only translator from intent strings to
 `MotorCommand`, and `MalbersAnimalAdapter` remains the only body executor.

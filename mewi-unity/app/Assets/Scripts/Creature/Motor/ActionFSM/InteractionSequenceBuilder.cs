@@ -118,17 +118,17 @@ public static class InteractionSequenceBuilder
             return true;
         }
 
-        if (IsPlayerTarget(context, smart))
-        {
-            BuildCatPlayerSocial(context, actions);
-            source = "markup_cat_player_social";
-            return true;
-        }
-
         if (IsCatTarget(context, smart))
         {
             BuildCatCatSocial(context, actions);
             source = "markup_cat_cat_social";
+            return true;
+        }
+
+        if (IsPlayerTarget(context, smart))
+        {
+            BuildCatPlayerSocial(context, actions);
+            source = "markup_cat_player_social";
             return true;
         }
 
@@ -267,8 +267,7 @@ public static class InteractionSequenceBuilder
             directionHint,
             NextCommandId("interaction"),
             context.RequestId,
-            target ?? "",
-            context.CorrelationId));
+            target ?? ""));
     }
 
     static T FindOnTarget<T>(Transform target) where T : Component
@@ -283,9 +282,6 @@ public static class InteractionSequenceBuilder
 
     static bool IsCatTarget(InteractionContext context, SmartObject smart)
     {
-        if (IsPlayerTarget(context, smart))
-            return false;
-
         CreatureBlackboard targetBoard = FindOnTarget<CreatureBlackboard>(context.Target);
         if (targetBoard != null && targetBoard != context.Board)
             return true;

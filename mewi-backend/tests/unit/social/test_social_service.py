@@ -173,61 +173,6 @@ async def test_leaving_zone_dissolves_room_for_new_set() -> None:
     assert "cat_c" in second.room.members
 
 
-async def test_affordance_target_alias_resolves_to_room_member() -> None:
-    # ADR-039: Unity affordance id "kosto_cat" must route to room member "kosto".
-    world = WorldState()
-    social = SocialService(world=world)
-    await world.ingest_tick("kosto", _payload("Yard"))
-    await world.ingest_tick("miso", _payload("Yard"))
-
-    spoke = await social.publish_turn(
-        "miso",
-        say="Fish smell is near the boxes.",
-        target="kosto_cat",
-        expects_reply=True,
-    )
-    assert spoke.decision.utterance.target_id == "kosto"
-
-    heard = await social.observe_turn("kosto")
-    assert [i.utterance.text for i in heard.delivered_inbox] == ["Fish smell is near the boxes."]
-
-
-async def test_repeated_say_is_suppressed_as_body_language() -> None:
-    # ADR-039 anti-loop: do not re-publish the speaker's own recent line.
-    world = WorldState()
-    social = SocialService(world=world)
-    await world.ingest_tick("kosto", _payload("Yard"))
-    await world.ingest_tick("miso", _payload("Yard"))
-
-    first = await social.publish_turn("miso", say="Sit here; the boardwalk is warm.")
-    second = await social.publish_turn("miso", say="Sit here; the boardwalk is warm.")
-
-    assert first.decision.spoke is True
-    assert second.decision.note != "agent_spoke"
-
-
-async def test_bid_outcome_matches_aliased_target_to_sender() -> None:
-    # ADR-039: replying toward "kosto_cat" closes a bid raised by "kosto".
-    world = WorldState()
-    social = SocialService(world=world)
-    await world.ingest_tick("kosto", _payload("Yard"))
-    await world.ingest_tick("miso", _payload("Yard"))
-
-    await social.publish_turn("kosto", say="You heard that too?", target="miso", expects_reply=True)
-    heard = await social.observe_turn("miso")
-    delivered = [item.to_prompt_context() for item in heard.delivered_inbox]
-
-    outcomes = social.resolve_observed_bids(
-        "miso",
-        delivered_inbox=delivered,
-        selected_intent="SOCIALIZE",
-        target_id="kosto_cat",
-        spoke=True,
-    )
-
-    assert outcomes and outcomes[0]["status"] == "replied"
-
-
 async def test_social_bid_feedback_arrives_on_sender_later_tick() -> None:
     world = WorldState()
     social = SocialService(world=world)

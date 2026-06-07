@@ -219,7 +219,6 @@ class Settings(BaseSettings):
     
     # Auth
     API_SECRET_TOKEN: str = "dev-secret-change-me"
-    MEWI_REPORT_READ_JWT_SECRET: str = ""
 
     # Feature toggles
     ENABLE_MEMORY_PIPELINE: bool = False    # Redis buffer → embedding → perception_snapshots

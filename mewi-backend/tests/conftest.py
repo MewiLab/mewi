@@ -22,20 +22,6 @@ from app.main import create_app
 load_dotenv(override=True)  # .env values win over pytest-env fakes
 
 
-# These tests target retired pre-queue/microlog modules that no longer exist in
-# the current backend. Keep them out of collection so `pytest tests/unit` reports
-# on the active code instead of failing before tests run.
-collect_ignore = [
-    "unit/api/test_api_routes.py",
-    "unit/core/test_redis_real.py",
-    "unit/models/test_models.py",
-    "unit/services/test_agent_service.py",
-    "unit/services/test_storage_service.py",
-    "unit/workers/test_agent_worker.py",
-    "unit/workers/test_microlog_worker.py",
-]
-
-
 # ── Integration fixtures (real connections, require .env) ─────────────────────
 
 @pytest.fixture

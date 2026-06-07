@@ -30,82 +30,11 @@ public static class SnapshotAffordanceBuilder
         var drafts = new List<TargetDraft>(byId.Values);
         drafts.Sort(CompareDrafts);
 
-        List<TargetDraft> selected = SelectTargets(drafts, maxTargets);
-        var result = new List<AffordanceTargetData>(selected.Count);
-        for (int i = 0; i < selected.Count; i++)
-            result.Add(selected[i].ToWire());
-        return result;
-    }
-
-    static List<TargetDraft> SelectTargets(List<TargetDraft> drafts, int maxTargets)
-    {
         int count = maxTargets > 0 ? Mathf.Min(maxTargets, drafts.Count) : 0;
-        var selected = new List<TargetDraft>(count);
+        var result = new List<AffordanceTargetData>(count);
         for (int i = 0; i < count; i++)
-            selected.Add(drafts[i]);
-
-        EnsureSupportedIntent(selected, drafts, "EXPLORE", maxTargets);
-        selected.Sort(CompareDrafts);
-        return selected;
-    }
-
-    static void EnsureSupportedIntent(
-        List<TargetDraft> selected,
-        List<TargetDraft> allDrafts,
-        string intent,
-        int maxTargets)
-    {
-        if (maxTargets <= 0 || HasSupportedIntent(selected, intent))
-            return;
-
-        TargetDraft candidate = FirstSupportingDraft(allDrafts, selected, intent);
-        if (candidate == null)
-            return;
-
-        if (selected.Count < maxTargets)
-        {
-            selected.Add(candidate);
-            return;
-        }
-
-        int replaceIndex = ReplaceableIndexForExplore(selected);
-        if (replaceIndex >= 0)
-            selected[replaceIndex] = candidate;
-    }
-
-    static bool HasSupportedIntent(List<TargetDraft> drafts, string intent)
-    {
-        for (int i = 0; i < drafts.Count; i++)
-        {
-            if (drafts[i].HasSupport(intent))
-                return true;
-        }
-        return false;
-    }
-
-    static TargetDraft FirstSupportingDraft(
-        List<TargetDraft> drafts,
-        List<TargetDraft> selected,
-        string intent)
-    {
-        for (int i = 0; i < drafts.Count; i++)
-        {
-            TargetDraft draft = drafts[i];
-            if (draft.HasSupport(intent) && !selected.Contains(draft))
-                return draft;
-        }
-        return null;
-    }
-
-    static int ReplaceableIndexForExplore(List<TargetDraft> selected)
-    {
-        for (int i = selected.Count - 1; i >= 0; i--)
-        {
-            TargetDraft draft = selected[i];
-            if (!draft.HasSupport("SEEK_FOOD") && !draft.HasSupport("SAFETY") && !draft.HasSupport("REST"))
-                return i;
-        }
-        return -1;
+            result.Add(drafts[i].ToWire());
+        return result;
     }
 
     static void AddEntityTargets(SnapshotPayload payload, Dictionary<string, TargetDraft> byId)
@@ -295,14 +224,7 @@ public static class SnapshotAffordanceBuilder
 
     static string Clean(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return "";
-
-        string trimmed = value.Trim();
-        return !string.Equals(trimmed, "player_cat", StringComparison.OrdinalIgnoreCase)
-            && trimmed.EndsWith("_cat", StringComparison.OrdinalIgnoreCase)
-            ? trimmed.Substring(0, trimmed.Length - 4)
-            : trimmed;
+        return string.IsNullOrWhiteSpace(value) ? "" : value.Trim();
     }
 
     static int CompareDrafts(TargetDraft a, TargetDraft b)

@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CinemachineCamera))]
 public class DemoGodCameraController : MonoBehaviour
 {
-    public float moveSpeed = 3f;
+    public float moveSpeed = 8f;
     public float fastMultiplier = 4f;
     public float lookSensitivity = 2f;
     public int activePriorityThreshold = 20;

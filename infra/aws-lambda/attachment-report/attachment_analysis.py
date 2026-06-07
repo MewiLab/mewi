@@ -1,12 +1,14 @@
 """Attachment-analysis core for the `attachment-report` Lambda.
 
-This is the report pipeline's Claude attachment-analysis owner. FastAPI has no
-in-process report-analysis copy; it only stores raw sessions and enqueues the
-Lambda hand-off.
+Self-contained copy of the agent path in
+``mewi-backend/app/services/report/attachment_client.py`` (ADR-014 names this as
+the future EventBridge/SQS -> Lambda hand-off). The backend keeps its in-process
+copy; this one is trimmed for Lambda:
 
   * input comes from the invocation event (raw ``session`` objects), not from the
     mewi-report filesystem, so there is no ``MEWI_REPORT_ROOT`` / cwd dance;
-  * Claude gets the compact digest in the prompt and no file tools are needed;
+  * the agent gets the compact digest in the prompt and is given **no** file
+    tools (nothing to read inside the Lambda sandbox);
   * the bundled ``skills/attachment-analysis/SKILL.md`` is the operating method.
 
 Keep the scoring/summarisation logic in sync with the backend module when it
@@ -22,8 +24,6 @@ import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
-
-from report_processor import PLAYER_CAT_ACTION_SCHEMA
 
 # SKILL.md ships next to this module inside the Lambda zip.
 SKILL_PATH = Path(__file__).resolve().parent / "skills" / "attachment-analysis" / "SKILL.md"
@@ -81,36 +81,6 @@ def _digest_cat(c: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _new_player_digest() -> dict[str, Any]:
-    return {
-        "actions": defaultdict(int),
-        "action_families": defaultdict(int),
-        "targets": defaultdict(int),
-        "samples": 0,
-    }
-
-
-def _digest_player(p: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "actions": dict(sorted(p["actions"].items(), key=lambda kv: (-kv[1], kv[0]))),
-        "action_families": dict(sorted(p["action_families"].items(), key=lambda kv: (-kv[1], kv[0]))),
-        "targets": dict(sorted(p["targets"].items(), key=lambda kv: (-kv[1], kv[0]))),
-        "samples": p["samples"],
-    }
-
-
-def _player_family(action: str) -> str:
-    spec = PLAYER_CAT_ACTION_SCHEMA.get(action)
-    if spec:
-        return spec["family"]
-    return "unknown" if action.startswith("player_") else ""
-
-
-def _is_player_event(event: dict[str, Any]) -> bool:
-    action = str(event.get("action") or "")
-    return event.get("actor") == "player_cat" or action.startswith("player_")
-
-
 def summarize_sessions(
     payloads: list[dict[str, Any]],
     player_id: str | None = None,
@@ -118,10 +88,9 @@ def summarize_sessions(
     """Condense raw Unity traces into a compact, agent-ready digest.
 
     Drops per-event boilerplate and the large raw event rows, keeping only what
-    the attachment skill scores from: player-cat action mix, per-cat trust arcs,
-    and player-distance stats. In raw v2, the human-controlled cat is represented
-    by ``actor == "player_cat"`` rows. The report ``user_id`` / slug is not a
-    creature id and must not be used as a ``cat_id`` lookup.
+    the attachment skill scores from: per-cat trust arcs, action mix, and
+    player-distance stats. The human-controlled cat is the one whose ``cat_id``
+    equals ``player_id`` (the report slug); its stream is the dependent variable.
     """
     sessions = sorted(
         (_as_session(p) for p in payloads),
@@ -131,26 +100,8 @@ def summarize_sessions(
     for s in sessions:
         events = s.get("events") or []
         cats: dict[str, dict[str, Any]] = {}
-        player = _new_player_digest()
         for e in events:
-            action = e.get("action")
-            if _is_player_event(e):
-                player["samples"] += 1
-                if action:
-                    action = str(action)
-                    player["actions"][action] += 1
-                    family = _player_family(action)
-                    if family:
-                        player["action_families"][family] += 1
-                target_id = e.get("target_id") or (e.get("params") or {}).get("target_id")
-                if target_id:
-                    player["targets"][str(target_id)] += 1
-                continue
-
-            if e.get("actor") != "cat":
-                continue
-
-            cid = e.get("cat_id") or e.get("actor_id") or "unknown"
+            cid = e.get("cat_id") or "unknown"
             c = cats.setdefault(
                 cid,
                 {
@@ -164,6 +115,7 @@ def summarize_sessions(
                 },
             )
             c["samples"] += 1
+            action = e.get("action")
             if action:
                 c["actions"][action] += 1
             tb, ta = e.get("trust_before"), e.get("trust_after")
@@ -176,12 +128,13 @@ def summarize_sessions(
             dist = _measure((e.get("params") or {}).get("distance_to_player_m"))
             if dist is not None:
                 c["distances"].append(dist)
+        player_cat = cats.pop(player_id, None) if player_id else None
         out.append(
             {
                 "session_index": s.get("session_index"),
                 "duration_seconds": round(s.get("duration_seconds") or 0, 1),
                 "event_count": len(events),
-                "player": _digest_player(player) if player["samples"] else None,
+                "player": _digest_cat(player_cat) if player_cat else None,
                 "other_cats": {cid: _digest_cat(c) for cid, c in sorted(cats.items())},
                 "multi_cat_encounters": s.get("multi_cat_encounters") or [],
             }
@@ -215,17 +168,14 @@ def build_prompt(slug: str | None, payloads: list[dict[str, Any]]) -> str:
         "trust arcs, action mix, and distance stats) — NOT the raw event log, "
         "which is large and mostly boilerplate. Treat these derived numbers as "
         "the session facts.\n\n"
-        "The player is ALSO a cat, but the report_slug is only report identity. "
-        "In raw v2, the player stream is made of events whose `actor` is "
-        "`player_cat` or whose action starts with `player_`; do NOT infer the "
-        f"player from a `cat_id` equal to `{resolved_slug}`. In each session, "
-        "`player` is the human-controlled action stream and `other_cats` are the "
-        "AI-controlled stimulus/response streams. Read the player's action mix, "
-        "action families, targets, and the stimulus cats' `distance_to_player_m` "
-        "as Strange-Situation-inspired game signals. If `player` is null and "
-        "`player_tagged` is false, the player cat was not recorded in this trace: "
-        "say so explicitly and lower confidence rather than inventing player "
-        "behavior.\n\n"
+        "The player is ALSO a cat: the human-controlled cat is the one whose "
+        f"`cat_id` equals the report_slug (`{resolved_slug}`). In each session, "
+        "`player` is that cat's stream — the dependent variable, i.e. the human's "
+        "response — and `other_cats` are the AI-controlled stimulus. Read the "
+        "player's action mix and the stimulus cats' `distance_to_player_m` as the "
+        "Strange-Situation signals. If `player` is null and `player_tagged` is "
+        "false, the player cat was NOT tagged in this trace: say so explicitly and "
+        "lower confidence rather than inventing player behavior.\n\n"
         "You are running in a Lambda sandbox with no report files available, so "
         "score only from the digest below — do not attempt to read other files.\n\n"
         "Follow the skill's steps: derive the Strange-Situation signals, score the "
@@ -239,19 +189,20 @@ def build_prompt(slug: str | None, payloads: list[dict[str, Any]]) -> str:
     )
 
 
-# ── Claude run ───────────────────────────────────────────────────────────────
+# ── Agent run ────────────────────────────────────────────────────────────────
 async def run_agent(prompt: str, skill: str, model: str | None) -> str:
-    """Call Claude directly and return the final text.
-
-    The Claude Agent SDK bundles a large CLI binary that is unsuitable for this
-    Lambda zip. This direct Messages API path keeps the same skill/system prompt
-    contract without shipping that binary.
-    """
+    """Drive the Claude Agent SDK and return the agent's final text."""
     try:
-        from anthropic import AsyncAnthropic
+        from claude_agent_sdk import (
+            AssistantMessage,
+            ClaudeAgentOptions,
+            ResultMessage,
+            TextBlock,
+            query,
+        )
     except ImportError as exc:  # pragma: no cover - environment guard
         raise ImportError(
-            "anthropic is not installed in the Lambda bundle. "
+            "claude-agent-sdk is not installed in the Lambda bundle. "
             "Add it to requirements.txt (and set ANTHROPIC_API_KEY)."
         ) from exc
 
@@ -264,25 +215,31 @@ async def run_agent(prompt: str, skill: str, model: str | None) -> str:
         "===========================================================\n"
     )
 
-    api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("CLAUDE_API_KEY")
-    if not api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY is required for attachment-report")
+    agent_env = {
+        key: value
+        for key in ("ANTHROPIC_API_KEY", "CLAUDE_API_KEY")
+        if (value := os.getenv(key))
+    }
 
-    client = AsyncAnthropic(api_key=api_key)
-    response = await client.messages.create(
-        model=_attachment_model(model) or "claude-sonnet-4-6",
-        max_tokens=1800,
-        temperature=0,
-        system=system_prompt,
-        messages=[{"role": "user", "content": prompt}],
+    options = ClaudeAgentOptions(
+        system_prompt=system_prompt,
+        allowed_tools=[],                       # no files to read inside the sandbox
+        permission_mode="bypassPermissions",    # non-interactive batch run
+        model=_attachment_model(model),
+        env=agent_env,
     )
 
-    parts: list[str] = []
-    for block in response.content:
-        text = getattr(block, "text", None)
-        if isinstance(text, str):
-            parts.append(text)
-    return "\n".join(parts)
+    final_text = ""
+    async for message in query(prompt=prompt, options=options):
+        if isinstance(message, AssistantMessage):
+            for block in message.content:
+                if isinstance(block, TextBlock):
+                    final_text += block.text + "\n"
+        elif isinstance(message, ResultMessage):
+            result = getattr(message, "result", None)
+            if isinstance(result, str) and result.strip():
+                final_text = result
+    return final_text
 
 
 # ── Output extraction ────────────────────────────────────────────────────────

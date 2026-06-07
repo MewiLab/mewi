@@ -59,7 +59,6 @@ class Mem0MemoryStore:
         *,
         creature_id: str,
         limit: int = 5,
-        now_tick: int | None = None,
     ) -> list[dict[str, Any]]:
         return await asyncio.to_thread(self._search, query, creature_id, limit)
 
@@ -68,7 +67,7 @@ class Mem0MemoryStore:
     def _add(self, write: TurnMemoryWrite) -> None:
         creature_id = write.raw_event.creature_id
         for memory in write.aspect_memories:
-            if memory.memory_kind != "summary" or not memory.text.strip():
+            if not memory.text.strip():
                 continue
             self._mem.add(
                 memory.text,

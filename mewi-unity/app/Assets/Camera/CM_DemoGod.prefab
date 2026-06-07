@@ -88,7 +88,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3eb776755ce394975be23c1cad6f8e54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DemoGodCameraController
-  moveSpeed: 3
+  moveSpeed: 8
   fastMultiplier: 4
   lookSensitivity: 2
   activePriorityThreshold: 20

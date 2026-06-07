@@ -23209,9 +23209,7 @@ GameObject:
   - component: {fileID: 409106988226194208}
   - component: {fileID: 4279796666913482697}
   - component: {fileID: 4936281964030661329}
-  - component: {fileID: 8221069688973365417}
-  - component: {fileID: 3003704227866292343}
-  - component: {fileID: 8234948117626898198}
+  - component: {fileID: 7920863452690961420}
   m_Layer: 20
   m_Name: slime_cat
   m_TagString: Player
@@ -33530,9 +33528,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CreatureBlackboard
   creatureId: slime
-  _debugIntentQueue: "\u2014"
-  _debugMicroActionSlot: "\u2014"
-  _debugMicroActionQueue: "\u2014"
+  _debugMindSlot: "\u2014"
+  _debugMindQueue: "\u2014"
   closestPlayer: {fileID: 0}
   closestPlayerDist: Infinity
   playerInSight: 0
@@ -33586,7 +33583,6 @@ MonoBehaviour:
   feelingLayer:
     serializedVersion: 2
     m_Bits: 0
-  maxTraceFeelingEvents: 4
 --- !u!114 &6478323614502407906
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -33602,6 +33598,7 @@ MonoBehaviour:
   _hub: {fileID: 0}
   _snapshotManager: {fileID: 4279796666913482697}
   _motorWorker: {fileID: 7905588578162417255}
+  _neutralIntentSource: {fileID: 0}
   logTicks: 1
 --- !u!114 &7905588578162417255
 MonoBehaviour:
@@ -33617,7 +33614,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CreatureMotorWorker
   _targetRegistry: {fileID: 0}
   logWorkerDispatch: 1
-  validatableConfirmationGraceSeconds: 0.2
 --- !u!114 &409106988226194208
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -33666,36 +33662,12 @@ MonoBehaviour:
   deathState: {fileID: 11400000, guid: adfa24f62d6db4d40a1d837f4ec1a6e9, type: 2}
   wanderRadius: 10
   fleeDistance: 15
-  wanderArea: {fileID: 0}
-  wanderProjection: 6
-  wanderJitterDegrees: 35
   navMeshDestinationSampleRadius: 2
   navMeshStartSampleRadius: 2
   useManualNavMeshFallback: 1
   manualNavArrivalDistance: 0.65
   manualNavCornerDistance: 0.35
   manualNavRepathInterval: 0.5
-  rejectRiskyNavMeshPaths: 1
-  navigationSafety:
-    enabled: 1
-    pathSampleSpacing: 0.75
-    minNavMeshEdgeDistance: 0.25
-    pathSampleNavMeshRadius: 0.35
-    checkGroundProbes: 0
-    groundMask:
-      serializedVersion: 2
-      m_Bits: 4294967295
-    groundProbeHeight: 0.75
-    groundProbeDepth: 1.5
-    maxDropMeters: 0.65
-    maxGroundSlopeDegrees: 50
-    checkFootprintGround: 0
-    footprintProbeOffset: 0.28
-  useSafeDetours: 1
-  maxSafeDetourHops: 2
-  safeDetourSearchRadius: 7
-  safeDetourRadiusStep: 1.5
-  safeDetourSamplesPerRing: 16
   faceTargetTurnSpeedDegrees: 360
   faceTargetAngleTolerance: 3
   faceTargetMaxSeconds: 1.5
@@ -33730,22 +33702,6 @@ MonoBehaviour:
   maxReachableZones: 12
   reachableZoneRadius: 60
   requireNavMeshPathForReachableZones: 1
-  navigationSafety:
-    enabled: 1
-    pathSampleSpacing: 0.75
-    minNavMeshEdgeDistance: 0.25
-    pathSampleNavMeshRadius: 0.35
-    checkGroundProbes: 0
-    groundMask:
-      serializedVersion: 2
-      m_Bits: 4294967295
-    groundProbeHeight: 0.75
-    groundProbeDepth: 1.5
-    maxDropMeters: 0.65
-    maxGroundSlopeDegrees: 50
-    checkFootprintGround: 0
-    footprintProbeOffset: 0.28
-  maxAffordanceTargets: 16
   logPayload: 1
 --- !u!114 &4936281964030661329
 MonoBehaviour:
@@ -33766,7 +33722,7 @@ MonoBehaviour:
   sampleRadius: 1
   logChanges: 1
   scanAllLayersFallback: 1
---- !u!114 &8221069688973365417
+--- !u!114 &7920863452690961420
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -33775,57 +33731,41 @@ MonoBehaviour:
   m_GameObject: {fileID: 6870488309520992799}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 62e0fd00357648cb844e03c853f5f0cd, type: 3}
+  m_Script: {fileID: 11500000, guid: 3fd39ee2bde314009a74a516f22fe9f6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CreatureIntentWorker
-  _behaviorGraph: {fileID: 3003704227866292343}
-  _board: {fileID: 3260338936625565439}
-  _motorWorker: {fileID: 7905588578162417255}
-  enableSocialStimulusPolicy: 1
-  _socialPolicy: {fileID: 8234948117626898198}
-  logIntentWorker: 0
---- !u!114 &3003704227866292343
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6870488309520992799}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 99d134f3503594727a0b7dcf55d75263, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CatBehaviorGraph
-  defaultWeights:
-    idle: 0.3
-    explore: 1
-    investigate: 1
-    seekFood: 1
-    socialize: 1
-    rest: 1
-    safety: 1
-    groom: 0.55
-  stateInertia: 0.25
-  randomDecisionNoise: 0.12
-  currentNode: 0
-  logDecisions: 0
---- !u!114 &8234948117626898198
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6870488309520992799}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 67ba2bbe6225646309883e51495359ae, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CreatureSocialStimulusPolicy
-  ttlSeconds: 4
-  cooldownSeconds: 1
-  minimumConfidence: 0.5
-  hardPreemptFacingDot: 0.35
-  hardPreemptFastApproachAndContact: 1
+  m_EditorClassIdentifier: Assembly-CSharp::NeutralIntentSource
+  enableNeutralOutput: 1
+  allowWhenNoRequestInFlight: 0
+  outputChance: 0.8
+  cooldownSeconds: 3
+  cooldownJitterSeconds: {x: 0.25, y: 1.25}
+  maxFear: 0.65
+  localWalkMinRadius: 2.5
+  localWalkMaxRadius: 5
+  navMeshSampleRadius: 1.25
+  destinationSampleAttempts: 10
+  requireSamePlace: 1
+  fallbackToNonMovingAction: 1
+  maxConsecutiveLocalWalkEpisodes: 1
+  repeatedLocalWalkWeightScale: 0
+  postLocalWalkCooldownMultiplier: 1.5
+  episodes:
+  - id: sniff_shift
+    weight: 35
+    nodes: 0100000000000000
+  - id: small_walk
+    weight: 25
+    nodes: 0000000001000000
+  - id: sit_pause
+    weight: 20
+    nodes: 0200000001000000
+  - id: rest_shift
+    weight: 10
+    nodes: 03000000
+  - id: soft_call
+    weight: 10
+    nodes: 04000000
+  logNeutralOutput: 0
 --- !u!1 &6953638720922365112
 GameObject:
   m_ObjectHideFlags: 0

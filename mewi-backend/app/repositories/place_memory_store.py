@@ -67,37 +67,6 @@ class PlaceMemoryStoreChain:
                     exc_info=True,
                 )
 
-    async def record_place_summary(
-        self,
-        creature_id: str,
-        zone_id: str,
-        *,
-        summary: str,
-        evidence: dict[str, Any],
-        observed_at: float,
-        request_id: str = "",
-    ) -> None:
-        for store in self._stores:
-            if not hasattr(store, "record_place_summary"):
-                continue
-            try:
-                await store.record_place_summary(
-                    creature_id,
-                    zone_id,
-                    summary=summary,
-                    evidence=evidence,
-                    observed_at=observed_at,
-                    request_id=request_id,
-                )
-            except Exception:
-                logger.warning(
-                    "Place summary write failed store=%s creature_id=%s zone_id=%s",
-                    type(store).__name__,
-                    creature_id,
-                    zone_id,
-                    exc_info=True,
-                )
-
     async def load_overlay(self, creature_id: str) -> PlaceMemoryOverlay:
         for store in reversed(self._stores):
             if not hasattr(store, "load_overlay"):

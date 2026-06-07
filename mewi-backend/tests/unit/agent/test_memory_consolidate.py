@@ -1,8 +1,5 @@
 from app.agent.creature_runtime import CreatureRuntime
-from app.agent.memory.memory_consolidate import (
-    build_micro_action_events,
-    build_turn_memory_write,
-)
+from app.agent.memory.memory_consolidate import build_turn_memory_write
 
 
 def test_turn_memory_write_captures_unity_result_and_python_plan() -> None:
@@ -59,9 +56,6 @@ def test_turn_memory_write_captures_unity_result_and_python_plan() -> None:
     recall = runtime.memory.recall(last_n=5).to_prompt_context()
 
     assert write.raw_event.payload["previous_action_result"]["status"] == "completed"
-    assert [event.action for event in write.micro_action_events] == ["go_to", "eat"]
-    assert runtime.memory.micro_action_event_count == 2
-    assert recall["recent_micro_actions"][0]["event_id"].endswith(":0:go_to:SM_Fish_1")
     assert write.raw_event.payload["plan_steps"][1]["target"] == "SM_Fish_1"
     # STM intentionally keeps only cross-tick aspects ("action", and
     # "social" when present). The body / place / sensory blocks are rendered
@@ -70,7 +64,7 @@ def test_turn_memory_write_captures_unity_result_and_python_plan() -> None:
     assert {memory.aspect for memory in write.aspect_memories} == {"action"} or \
         {memory.aspect for memory in write.aspect_memories} == {"action", "social"}
     assert runtime.memory.raw_event_count == 1
-    assert any("Current intention: SEEK_FOOD" in line for line in recall["short_term_lines"])
+    assert any("Next intent SEEK_FOOD" in line for line in recall["short_term_lines"])
 
 
 def test_turn_memory_remembers_words_said_and_heard_from_inbox() -> None:
@@ -115,126 +109,3 @@ def test_turn_memory_remembers_words_said_and_heard_from_inbox() -> None:
 
     recall = runtime.memory.recall(last_n=5).to_prompt_context()
     assert any("down by the crates" in line for line in recall["short_term_lines"])
-
-
-def test_micro_action_normalizer_maps_current_unity_report_shape() -> None:
-    runtime = CreatureRuntime(persona="A careful test cat.")
-    state = runtime.state_for_tick(
-        "cat_a",
-        {
-            "tick": 12,
-            "requestId": "tick-12",
-            "agent_id": "cat_a",
-            "action_result": {
-                "agent_id": "cat_a",
-                "requestId": "report-12",
-                "planId": "plan-1",
-                "correlationId": "loop-1",
-                "status": "completed",
-                "startedAt": "2026-06-06T01:00:00Z",
-                "completedAt": "2026-06-06T01:00:06Z",
-                "steps": [
-                    {
-                        "commandId": "cmd-1",
-                        "requestId": "step-1",
-                        "correlationId": "loop-step",
-                        "action": "approach",
-                        "target": "player",
-                        "status": "completed",
-                        "reason": "greet softly",
-                        "startedAt": "2026-06-06T01:00:01Z",
-                        "endedAt": "2026-06-06T01:00:02Z",
-                    }
-                ],
-            },
-        },
-    )
-
-    events = build_micro_action_events(state)
-
-    assert len(events) == 1
-    event = events[0]
-    assert event.creature_id == "cat_a"
-    assert event.event_id == "cmd-1"
-    assert event.request_id == "step-1"
-    assert event.correlation_id == "loop-step"
-    assert event.actor_type == "cat"
-    assert event.actor_id == "cat_a"
-    assert event.target_type == "player_cat"
-    assert event.direction == "cat_to_player_cat"
-    assert event.action == "approach"
-    assert event.phase == ""
-    assert event.trust_delta is None
-    assert event.evidence["plan_id"] == "plan-1"
-
-
-def test_micro_action_normalizer_maps_live_report_events() -> None:
-    runtime = CreatureRuntime(persona="A careful test cat.")
-    state = runtime.state_for_tick(
-        "cat_a",
-        {
-            "tick": 14,
-            "requestId": "tick-14",
-            "agent_id": "cat_a",
-            "action_result": {
-                "agent_id": "cat_a",
-                "requestId": "report-14",
-                "correlationId": "social-loop",
-                "status": "observed",
-                "events": [
-                    {
-                        "event_id": "player-1",
-                        "correlation_id": "social-loop",
-                        "actor_type": "player_cat",
-                        "actor_id": "player_cat",
-                        "target_type": "cat",
-                        "target_id": "cat_a",
-                        "direction": "player_cat_to_cat",
-                        "action": "player_scratch",
-                        "behavior_key": "scratch",
-                        "phase": "committed",
-                        "source_event_id": "source-1",
-                    }
-                ],
-            },
-        },
-    )
-
-    events = build_micro_action_events(state)
-
-    assert len(events) == 1
-    event = events[0]
-    assert event.event_id == "player-1"
-    assert event.actor_type == "player_cat"
-    assert event.actor_id == "player_cat"
-    assert event.target_type == "cat"
-    assert event.target_id == "cat_a"
-    assert event.direction == "player_cat_to_cat"
-    assert event.action == "player_scratch"
-    assert event.behavior_key == "scratch"
-    assert event.phase == "committed"
-    assert event.source_event_id == "source-1"
-
-
-def test_micro_action_normalizer_keeps_unknown_empty_action() -> None:
-    runtime = CreatureRuntime(persona="A careful test cat.")
-    state = runtime.state_for_tick(
-        "cat_a",
-        {
-            "tick": 13,
-            "requestId": "tick-13",
-            "agent_id": "cat_a",
-            "action_result": {
-                "requestId": "report-13",
-                "status": "completed",
-                "steps": [{"target": "crate", "status": "completed"}],
-            },
-        },
-    )
-
-    events = build_micro_action_events(state)
-
-    assert len(events) == 1
-    assert events[0].action == "unknown"
-    assert events[0].trust_delta is None
-    assert events[0].evidence["normalization_status"] == "unknown_action"

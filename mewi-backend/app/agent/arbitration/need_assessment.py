@@ -71,7 +71,6 @@ async def propose_need_intent(llm: Any, state: dict[str, Any]) -> dict[str, Any]
         state,
         heading="Need domain: body pressure, fear, fatigue, hunger, neglected drives.",
         focus_lines=list(assessment.focus_lines),
-        view="need",
     )
     message = build_domain_message(prompt)
     response = await llm.ainvoke([message])

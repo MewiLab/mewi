@@ -88,8 +88,7 @@ public sealed class CatSocialMotionStep
             directionHint,
             InteractionSequenceBuilder.NextCommandId(commandPrefix),
             context.RequestId,
-            target,
-            context.CorrelationId));
+            target));
     }
 }
 

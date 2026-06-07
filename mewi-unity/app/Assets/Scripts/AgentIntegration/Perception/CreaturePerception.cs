@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -107,7 +106,7 @@ public class CreaturePerception : MonoBehaviour
             if (cc != null)
             {
                 var so = cc.GetComponentInChildren<SmartObject>();
-                string label    = ResolveCreatureLabel(cc, targetT, so);
+                string label    = so != null ? so.Label            : targetT.name;
                 string category = so != null ? so.SpecificCategory : "cat";
 
                 float intensity = 1f - Mathf.Clamp01(dist / scanRadius);
@@ -137,14 +136,14 @@ public class CreaturePerception : MonoBehaviour
                 if (inSight)
                 {
                     // Note: You might want to rename PlayerNearby to CreatureNearby in your Enum!
-                    EmitEvent(SensoryEvent.SenseType.PlayerNearby, targetT, 1f - (dist / _config.sightRange), ResolveCreatureLabel(cc, targetT));
+                    EmitEvent(SensoryEvent.SenseType.PlayerNearby, targetT, 1f - (dist / _config.sightRange), targetT.name);
                 }
 
                 // Fast Approach Check (e.g., someone is running at the cat)
                 if (approachSpeed > _config.fastApproachSpeed && dist < _config.personalSpaceRadius * 3f)
                 {
                     // Note: You might want to rename PlayerApproachFast to CreatureApproachFast
-                    EmitEvent(SensoryEvent.SenseType.PlayerApproachFast, targetT, Mathf.Clamp01(approachSpeed / 6f), ResolveCreatureLabel(cc, targetT));
+                    EmitEvent(SensoryEvent.SenseType.PlayerApproachFast, targetT, Mathf.Clamp01(approachSpeed / 6f), targetT.name);
                 }
             }
         }
@@ -280,37 +279,6 @@ public class CreaturePerception : MonoBehaviour
 
     void EmitEvent(SensoryEvent.SenseType type, Transform src, float intensity, string label = null)
         => _board.sensorEvents.Add(SensoryEvent.Create(type, src.position, intensity, src, label));
-
-    static string ResolveCreatureLabel(CreatureController controller, Transform target, SmartObject smartObject = null)
-    {
-        CreatureBlackboard board = controller != null ? controller.GetComponent<CreatureBlackboard>() : null;
-        if (board == null && target != null)
-        {
-            board = target.GetComponent<CreatureBlackboard>()
-                ?? target.GetComponentInParent<CreatureBlackboard>()
-                ?? target.GetComponentInChildren<CreatureBlackboard>();
-        }
-
-        if (board != null)
-            return NormalizeCreatureId(board.CreatureId);
-
-        if (smartObject != null && !string.IsNullOrWhiteSpace(smartObject.Label))
-            return NormalizeCreatureId(smartObject.Label);
-
-        return NormalizeCreatureId(target != null ? target.name : "");
-    }
-
-    static string NormalizeCreatureId(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "";
-
-        string trimmed = value.Trim();
-        return !string.Equals(trimmed, "player_cat", StringComparison.OrdinalIgnoreCase)
-            && trimmed.EndsWith("_cat", StringComparison.OrdinalIgnoreCase)
-            ? trimmed.Substring(0, trimmed.Length - 4)
-            : trimmed;
-    }
 
     // ── External injection ────────────────────────────────────────────────────
 

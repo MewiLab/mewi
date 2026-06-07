@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// Designer-authored hint volume placed on stairs, ledges, jump gaps, drops, or
 /// fall hazards. Carries metadata only — it does not move the cat. Consumers
-/// Runtime traversal helpers read the <see cref="kind"/>
+/// such as <see cref="CreatureOffMeshLinkTraversal"/> read the <see cref="kind"/>
 /// to decide how to react when the cat enters or exits the trigger.
 ///
 /// See docs/jump_through_obstacle_proposol.md (Phase 2). Triggers are hints and

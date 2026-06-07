@@ -14,7 +14,6 @@ public class CreatureBlackboard : MonoBehaviour
     public struct MindDirective
     {
         public string RequestId;
-        public string CorrelationId;
         public string Intent;
         public string FocusTarget;
         public string Mood;
@@ -31,13 +30,11 @@ public class CreatureBlackboard : MonoBehaviour
             string mood = "",
             string style = "",
             SocialAct socialAct = default,
-            string requestId = "",
-            string correlationId = "")
+            string requestId = "")
         {
             return new MindDirective
             {
                 RequestId = requestId ?? "",
-                CorrelationId = correlationId ?? "",
                 Intent = string.IsNullOrWhiteSpace(intent) ? "" : intent.Trim().ToUpperInvariant(),
                 FocusTarget = focusTarget ?? "",
                 Mood = mood ?? "",
@@ -56,13 +53,8 @@ public class CreatureBlackboard : MonoBehaviour
     [SerializeField] string _debugMicroActionSlot  = "—";
     [SerializeField] string _debugMicroActionQueue = "—";
 
-    // High Level Intent from LLM: SOCIALIZE,...
     readonly Queue<MindDirective> _intentQueue = new Queue<MindDirective>();
-    // Interrupt Queue with user action
-    readonly Queue<SocialStimulus> _socialStimulusQueue = new Queue<SocialStimulus>();
-    // Actual action with malber Animal Controll via adapter pattern design
     readonly Queue<IntentMessage> _microActionQueue = new Queue<IntentMessage>();
-    // The micro action report for llm workflow not session final report
     readonly Queue<PlanExecutionReport> _completedPlanReports = new Queue<PlanExecutionReport>();
 
     /// <summary>Latest behavior weights read by CatBehaviorGraph (scoring fallback).</summary>
@@ -75,27 +67,11 @@ public class CreatureBlackboard : MonoBehaviour
     /// <summary>Target id the active directive points at; the graph biases actions toward it.</summary>
     public string MindFocusTarget { get; private set; } = "";
     public string MindDirectiveRequestId { get; private set; } = "";
-    public string MindDirectiveCorrelationId { get; private set; } = "";
     public string MindDirectiveMood { get; private set; } = "";
     public string MindDirectiveStyle { get; private set; } = "";
     public string MindDirectiveReason { get; private set; } = "";
     public SocialAct MindDirectiveSocialAct { get; private set; }
     public MindDirective ActiveMindDirective { get; private set; }
-
-    /// <summary>
-    /// Raised whenever this creature produces a social line to "say" (a bubble
-    /// hint). UI such as CatNameplateUI listens to render a speech bubble.
-    /// The string is the spoken text; tone carries an optional style hint.
-    /// </summary>
-    public event Action<string, string> SocialLineSpoken;
-
-    /// <summary>Manually surface a spoken line (e.g. from gameplay scripts).</summary>
-    public void SpeakSocialLine(string say, string tone = "")
-    {
-        if (string.IsNullOrWhiteSpace(say))
-            return;
-        SocialLineSpoken?.Invoke(say.Trim(), tone ?? "");
-    }
 
     /// <summary>True when the intent worker may refill the micro-action queue.</summary>
     public bool IntentWorkerEnabled { get; private set; }
@@ -148,29 +124,9 @@ public class CreatureBlackboard : MonoBehaviour
         get
         {
             if (string.IsNullOrWhiteSpace(creatureId))
-                creatureId = NormalizeCreatureId(gameObject.name);
-            return NormalizeCreatureId(creatureId);
+                creatureId = gameObject.name;
+            return creatureId;
         }
-    }
-
-    public void SetCreatureId(string id)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-            return;
-
-        creatureId = NormalizeCreatureId(id);
-    }
-
-    static string NormalizeCreatureId(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "";
-
-        string trimmed = value.Trim();
-        return !string.Equals(trimmed, "player_cat", StringComparison.OrdinalIgnoreCase)
-            && trimmed.EndsWith("_cat", StringComparison.OrdinalIgnoreCase)
-            ? trimmed.Substring(0, trimmed.Length - 4)
-            : trimmed;
     }
 
     // -------------------------------------------------------------------------
@@ -206,51 +162,6 @@ public class CreatureBlackboard : MonoBehaviour
     public void ClearMindDirectives() => _intentQueue.Clear();
 
     // -------------------------------------------------------------------------
-    // Local Social Stimulus Queue
-    // -------------------------------------------------------------------------
-
-    public int QueuedSocialStimulusCount => _socialStimulusQueue.Count;
-    public bool HasSocialStimulus => _socialStimulusQueue.Count > 0;
-
-    public void EnqueueSocialStimulus(SocialStimulus stimulus)
-    {
-        if (!stimulus.IsValid)
-            return;
-
-        CoalesceSocialStimulus(stimulus);
-        _socialStimulusQueue.Enqueue(stimulus);
-    }
-
-    public bool TryPeekSocialStimulus(out SocialStimulus stimulus)
-    {
-        if (_socialStimulusQueue.Count == 0)
-        {
-            stimulus = default;
-            return false;
-        }
-
-        stimulus = _socialStimulusQueue.Peek();
-        return true;
-    }
-
-    public bool TryPopSocialStimulus(out SocialStimulus stimulus)
-    {
-        if (_socialStimulusQueue.Count == 0)
-        {
-            stimulus = default;
-            return false;
-        }
-
-        stimulus = _socialStimulusQueue.Dequeue();
-        return true;
-    }
-
-    public void ClearSocialStimuli()
-    {
-        _socialStimulusQueue.Clear();
-    }
-
-    // -------------------------------------------------------------------------
     // Micro-Action Queue
     // -------------------------------------------------------------------------
 
@@ -271,11 +182,10 @@ public class CreatureBlackboard : MonoBehaviour
         Vector3 directionHint = default,
         string commandId = "",
         string requestId = "",
-        string targetKey = "",
-        string correlationId = "")
+        string targetKey = "")
     {
         _microActionQueue.Clear();
-        _microActionQueue.Enqueue(IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint, commandId, requestId, targetKey, correlationId));
+        _microActionQueue.Enqueue(IntentMessage.Create(intent, LayerSource.Mind, -1f, directionHint, commandId, requestId, targetKey));
     }
 
     /// <summary>Replace all queued micro-actions with a backend-authored legacy plan.</summary>
@@ -441,11 +351,9 @@ public class CreatureBlackboard : MonoBehaviour
                 directive.Mood,
                 directive.Style,
                 directive.SocialAct,
-                directive.RequestId,
-                directive.CorrelationId)
+                directive.RequestId)
             : default;
         MindDirectiveRequestId = ActiveMindDirective.RequestId ?? "";
-        MindDirectiveCorrelationId = ActiveMindDirective.CorrelationId ?? "";
         MindDirectiveIntent = ActiveMindDirective.Intent ?? "";
         MindFocusTarget = ActiveMindDirective.FocusTarget ?? "";
         MindDirectiveMood = ActiveMindDirective.Mood ?? "";
@@ -453,17 +361,12 @@ public class CreatureBlackboard : MonoBehaviour
         MindDirectiveReason = ActiveMindDirective.Reason ?? "";
         MindDirectiveSocialAct = ActiveMindDirective.SocialAct;
         ClearLastMicroActionOutcome();
-
-        SocialAct social = ActiveMindDirective.SocialAct;
-        if (!string.IsNullOrWhiteSpace(social.say))
-            SpeakSocialLine(social.say, social.tone);
     }
 
     public void ClearActiveMindDirective()
     {
         ActiveMindDirective = default;
         MindDirectiveRequestId = "";
-        MindDirectiveCorrelationId = "";
         MindDirectiveIntent = "";
         MindFocusTarget = "";
         MindDirectiveMood = "";
@@ -554,20 +457,6 @@ public class CreatureBlackboard : MonoBehaviour
     {
         TrimInactiveMicroActions();
         return Mathf.Max(0, _microActionQueue.Count - 1);
-    }
-
-    void CoalesceSocialStimulus(SocialStimulus incoming)
-    {
-        if (_socialStimulusQueue.Count == 0)
-            return;
-
-        SocialStimulus[] existing = _socialStimulusQueue.ToArray();
-        _socialStimulusQueue.Clear();
-        for (int i = 0; i < existing.Length; i++)
-        {
-            if (!existing[i].SameCoalescingKey(incoming))
-                _socialStimulusQueue.Enqueue(existing[i]);
-        }
     }
 
     // -------------------------------------------------------------------------

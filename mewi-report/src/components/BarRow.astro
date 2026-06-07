@@ -10,7 +10,7 @@ const { label, value, color = 'var(--ink3)' } = Astro.props;
 <div class="bar-row">
   <span class="bar-lbl">{label}</span>
   <div class="bar-track">
-    <div class="bar-fill" data-value={value} style={`background:${color};width:${value}%`}></div>
+    <div class="bar-fill" data-value={value} style={`background:${color}`}></div>
   </div>
   <span class="bar-val">{value}%</span>
 </div>
