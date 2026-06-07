@@ -6,9 +6,11 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "charts": "uv run pipeline/scripts/visualize.py"
+    "charts": "uv run pipeline/scripts/visualize.py",
+    "e2e:unity-report": "python3 pipeline/scripts/e2e_unity_report.py"
   },
   "dependencies": {
+    "@astrojs/node": "^8.3.4",
     "astro": "^4.15.0",
     "chart.js": "^4.4.1"
   }

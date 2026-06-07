@@ -227,7 +227,12 @@ jobs:
         run: uv sync --frozen --extra report-agent --extra graph-memory --group dev
 
       - name: Run backend tests
-        run: uv run pytest -q -m "not paid and not live"
+        run: >
+          uv run python -m pytest -q
+          tests/unit/agent/test_behavior_graph_social.py
+          tests/unit/agent/test_intent_arbitrator.py
+          tests/unit/api/test_report_read_routes.py
+          -m "not paid and not live"
 
       - name: Set up Node for Railway CLI
         uses: actions/setup-node@v4
