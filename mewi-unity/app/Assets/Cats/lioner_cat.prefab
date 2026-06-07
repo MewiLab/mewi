@@ -34539,8 +34539,11 @@ GameObject:
   - component: {fileID: 3389517830449589643}
   - component: {fileID: 7710265905333787692}
   - component: {fileID: 1996451592786723949}
+  - component: {fileID: 6888027619210663136}
+  - component: {fileID: 7157843632815845476}
+  - component: {fileID: 6139414049536842846}
   m_Layer: 20
-  m_Name: lioner
+  m_Name: lioner_cat
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -44857,8 +44860,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CreatureBlackboard
   creatureId: lioner
-  _debugMindSlot: "\u2014"
-  _debugMindQueue: "\u2014"
+  _debugIntentQueue: "\u2014"
+  _debugMicroActionSlot: "\u2014"
+  _debugMicroActionQueue: "\u2014"
   closestPlayer: {fileID: 0}
   closestPlayerDist: Infinity
   playerInSight: 0
@@ -44912,6 +44916,7 @@ MonoBehaviour:
   feelingLayer:
     serializedVersion: 2
     m_Bits: 0
+  maxTraceFeelingEvents: 4
 --- !u!114 &498035569874844424
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -44927,7 +44932,6 @@ MonoBehaviour:
   _hub: {fileID: 0}
   _snapshotManager: {fileID: 7710265905333787692}
   _motorWorker: {fileID: 4774177068252730756}
-  _neutralIntentSource: {fileID: 0}
   logTicks: 1
 --- !u!114 &4774177068252730756
 MonoBehaviour:
@@ -44943,6 +44947,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CreatureMotorWorker
   _targetRegistry: {fileID: 0}
   logWorkerDispatch: 1
+  validatableConfirmationGraceSeconds: 0.2
 --- !u!114 &3389517830449589643
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -44991,12 +44996,36 @@ MonoBehaviour:
   deathState: {fileID: 11400000, guid: adfa24f62d6db4d40a1d837f4ec1a6e9, type: 2}
   wanderRadius: 10
   fleeDistance: 15
+  wanderArea: {fileID: 0}
+  wanderProjection: 6
+  wanderJitterDegrees: 35
   navMeshDestinationSampleRadius: 2
   navMeshStartSampleRadius: 2
   useManualNavMeshFallback: 1
   manualNavArrivalDistance: 0.65
   manualNavCornerDistance: 0.35
   manualNavRepathInterval: 0.5
+  rejectRiskyNavMeshPaths: 1
+  navigationSafety:
+    enabled: 1
+    pathSampleSpacing: 0.75
+    minNavMeshEdgeDistance: 0.25
+    pathSampleNavMeshRadius: 0.35
+    checkGroundProbes: 0
+    groundMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+    groundProbeHeight: 0.75
+    groundProbeDepth: 1.5
+    maxDropMeters: 0.65
+    maxGroundSlopeDegrees: 50
+    checkFootprintGround: 0
+    footprintProbeOffset: 0.28
+  useSafeDetours: 1
+  maxSafeDetourHops: 2
+  safeDetourSearchRadius: 7
+  safeDetourRadiusStep: 1.5
+  safeDetourSamplesPerRing: 16
   faceTargetTurnSpeedDegrees: 360
   faceTargetAngleTolerance: 3
   faceTargetMaxSeconds: 1.5
@@ -45031,6 +45060,22 @@ MonoBehaviour:
   maxReachableZones: 12
   reachableZoneRadius: 60
   requireNavMeshPathForReachableZones: 1
+  navigationSafety:
+    enabled: 1
+    pathSampleSpacing: 0.75
+    minNavMeshEdgeDistance: 0.25
+    pathSampleNavMeshRadius: 0.35
+    checkGroundProbes: 0
+    groundMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+    groundProbeHeight: 0.75
+    groundProbeDepth: 1.5
+    maxDropMeters: 0.65
+    maxGroundSlopeDegrees: 50
+    checkFootprintGround: 0
+    footprintProbeOffset: 0.28
+  maxAffordanceTargets: 16
   logPayload: 1
 --- !u!114 &1996451592786723949
 MonoBehaviour:
@@ -45051,6 +45096,66 @@ MonoBehaviour:
   sampleRadius: 1
   logChanges: 1
   scanAllLayersFallback: 1
+--- !u!114 &6888027619210663136
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8386147397866572238}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62e0fd00357648cb844e03c853f5f0cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureIntentWorker
+  _behaviorGraph: {fileID: 7157843632815845476}
+  _board: {fileID: 7556916469236370196}
+  _motorWorker: {fileID: 4774177068252730756}
+  enableSocialStimulusPolicy: 1
+  _socialPolicy: {fileID: 6139414049536842846}
+  logIntentWorker: 0
+--- !u!114 &7157843632815845476
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8386147397866572238}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99d134f3503594727a0b7dcf55d75263, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatBehaviorGraph
+  defaultWeights:
+    idle: 0.3
+    explore: 1
+    investigate: 1
+    seekFood: 1
+    socialize: 1
+    rest: 1
+    safety: 1
+    groom: 0.55
+  stateInertia: 0.25
+  randomDecisionNoise: 0.12
+  currentNode: 0
+  logDecisions: 0
+--- !u!114 &6139414049536842846
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8386147397866572238}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67ba2bbe6225646309883e51495359ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureSocialStimulusPolicy
+  ttlSeconds: 4
+  cooldownSeconds: 1
+  minimumConfidence: 0.5
+  hardPreemptFacingDot: 0.35
+  hardPreemptFastApproachAndContact: 1
 --- !u!1 &8394095952338175289
 GameObject:
   m_ObjectHideFlags: 0

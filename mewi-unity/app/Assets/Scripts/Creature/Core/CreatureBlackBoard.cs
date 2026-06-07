@@ -82,6 +82,21 @@ public class CreatureBlackboard : MonoBehaviour
     public SocialAct MindDirectiveSocialAct { get; private set; }
     public MindDirective ActiveMindDirective { get; private set; }
 
+    /// <summary>
+    /// Raised whenever this creature produces a social line to "say" (a bubble
+    /// hint). UI such as CatNameplateUI listens to render a speech bubble.
+    /// The string is the spoken text; tone carries an optional style hint.
+    /// </summary>
+    public event Action<string, string> SocialLineSpoken;
+
+    /// <summary>Manually surface a spoken line (e.g. from gameplay scripts).</summary>
+    public void SpeakSocialLine(string say, string tone = "")
+    {
+        if (string.IsNullOrWhiteSpace(say))
+            return;
+        SocialLineSpoken?.Invoke(say.Trim(), tone ?? "");
+    }
+
     /// <summary>True when the intent worker may refill the micro-action queue.</summary>
     public bool IntentWorkerEnabled { get; private set; }
 
@@ -438,6 +453,10 @@ public class CreatureBlackboard : MonoBehaviour
         MindDirectiveReason = ActiveMindDirective.Reason ?? "";
         MindDirectiveSocialAct = ActiveMindDirective.SocialAct;
         ClearLastMicroActionOutcome();
+
+        SocialAct social = ActiveMindDirective.SocialAct;
+        if (!string.IsNullOrWhiteSpace(social.say))
+            SpeakSocialLine(social.say, social.tone);
     }
 
     public void ClearActiveMindDirective()
