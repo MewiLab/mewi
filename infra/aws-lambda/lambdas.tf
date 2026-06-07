@@ -78,6 +78,83 @@ resource "aws_iam_role_policy_attachment" "report_lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# S3 read/write for the report-results bucket: attachment-report writes
+# attachment.json; recommendation-report reads it and writes recommendation.json.
+# Scoped to objects under this one bucket. Skipped when no bucket is wired.
+#
+# count gates on results_bucket (the NAME), not results_bucket_arn: the bucket
+# name is config-known at plan time, while .arn is a computed attribute that can
+# be unknown until apply — and count must be known at plan time.
+data "aws_iam_policy_document" "report_lambda_s3" {
+  count = var.results_bucket != "" ? 1 : 0
+  statement {
+    actions   = ["s3:GetObject", "s3:PutObject"]
+    resources = ["${var.results_bucket_arn}/*"]
+  }
+
+  statement {
+    actions   = ["s3:ListBucket"]
+    resources = [var.results_bucket_arn]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["results/*", "config/*"]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "report_lambda_s3" {
+  count  = var.results_bucket != "" ? 1 : 0
+  name   = "${var.project_name}-report-lambda-s3"
+  role   = aws_iam_role.report_lambda.id
+  policy = data.aws_iam_policy_document.report_lambda_s3[0].json
+}
+
+# Raw-session S3 read/list for attachment-report's SQS jobs. The queue message is
+# only a job pointer, so the Lambda lists raw/{user_id}/ and reads each session.
+data "aws_iam_policy_document" "report_lambda_raw_s3" {
+  statement {
+    actions   = ["s3:GetObject"]
+    resources = ["${var.raw_bucket_arn}/raw/*"]
+  }
+
+  statement {
+    actions   = ["s3:ListBucket"]
+    resources = [var.raw_bucket_arn]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["raw/*"]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "report_lambda_raw_s3" {
+  name   = "${var.project_name}-report-lambda-raw-s3"
+  role   = aws_iam_role.report_lambda.id
+  policy = data.aws_iam_policy_document.report_lambda_raw_s3.json
+}
+
+# SQS consume permissions for the event-source mapping that invokes
+# attachment-report.
+data "aws_iam_policy_document" "report_lambda_sqs" {
+  statement {
+    actions = [
+      "sqs:ChangeMessageVisibility",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:ReceiveMessage",
+    ]
+    resources = [var.report_processing_queue_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "report_lambda_sqs" {
+  name   = "${var.project_name}-report-lambda-sqs"
+  role   = aws_iam_role.report_lambda.id
+  policy = data.aws_iam_policy_document.report_lambda_sqs.json
+}
+
 # ── The Lambdas ────────────────────────────────────────────────────────────────
 resource "aws_lambda_function" "report" {
   for_each = toset(local.lambdas)

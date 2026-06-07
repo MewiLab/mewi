@@ -8,7 +8,9 @@ import {
 } from '../../utils/reportSource';
 import { isAttachmentReport } from '../../utils/reportSchema';
 
-const sourceMode = import.meta.env.PUBLIC_REPORT_SOURCE === 'remote' ? 'remote' : 'local';
+const runtimeEnv = (globalThis as any).process?.env ?? {};
+const configuredSource = runtimeEnv.PUBLIC_REPORT_SOURCE ?? import.meta.env.PUBLIC_REPORT_SOURCE;
+const sourceMode = configuredSource === 'remote' ? 'remote' : 'local';
 const token = Astro.url.searchParams.get('token')?.trim() ?? '';
 const product = 'attachment';
 
@@ -18,7 +20,7 @@ if (sourceMode === 'remote') {
   if (!token) {
     return Astro.redirect('/404');
   }
-  const apiBase = import.meta.env.REPORT_API_BASE ?? 'http://localhost:8000';
+  const apiBase = runtimeEnv.REPORT_API_BASE ?? import.meta.env.REPORT_API_BASE ?? 'http://localhost:8000';
   report = await createRemoteReportSource(apiBase, token).load('me', product);
 } else {
   const localId = Astro.url.searchParams.get('id')?.trim();

@@ -52,6 +52,21 @@ fully built) · `Superseded` (replaced — kept for history).
 | [023](ADR-023-shared-unity-agent-websocket.md) | Shared Unity Agent WebSocket | Accepted | One Unity websocket carries many per-cat ticks, routed by `creature_id + requestId`. |
 | [024](ADR-024-backend-makefile-and-graph-db-workflow.md) | Backend Makefile + Graph DB Workflow | Accepted | Backend Make targets for full Docker stack, Redis, Neo4j graph memory, testing, and app URLs. |
 | [025](ADR-025-world-authored-interaction-fsm.md) | World-Authored Interaction FSM | Accepted | Scene objects own local interaction recipes; the graph coordinates and the motor executes. |
+| [026](ADR-026-fishing-village-prop-catalog.md) | Fishing Village Prop Catalog | Accepted | Canonical id/label/tags/feelings/recipe for the interactable fishing-village props; pots are containers with food inside. |
+| [027](ADR-027-malbers-action-vocabulary-and-micro-action-matching.md) | Malbers Action Vocabulary | Proposed | Canonical Malbers action inventory plus micro-action string/alias matching rules. |
+| [028](ADR-028-cat-social-fsm-split.md) | Cat Social FSM Split | Accepted | Separate NPC cat-player and cat-cat social FSMs with stable authored motion keys. |
+| [029](ADR-029-player-cat-action-fsm-proposal.md) | PlayerCat Action FSM | Proposed | Player-to-NPC-cat social actions emit observable stimuli into a target cat reaction lane and report pipeline. |
+| [030](ADR-030-post-session-report-processing.md) | Post-Session Report Processing | Proposed | Thin closed-session ingest: HTTP upload stores/enqueues only; out-of-band stats/narrative job; raw v2 causal schema. |
+| [031](ADR-031-report-end-to-end-workflow.md) | Report End-To-End Production Workflow | Proposed | Full production path past FastAPI: two report-product Lambdas (attachment → recommendation) chained by an S3 `attachment.json` notification; Lambda-only Anthropic/RAGFlow secrets; per-product `results/{user_id}/*.json` → Astro fetch. |
+| [032](ADR-032-sqs-first-hop-report-ingestion.md) | SQS First Hop For Report Processing | Proposed | First-hop production bridge: FastAPI stores raw sessions in S3, sends compact SQS jobs, and SQS triggers `attachment-report`; ADR-031's S3 notification remains the second hop. |
+| [033](ADR-033-astro-report-frontend-data-source.md) | Astro Report Frontend Data Source | Proposed | Thin swappable `ReportSource` seam (local files in dev, read endpoint/presigned in prod); site renders one merged `ProcessedReport`, never touches S3 or merges itself. |
+| [034](ADR-034-live-micro-action-memory-pipeline.md) | Live Micro-Action Memory Pipeline | Proposed | Normalize Unity live reports into typed micro-action events; dedicated `agent_micro_action_events` table for recall/audit, Neo4j owns causal chains + trust edges (events carry `trust_delta`, not before/after). |
+| [035](ADR-035-player-action-attachment-analysis.md) | Player Action Attachment Analysis | Proposed | Replace six-axis legacy report scoring for raw v2 with player-action interaction signatures, causal gesture-response chains, and attachment features grounded in the 24-action player-cat vocabulary. |
+| [036](ADR-036-cat-navmesh-corridor-stability.md) | Cat NavMesh Corridor Stability | Proposed | Keep the visible Malbers cat reconciled to the intended NavMesh corridor so routes, body position, fallback movement, and debug traces agree. |
+| [037](ADR-037-agent-prompt-memory-hygiene.md) | Agent Prompt And Memory Hygiene | Proposed | Hide technical telemetry from agent prompts; convert reports into semantic experience, dedupe context, and make reflection evidence-backed. |
+| [040](ADR-040-reflective-memory-consolidation-prompt.md) | Reflective Memory Consolidation Prompt | Proposed | Rewrite the consolidation prompt: privilege the newest intention, extract-then-generate for faithfulness, single-event truthfulness, and a hard compactness budget. |
+| [041](ADR-041-ambient-wander-and-exploration-zones.md) | Ambient Drive + Exploration Zones | Proposed | Cat is never idle: a local Ambient Drive feeds the same intent queue as the LLM (LLM preempts); forward-projected wander kills circling; authored/seeded wander zones give large-area explore with enforced walk–stop–think dwell cadence. |
+| [042](ADR-042-local-aws-compose-override-for-report-ingestion.md) | Local AWS Compose Override For Report Ingestion | Accepted | Keep local AWS profile mounts in ignored Compose overrides; commit only a sanitized example for S3/SQS report testing. |
 
 ## How the decisions relate
 
@@ -121,6 +136,7 @@ flowchart TD
 
     subgraph DevOps["Local dev & ops"]
         A024[024 Backend Makefile + graph DB]
+        A042[042 Local AWS compose override]
     end
 
     A004 --> A006
@@ -136,6 +152,8 @@ flowchart TD
     A021 --> A022
     A017 --> A024
     A023 --> A024
+    A024 --> A042
+    A032 --> A042
     A023 --> A025
 
     classDef sup fill:#E5E5E5,stroke:#999,color:#555

@@ -481,4 +481,9 @@ $RECYCLE.BIN/
 # logging files
 app.log
 
+# Local Docker Compose overrides can contain machine-specific paths such as
+# /Users/<name>/.aws and must stay out of Git. Commit only the .example.yml.
+docker-compose.aws.override.yml
+mewi-backend-aws.override.yml
+
 .claude

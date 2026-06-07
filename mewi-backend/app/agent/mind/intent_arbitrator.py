@@ -20,11 +20,11 @@ from app.agent.prompts.sections import clean_text
 INTENT_PRIORITY = {
     INTENT_SAFETY: 100,
     INTENT_SEEK_FOOD: 80,
-    INTENT_REST: 70,
+    INTENT_EXPLORE: 65,
     INTENT_SOCIALIZE: 60,
     INTENT_SEEK_PLAYER: 55,
     INTENT_INVESTIGATE: 45,
-    INTENT_EXPLORE: 40,
+    INTENT_REST: 35,
     INTENT_IDLE: 0,
 }
 
@@ -33,7 +33,6 @@ DOMAIN_PRIORITY = {
     "social": 20,
     "exploration": 10,
 }
-
 
 def select_intent_from_proposals(proposals: list[dict[str, Any]]) -> dict[str, Any]:
     """Collapse domain proposals into one ActionFSM-style directive."""
@@ -49,10 +48,7 @@ def select_intent_from_proposals(proposals: list[dict[str, Any]]) -> dict[str, A
     for item in candidates:
         grouped[item["intent"]].append(item)
 
-    selected_intent = max(
-        grouped,
-        key=lambda intent: (len(grouped[intent]), INTENT_PRIORITY.get(intent, 0)),
-    )
+    selected_intent = max(grouped, key=lambda intent: _intent_group_score(intent, grouped[intent]))
     selected_group = grouped[selected_intent]
     target_id = _select_target(selected_group)
     winner = _select_winning_proposal(selected_group, target_id)
@@ -116,6 +112,12 @@ def _proposal_score(proposal: dict[str, Any]) -> int:
     intent = clean_text(proposal.get("intent"))
     domain = clean_text(proposal.get("domain"))
     return INTENT_PRIORITY.get(intent, 0) + DOMAIN_PRIORITY.get(domain, 0)
+
+
+def _intent_group_score(intent: str, proposals: list[dict[str, Any]]) -> tuple[int, int]:
+    """Score final-intent groups by support count, then intent weight."""
+
+    return (len(proposals), INTENT_PRIORITY.get(intent, 0))
 
 
 def _supporting_domains(proposals: list[dict[str, Any]]) -> list[str]:

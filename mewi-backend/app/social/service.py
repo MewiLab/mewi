@@ -444,9 +444,10 @@ def _bid_outcome(
     responder_id: str,
     spoke: bool,
 ) -> tuple[str, str]:
-    if intent == "SOCIALIZE" and target_id == sender_id:
-        if spoke:
-            return "replied", f"{responder_id} replied to the social bid."
+    aimed_at_sender = _creature_base(target_id) == _creature_base(sender_id)
+    if aimed_at_sender and spoke:
+        return "replied", f"{responder_id} replied to the social bid."
+    if intent == "SOCIALIZE" and aimed_at_sender:
         return "acknowledged", f"{responder_id} acknowledged the social bid with body language."
     if intent == "SAFETY":
         return "deferred", "The receiver was focused on safety, so the bid was deferred."

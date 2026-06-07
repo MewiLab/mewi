@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: dev
     container_name: mewi_report_viewer
     restart: unless-stopped
     ports:

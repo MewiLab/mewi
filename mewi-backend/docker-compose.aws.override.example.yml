@@ -1,0 +1,16 @@
+# Copy to docker-compose.aws.override.yml for local S3/SQS report-ingestion
+# testing. The real override is gitignored because it can contain
+# machine-specific paths and references to private AWS credential files.
+#
+# Start with:
+#   docker compose -f docker-compose.yml -f docker-compose.aws.override.yml up -d mewi_agent_runtime
+
+services:
+  mewi_agent_runtime:
+    environment:
+      AWS_PROFILE: ${AWS_PROFILE:-default}
+      AWS_SDK_LOAD_CONFIG: "1"
+    volumes:
+      # The current Dockerfile runs as root, so boto3 reads /root/.aws.
+      # If the image later switches to a non-root USER, update this target path.
+      - ${HOME}/.aws:/root/.aws:ro

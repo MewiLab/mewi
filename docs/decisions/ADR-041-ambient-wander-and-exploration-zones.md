@@ -20,14 +20,15 @@ The Unity local behavior loop:
   — `ExecuteWander()` uses `Random.insideUnitSphere`, which causes circling.
 - `mewi-unity/app/Assets/Scripts/Creature/Core/CreatureBlackBoard.cs`
   — the directive queue + micro-action queue both intents flow through.
-- New: a `WanderZone` component + `WanderZoneRegistry` for authored exploration
-  anchors, optionally seeded from the ADR-026 prop catalog / affordance scanner.
+- Authoring: Malbers' native `AIWanderArea`
+  (`Assets/Malbers Animations/Common/Scripts/AI/AIWanderArea.cs`, a `MWayPoint`)
+  is the exploration-zone authoring tool — no custom zone component is needed.
 
 ## Builds on
 
 - ADR-022 (Dispatcher + Intent/Motor Workers) — keeps the single execution path
   `IntentMessage → CreatureMotorWorker → MotorCommand → MalbersAnimalAdapter`.
-- ADR-025 (World-Authored Interaction FSM) — wander zones are authored scene
+- ADR-025 (World-Authored Interaction FSM) — wander areas are authored scene
   objects, like interaction recipes.
 - ADR-005 (Movement Reliability — Watchdog + Warp) — every wander/go_to still
   terminates through the existing watchdog.
@@ -176,54 +177,61 @@ if (NavMesh.SamplePosition(candidate, out var hit, wanderRadius, NavMesh.AllArea
     return NavigateTo(hit.position);
 ```
 
-**Macro tier — overlapping exploration zones as a connected web (the owner's
-idea, refined).** Add a `WanderZone` MonoBehaviour: a position + radius (the "2D
-circle on the ground") authored in the scene. Zones are placed **overlapping** so
-their union paints the walkable roaming region — and, critically, the overlap
-defines a **neighbor graph**: two zones whose circles intersect (or are within a
-small slack) are adjacent. A `WanderZoneRegistry` collects the zones and computes
-adjacency once.
+**Macro tier — Malbers `AIWanderArea` as the connected web (the owner's idea,
+already native).** Do **not** build a custom zone component. Malbers ships
+`AIWanderArea` (a `MWayPoint`) which is exactly the "2D circle on the ground" with
+everything this ADR's macro tier needs:
 
-When the Explore node needs a destination it does **not** pick a random far zone
-(that teleport-paths across the map and looks unnatural). It picks among the
-**current zone's neighbors**, weighted:
+- **area + radius** — `AreaType.Circle` (or `Box`) with `radius`; the cat picks a
+  random point inside via `GetNextDestination()`;
+- **the web** — `nextWayPoints` links areas together, and a parent area with
+  child `AIWanderArea`s forms a multi-circle region; `NextTarget()` walks the web;
+- **stay-vs-advance** — `WanderWeight` is the probability of taking another point
+  in the same area versus advancing to a linked `nextWayPoint` — the spread/flow
+  control;
+- **dwell** — `WaitTime` (a `RangedFloat` min..max) is the built-in pause at each
+  point — the "stop and think" gap, authored per area;
+- **arrival** — `stoppingDistance` / `slowingDistance` and the
+  `MAnimalAIControl.OnArrived` / `OnTargetPositionArrived` events the adapter
+  already subscribes to (`MalbersAnimalAdapter.cs:243`);
+- **gizmos** — editor discs + `nextWayPoint` lines for authoring overlap by eye.
 
-- **distance** — prefer adjacent zones (the web keeps movement continuous);
-- **recency** — down-weight the last N visited zones so the cat *flows onward*
-  instead of bouncing back into the zone it just left;
-- **reachability** — `NavMesh.SamplePosition` the chosen point before committing;
-  reject and re-pick if unreachable.
+Integration keeps the single executor (ADR-022). The Explore node's `wander`
+micro-action, instead of `Random.insideUnitSphere`, sources its destination from
+the cat's active `AIWanderArea`: the adapter reads **one** point per hop via
+`area.GetNextDestination()` and routes it through the existing `NavigateTo` path,
+completing the micro-action on `OnArrived`. The intent worker then re-issues the
+next `wander`, so each hop stays a discrete micro-action inside the queue/report
+pipeline and the LLM can preempt at any hop boundary. After a hop the adapter
+advances the active area to `area.NextTarget()` so the cat flows along the web;
+`WaitTime` (or the ambient dwell gap below) provides the pause between hops. A
+fully native alternative — `aiControl.SetTarget(area)` to let Malbers run the
+whole wander loop internally — is simpler but hands the per-hop loop to Malbers and
+loses micro-action granularity; rejected as the default for that reason.
 
-The cat then `go_to`s a jittered point *inside* the chosen neighbor's radius, and
-once there does its forward-projected in-zone drift. Because the destinations
-follow the overlapping web rather than being centered on the cat, this produces
-flowing, large-area exploration that stays inside the hand-painted region (no
-wandering onto a dock edge or into water). If the cat starts outside all zones, it
-snaps to the nearest one first.
+If the cat starts outside every area, the adapter targets the nearest
+`AIWanderArea` first.
 
 ```mermaid
 flowchart LR
-    EXP[Explore node needs destination] --> REG{WanderZoneRegistry}
-    REG -->|neighbors of current zone| CAND[Adjacent zones via overlap]
-    CAND -->|weight: distance x recency x reachable| PICK[Pick neighbor zone]
-    PICK --> PT[Jittered point in zone radius]
-    PT --> GOTO[go_to micro-action]
-    GOTO --> DRIFT[In-zone forward-projected drift]
-    REG -.->|no zones authored| MICRO[Forward-projected wander fallback]
+    EXP[Explore node: wander micro-action] --> AREA{Active AIWanderArea}
+    AREA -->|GetNextDestination point| GOTO[NavigateTo via existing path]
+    GOTO -->|OnArrived| DONE[Micro-action complete]
+    DONE -->|advance| NEXT[area.NextTarget via WanderWeight + nextWayPoints]
+    AREA -.->|no area assigned| MICRO[Forward-projected wander fallback]
 ```
 
-**v1 recommendation: hand-placed overlapping zones.** Author overlapping
-`WanderZone` circles to paint the walkable region; the overlap gives both the
-clean roaming silhouette and the neighbor graph for free. This is the version that
-reads as natural in reference projects, and it does not depend on having tagged
-props everywhere.
+**v1 authoring: hand-placed overlapping `AIWanderArea` circles.** Paint the
+walkable region with overlapping/linked Malbers wander areas — the native gizmos,
+`WaitTime` dwell, and `nextWayPoints` web give the clean silhouette and connected
+flow with zero custom code. This is the recognised reference-project pattern and
+needs no tagged props.
 
-**Later: seed zones from props.** The registry can additionally be seeded from the
-ADR-026 prop catalog and the existing affordance scanner
-(`Assets/Scripts/Affordance/ReachableAffordanceScanner.cs`) so interactable props
-(crates, pots, perches) double as exploration anchors — added for variety once the
-hand-authored web reads well. Pure forward-wander remains the zero-author
-fallback.
+**Later: seed areas from props.** Wander areas can additionally be attached to (or
+generated near) ADR-026 catalog props via the affordance scanner
+(`Assets/Scripts/Affordance/ReachableAffordanceScanner.cs`) so crates, pots, and
+perches double as exploration anchors — added for variety once the hand-authored
+web reads well. Pure forward-wander remains the zero-author fallback.
 
 ## Consequences
 

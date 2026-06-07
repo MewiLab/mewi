@@ -1,6 +1,6 @@
 # Mewi — Behavioral Report Site
 
-A static website that generates per-user behavioral analysis reports from game session logs.
+A hybrid Astro website that renders per-user behavioral analysis reports from game session logs.
 Users interact with four AI cats (Mewi, Miso, Yuzu, Haru) in a Unity 3D fishing village;
 their behavioral patterns are logged, processed, and visualized here as psychological trace reports.
 
@@ -17,12 +17,12 @@ relational tendencies without self-report bias. Each report is a mirror held up 
 
 | Layer        | Tool                              |
 |--------------|-----------------------------------|
-| Site         | [Astro](https://astro.build) (static output) |
+| Site         | [Astro](https://astro.build) hybrid output + Node adapter |
 | Charts (UI)  | Chart.js 4 bundled by Astro/Vite  |
 | Charts (PNG) | matplotlib + numpy (Python)       |
 | Data pipeline| Python 3.10+                      |
 | Fonts        | Shippori Mincho + Space Mono      |
-| Deploy       | Any static host (Vercel, Netlify, itch.io, Cloudflare Pages) |
+| Deploy       | Node-capable host/container for remote S3-backed reports |
 
 ---
 
@@ -88,11 +88,11 @@ Each file is immutable raw data for one completed session:
 }
 ```
 
-Processing is owned by the **mewi-backend** service (ADR-014). The backend
-groups session files by `user_id`, derives `processed_data/report_{userId}.json`,
-and copies it into `src/data/` automatically when Unity posts a session to
-`POST /api/v1/report/session`. This site is render-only — it does not run the
-processor.
+Processing is owned by the **attachment-report Lambda**. FastAPI stores raw
+sessions and enqueues/no-ops depending on `MEWI_REPORT_PROCESSING_MODE`; it does
+not build the processed report inline. This site is render-only. In local mode it
+reads already-processed `report_*.json` files from `src/data/`; in remote mode it
+fetches finished private-S3 reports through FastAPI's read gateway.
 
 User-facing names live in `pipeline/user_info.json` (read by the backend
 processor). Keep `user_id` stable for internal files, and set `display_name` /
@@ -142,7 +142,42 @@ npm run build       # outputs to dist/
 npm run preview     # preview the built site locally
 ```
 
-Deploy `dist/` to any static host.
+The production report route is server-rendered, so deploy this as a Node app or
+container, not as plain static files. The default Docker image builds the
+standalone Astro server:
+
+```bash
+docker build -t mewi-report .
+docker run --rm -p 4321:4321 \
+  -e PUBLIC_REPORT_SOURCE=remote \
+  -e REPORT_API_BASE=https://<your-fastapi-host> \
+  mewi-report
+```
+
+Remote mode does not read S3 directly. The site calls FastAPI:
+
+```text
+GET /api/v1/report/me/attachment
+Authorization: Bearer <report-read JWT>
+```
+
+FastAPI then reads `mewi-report-results-v0/results/{user_id}/attachment.json`
+after checking the token. Required backend deploy env:
+
+```text
+MEWI_REPORT_RESULTS_BUCKET=mewi-report-results-v0
+MEWI_REPORT_READ_JWT_SECRET=<shared signing secret>
+AWS_REGION=ap-southeast-1
+AWS_DEFAULT_REGION=ap-southeast-1
+```
+
+Open the deployed report with:
+
+```text
+https://<report-host>/report?token=<JWT-with-sub-user_id>
+```
+
+The older `/user/report/{handle}` directory remains the local/static demo path.
 
 ---
 
