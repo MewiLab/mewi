@@ -3,12 +3,20 @@
 > *A game about the kinds of connection that time shapes — and eventually separates.*
 
 <p align="center">
-  <a href="https://youtu.be/CknOAqH-44U?si=iW1alAusgz2wgFhX"><img src="docs/assets/mewi-thumbnail.png" width="720" alt="Watch the Mewi demo on YouTube"></a>
+  <img src="docs/assets/mewi-thumbnail.png" width="720" alt="Mewi">
   <br>
   <sub>16 stray cats living in a Unity 3D fishing village — with or without you.</sub>
 </p>
 
 ---
+
+## Demo
+
+<p align="center">
+  <a href="docs/assets/mewi-demo.mp4"><img src="docs/assets/mewi-thumbnail.png" width="720" alt="Play the Mewi demo"></a>
+  <br>
+  <sub>▶ Click to play the demo</sub>
+</p>
 
 ## Why
 
