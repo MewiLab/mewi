@@ -107,7 +107,7 @@ This diagram shows only the backend architecture. The Unity side is omitted. It 
 | Engine | Unity 6.3 (`6000.3.11f1`) | Unity Technologies | Unity Personal |
 | 3D model | Cat models | [MalberS Animations](https://www.malbersanimations.com/) | [Standard Unity Asset Store EULA](https://unity.com/legal/as-terms) |
 | Animation / controller | Animal Controller | [MalberS Animations](https://www.malbersanimations.com/) | [Standard Unity Asset Store EULA](https://unity.com/legal/as-terms) |
-| Environment | Fishing village (docks, boats, sea) | Leartes Studios | License not recorded; verify before reuse |
+| Environment | Fishing village (docks, boats, sea) | Leartes Studios | [Standard Unity Asset Store EULA](https://unity.com/legal/as-terms) |
 | AI | [LangGraph](https://github.com/langchain-ai/langgraph) | LangChain, Inc. | MIT |
 
-All third-party assets belong to their respective creators. Please check each license before reuse.
+Third-party assets were purchased from their respective creators and are not included in this repository.
