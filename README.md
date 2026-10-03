@@ -11,7 +11,9 @@
 ## Demo
 
 <p align="center">
-  <video src="docs/assets/mewi-demo.mp4" poster="docs/assets/mewi-video-thumbnail.png" width="720" controls style="border-radius: 16px;"></video>
+  <a href="docs/assets/mewi-demo.mp4?raw=1"><img src="docs/assets/mewi-video-thumbnail.png" width="720" alt="Play the Mewi demo"></a>
+  <br>
+  <sub>▶ Click to play the demo</sub>
 </p>
 
 ## Why
@@ -88,7 +90,7 @@ The full vision is the long loop: cats that carry memories across players. Withi
   <img src="docs/assets/mewi-system-architecture.png" width="800" alt="Mewi backend system architecture">
 </p>
 
-This diagram shows only the backend architecture; the Unity side is omitted. It is designed to support multiple concurrent players: the game-agent backend is on the left, and the attachment-theory report pipeline is on the right.
+This diagram shows only the backend architecture. The Unity side is omitted. It is designed to support multiple concurrent players: the game-agent backend is on the left, and the attachment-theory report pipeline is on the right.
 
 ## Where It's Going
 
@@ -105,7 +107,7 @@ This diagram shows only the backend architecture; the Unity side is omitted. It 
 | Engine | Unity 6.3 (`6000.3.11f1`) | Unity Technologies | Unity Personal |
 | 3D model | Cat models | [MalberS Animations](https://www.malbersanimations.com/) | [Standard Unity Asset Store EULA](https://unity.com/legal/as-terms) |
 | Animation / controller | Animal Controller | [MalberS Animations](https://www.malbersanimations.com/) | [Standard Unity Asset Store EULA](https://unity.com/legal/as-terms) |
-| Environment | Fishing village (docks, boats, sea) | Source not recorded in this repository | License not recorded; verify before reuse |
+| Environment | Fishing village (docks, boats, sea) | Leartes Studios | License not recorded; verify before reuse |
 | AI | [LangGraph](https://github.com/langchain-ai/langgraph) | LangChain, Inc. | MIT |
 
 All third-party assets belong to their respective creators. Please check each license before reuse.
