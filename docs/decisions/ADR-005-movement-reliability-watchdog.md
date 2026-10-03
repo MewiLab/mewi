@@ -159,5 +159,5 @@ flowchart TD
 
 ## Companion docs
 
-- [docs/architecture/current_workflow.md](../architecture/current_workflow.md) — current backend/Unity/worker flow.
-- [docs/architecture/current_need_to_fix.md](../architecture/current_need_to_fix.md) — play-mode verification checklist and remaining risks.
+- [docs/architecture/workflow.md](../architecture/workflow.md) — current backend/Unity/worker flow.
+- [docs/architecture/known-issues.md](../architecture/known-issues.md) — play-mode verification checklist and remaining risks.

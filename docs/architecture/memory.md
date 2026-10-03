@@ -353,8 +353,8 @@ shape once the cat begins to feel alive.
 erDiagram
     creatures ||--o{ cat_place_memory : has
     place_nodes ||--o{ cat_place_memory : tracked_by
-    place_nodes ||--o{ place_edges : from
-    place_nodes ||--o{ place_edges : to
+    place_nodes ||--o{ place_edges : origin
+    place_nodes ||--o{ place_edges : destination
     creatures ||--o{ episodic_memories : remembers
     creatures ||--o{ relationship_states : feels
 

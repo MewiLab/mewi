@@ -1,8 +1,7 @@
 # Mewi: backend-owned cognitive architecture (mind / body / world / report)
 
 > Draft PR description. Grounded in `docs/decisions/` (ADR-001…025) and the
-> live developing notes (`docs/architecture/current_*.md` and
-> `docs/architecture/memory_design.md`). View on GitHub for inline Mermaid.
+> developing notes in `docs/architecture/`. View on GitHub for inline Mermaid.
 
 ## TL;DR
 
@@ -39,10 +38,10 @@ hardcoded to a weather-search example) had four structural problems:
    tick (ADR-010/011).
 2. **Repetitive behaviour.** Each planning turn started from nearly identical context,
    so the LLM kept choosing the same nearby places/actions. The missing feedback loop
-   was *place/coverage memory*, not vector search (`docs/architecture/memory_design.md`).
+   was *place/coverage memory*, not vector search (`docs/architecture/memory.md`).
 3. **A body that could get stuck.** Navigation could be "accepted" yet never arrive;
    rest actions (`eat`/`sit`/`lie`/`sleep`) could loop and never emit `OnModeEnd`,
-   blocking the next command forever (`docs/architecture/current_motor.md`).
+   blocking the next command forever (`docs/architecture/motor.md`).
 4. **Blocking transport.** Unity blocked on the LLM over request/poll HTTP.
 
 ## What changed (by subsystem)
@@ -66,7 +65,7 @@ hardcoded to a weather-search example) had four structural problems:
 - **Proposal–Arbiter tick graph** (ADR-018): the linear graph is reshaped into
   **propose → select → plan**. Need/social/exploration proposers compete on a bus; an
   arbiter selects; planning stays at the same two LLM calls.
-- **Place/coverage memory** (ADR-006, `memory_design.md`): backend owns visit
+- **Place/coverage memory** (ADR-006, `docs/architecture/memory.md`): backend owns visit
   counts/recency/novelty (Redis hot, Supabase durable); Unity owns geometry. This is the
   feedback loop that breaks repetitive plans.
 - **Mem0-style memory** (ADR-017): append-only writes, hybrid recall (recent + pgvector),
@@ -180,7 +179,7 @@ sequenceDiagram
     W-->>U: plan { actions, dialogue }
 ```
 
-Invariant (`docs/architecture/current_workflow.md`): Unity sends a new snapshot **only** when the
+Invariant (`docs/architecture/workflow.md`): Unity sends a new snapshot **only** when the
 previous backend request is done *and* the local body has finished its queued command.
 
 ## Motor reliability (why the body never gets stuck)
@@ -224,7 +223,7 @@ run via the ADR-024 Makefile/Docker stack.
 
 ## Known issues & follow-ups
 
-From `docs/architecture/current_need_to_fix.md` and the *Proposed* ADRs:
+From `docs/architecture/known-issues.md` and the *Proposed* ADRs:
 
 - **Unity play-mode verification pending** (this workspace can't run the editor):
   `go_to → SM_Fish_1, eat → SM_Fish_1`; blocked-route repath→warp; off-NavMesh raw-warp;
@@ -242,6 +241,6 @@ From `docs/architecture/current_need_to_fix.md` and the *Proposed* ADRs:
 - Start with `docs/decisions/README.md` for the index + relationship graph.
 - Foundational reads: ADR-003 (runtime), ADR-004/023 (transport), ADR-006 (mind),
   ADR-010/011 (world+social), ADR-018 (proposal-arbiter).
-- For runtime behaviour today, read `docs/architecture/current_workflow.md` and
-  `docs/architecture/current_motor.md`.
+- For runtime behaviour today, read `docs/architecture/workflow.md` and
+  `docs/architecture/motor.md`.
 ```

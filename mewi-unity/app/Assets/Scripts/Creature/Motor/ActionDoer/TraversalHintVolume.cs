@@ -6,7 +6,7 @@ using UnityEngine;
 /// such as <see cref="CreatureOffMeshLinkTraversal"/> read the <see cref="kind"/>
 /// to decide how to react when the cat enters or exits the trigger.
 ///
-/// See docs/architecture/jump_through_obstacle_proposol.md (Phase 2). Triggers are hints and
+/// See docs/architecture/obstacle-traversal.md (Phase 2). Triggers are hints and
 /// safety metadata; NavMesh + Malbers remain the primary movement layer.
 /// </summary>
 public enum TraversalHintKind
