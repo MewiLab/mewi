@@ -1,7 +1,6 @@
 # Memory Design
 
-This design follows the discussion in `docs/discussion.md` and the current
-Unity/FastAPI/LangGraph architecture.
+This design follows the current Unity/FastAPI/LangGraph architecture.
 
 ## Core Problem
 

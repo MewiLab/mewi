@@ -22,12 +22,12 @@ It is captured in three ADRs:
 
 | ADR | Owns | One line |
 | --- | --- | --- |
-| [ADR-031](decisions/ADR-031-report-end-to-end-workflow.md) | Product topology | Two report-product Lambdas (`attachment-report` → `recommendation-report`) chained by an S3 `attachment.json` notification; Lambda-only Anthropic/RAGFlow/model secrets. |
-| [ADR-032](decisions/ADR-032-sqs-first-hop-report-ingestion.md) | First hop | FastAPI stores raw to S3 + sends a compact SQS job; an event-source mapping runs `attachment-report` (DLQ + partial-batch failures). |
-| [ADR-033](decisions/ADR-033-astro-report-frontend-data-source.md) | Frontend read | Thin `ReportSource` seam; FastAPI read gateway over private S3 with a `PyJWT` capability token (`/me` + `admin`). |
+| [ADR-031](../decisions/ADR-031-report-end-to-end-workflow.md) | Product topology | Two report-product Lambdas (`attachment-report` → `recommendation-report`) chained by an S3 `attachment.json` notification; Lambda-only Anthropic/RAGFlow/model secrets. |
+| [ADR-032](../decisions/ADR-032-sqs-first-hop-report-ingestion.md) | First hop | FastAPI stores raw to S3 + sends a compact SQS job; an event-source mapping runs `attachment-report` (DLQ + partial-batch failures). |
+| [ADR-033](../decisions/ADR-033-astro-report-frontend-data-source.md) | Frontend read | Thin `ReportSource` seam; FastAPI read gateway over private S3 with a `PyJWT` capability token (`/me` + `admin`). |
 
-They build on [ADR-030](decisions/ADR-030-post-session-report-processing.md) (the
-computation rule + `generation_mode`) and [ADR-014](decisions/ADR-014-report-ingestion-service-boundary.md)
+They build on [ADR-030](../decisions/ADR-030-post-session-report-processing.md) (the
+computation rule + `generation_mode`) and [ADR-014](../decisions/ADR-014-report-ingestion-service-boundary.md)
 (the storage/processing ports).
 
 ## How it works
@@ -183,5 +183,5 @@ REPORT_API_BASE=https://<your-fastapi-host>
 ```
 
 `MEWI_REPORT_READ_JWT_SECRET` is a backend-only read secret — keep it out of git,
-same as the Lambda secrets. See [`infra/README.md`](../infra/README.md) and
-[`infra/aws-lambda/README.md`](../infra/aws-lambda/README.md) for details.
+same as the Lambda secrets. See [`infra/README.md`](../../infra/README.md) and
+[`infra/aws-lambda/README.md`](../../infra/aws-lambda/README.md) for details.

@@ -1,8 +1,8 @@
 # Mewi: backend-owned cognitive architecture (mind / body / world / report)
 
 > Draft PR description. Grounded in `docs/decisions/` (ADR-001…025) and the
-> live developing notes (`docs/current_*.md`, `docs/proposed_workflow.md`,
-> `docs/memory_design.md`). View on GitHub for inline Mermaid.
+> live developing notes (`docs/architecture/current_*.md` and
+> `docs/architecture/memory_design.md`). View on GitHub for inline Mermaid.
 
 ## TL;DR
 
@@ -36,13 +36,13 @@ hardcoded to a weather-search example) had four structural problems:
 1. **Split world truth.** Unity owned geometry and confirmed `eat`/`arrive`, Python
    owned memory and place stats. That worked for one cat but cannot express "two cats
    are in the same room and noticed each other" — no single party sees both cats in a
-   tick (`docs/proposed_workflow.md`).
+   tick (ADR-010/011).
 2. **Repetitive behaviour.** Each planning turn started from nearly identical context,
    so the LLM kept choosing the same nearby places/actions. The missing feedback loop
-   was *place/coverage memory*, not vector search (`docs/memory_design.md`).
+   was *place/coverage memory*, not vector search (`docs/architecture/memory_design.md`).
 3. **A body that could get stuck.** Navigation could be "accepted" yet never arrive;
    rest actions (`eat`/`sit`/`lie`/`sleep`) could loop and never emit `OnModeEnd`,
-   blocking the next command forever (`docs/current_motor.md`).
+   blocking the next command forever (`docs/architecture/current_motor.md`).
 4. **Blocking transport.** Unity blocked on the LLM over request/poll HTTP.
 
 ## What changed (by subsystem)
@@ -180,7 +180,7 @@ sequenceDiagram
     W-->>U: plan { actions, dialogue }
 ```
 
-Invariant (`docs/current_workflow.md`): Unity sends a new snapshot **only** when the
+Invariant (`docs/architecture/current_workflow.md`): Unity sends a new snapshot **only** when the
 previous backend request is done *and* the local body has finished its queued command.
 
 ## Motor reliability (why the body never gets stuck)
@@ -224,7 +224,7 @@ run via the ADR-024 Makefile/Docker stack.
 
 ## Known issues & follow-ups
 
-From `docs/current_need_to_fix.md` and the *Proposed* ADRs:
+From `docs/architecture/current_need_to_fix.md` and the *Proposed* ADRs:
 
 - **Unity play-mode verification pending** (this workspace can't run the editor):
   `go_to → SM_Fish_1, eat → SM_Fish_1`; blocked-route repath→warp; off-NavMesh raw-warp;
@@ -235,12 +235,13 @@ From `docs/current_need_to_fix.md` and the *Proposed* ADRs:
   later if popping is distracting.
 - **Proposed, not fully built:** behavioral toolkit (ADR-016), report pipeline
   (ADR-012–014), mem0-style memory rollout (ADR-017). Graph-memory rewrite currently
-  leaves the Supabase write path needing reconciliation (see `docs/memory_discussion.md`).
+  leaves the Supabase write path needing reconciliation.
 
 ## Review guide
 
 - Start with `docs/decisions/README.md` for the index + relationship graph.
 - Foundational reads: ADR-003 (runtime), ADR-004/023 (transport), ADR-006 (mind),
   ADR-010/011 (world+social), ADR-018 (proposal-arbiter).
-- For runtime behaviour today, read `docs/current_workflow.md` and `docs/current_motor.md`.
+- For runtime behaviour today, read `docs/architecture/current_workflow.md` and
+  `docs/architecture/current_motor.md`.
 ```
