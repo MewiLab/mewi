@@ -8,13 +8,7 @@
   <sub>16 stray cats living in a Unity 3D fishing village, with or without you.</sub>
 </p>
 
-## Demo
-
-
-
 https://github.com/user-attachments/assets/1ddffc32-9ab8-42e0-ab41-690801003e30
-
-
 
 ## Why
 
