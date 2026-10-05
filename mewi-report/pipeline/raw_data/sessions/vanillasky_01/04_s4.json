@@ -1,0 +1,71 @@
+{
+  "schema_version": "mewi.report.raw.v1",
+  "user_id": "vanillasky_01",
+  "source": {
+    "app": "mewi-unity",
+    "build": "demo",
+    "platform": "demo",
+    "scene": "demo_fishing_village"
+  },
+  "session": {
+    "session_id": "s4",
+    "session_index": 4,
+    "timestamp_start": "2026-05-26T16:20:00Z",
+    "duration_seconds": 620,
+    "events": [
+      {
+        "t": 5,
+        "actor": "human",
+        "action": "wait",
+        "params": {}
+      },
+      {
+        "t": 31,
+        "actor": "cat",
+        "cat_id": "mewi",
+        "action": "sit",
+        "trust_before": 9,
+        "trust_after": 21,
+        "trigger": "slow_recovery"
+      },
+      {
+        "t": 58,
+        "actor": "cat",
+        "cat_id": "miso",
+        "action": "settle_against_leg",
+        "trust_before": 16,
+        "trust_after": 28,
+        "trigger": "comfort_state"
+      },
+      {
+        "t": 71,
+        "actor": "cat",
+        "cat_id": "haru",
+        "action": "sit_nearby",
+        "trust_before": 7,
+        "trust_after": 24,
+        "trigger": "calm_returned"
+      },
+      {
+        "t": 100,
+        "actor": "cat",
+        "cat_id": "yuzu",
+        "action": "leave",
+        "trust_before": 14,
+        "trust_after": 5,
+        "trigger": "insufficient_reaction"
+      }
+    ],
+    "multi_cat_encounters": [
+      {
+        "t": 118,
+        "cats_present": [
+          "mewi",
+          "miso"
+        ],
+        "human_action": "stay_with_mewi",
+        "outcome": "miso_withdrew_quietly"
+      }
+    ]
+  }
+}

@@ -1,0 +1,320 @@
+name: Railway Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "mewi-report/**"
+      - "mewi-backend/**"
+      - ".github/workflows/railway-deploy.yml"
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: "Service to deploy"
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - report
+          - backend
+          - both
+
+permissions:
+  contents: read
+
+concurrency:
+  group: railway-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect Changed Services
+    runs-on: ubuntu-latest
+    outputs:
+      report: ${{ steps.detect.outputs.report }}
+      backend: ${{ steps.detect.outputs.backend }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect service changes
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          target="${{ github.event.inputs.deploy_target || 'auto' }}"
+          report=false
+          backend=false
+
+          case "$target" in
+            report)
+              report=true
+              ;;
+            backend)
+              backend=true
+              ;;
+            both)
+              report=true
+              backend=true
+              ;;
+            auto)
+              if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+                report=true
+                backend=true
+              else
+                base="${{ github.event.before }}"
+                head="${{ github.sha }}"
+
+                if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+                  changed="$(git show --format= --name-only "$head")"
+                else
+                  changed="$(git diff --name-only "$base" "$head")"
+                fi
+
+                if printf '%s\n' "$changed" | grep -Eq '^(mewi-report/|\.github/workflows/railway-deploy\.yml$)'; then
+                  report=true
+                fi
+                if printf '%s\n' "$changed" | grep -Eq '^(mewi-backend/|\.github/workflows/railway-deploy\.yml$)'; then
+                  backend=true
+                fi
+              fi
+              ;;
+            *)
+              echo "Unsupported deploy_target: $target" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "report=$report" >> "$GITHUB_OUTPUT"
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "report=$report backend=$backend"
+
+  report:
+    name: Build and Deploy Report
+    needs: changes
+    if: needs.changes.outputs.report == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: mewi-report
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN || vars.RAILWAY_TOKEN }}
+      RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT || 'production' }}
+      RAILWAY_REPORT_SERVICE: ${{ vars.RAILWAY_REPORT_SERVICE || 'mewi-report' }}
+      PUBLIC_REPORT_SOURCE: ${{ vars.PUBLIC_REPORT_SOURCE || 'remote' }}
+      REPORT_API_BASE: ${{ vars.REPORT_API_BASE }}
+      REPORT_PORT: ${{ vars.REPORT_PORT || '4321' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: mewi-report/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build report app
+        run: npm run build
+        env:
+          PUBLIC_REPORT_SOURCE: ${{ env.PUBLIC_REPORT_SOURCE }}
+          REPORT_API_BASE: ${{ env.REPORT_API_BASE }}
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Sync report variables to Railway
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          require_env() {
+            local missing=()
+            for name in "$@"; do
+              if [ -z "${!name:-}" ]; then
+                missing+=("$name")
+              fi
+            done
+            if [ "${#missing[@]}" -gt 0 ]; then
+              printf 'Missing required GitHub environment values: %s\n' "${missing[*]}" >&2
+              exit 1
+            fi
+          }
+
+          require_env RAILWAY_TOKEN RAILWAY_ENVIRONMENT RAILWAY_REPORT_SERVICE REPORT_API_BASE
+
+          railway variable set \
+            PUBLIC_REPORT_SOURCE="${PUBLIC_REPORT_SOURCE}" \
+            REPORT_API_BASE="${REPORT_API_BASE}" \
+            PORT="${REPORT_PORT}" \
+            ASTRO_TELEMETRY_DISABLED=1 \
+            --service "${RAILWAY_REPORT_SERVICE}" \
+            --environment "${RAILWAY_ENVIRONMENT}" \
+            --skip-deploys
+
+      - name: Deploy report to Railway
+        run: railway up --service "${RAILWAY_REPORT_SERVICE}" --environment "${RAILWAY_ENVIRONMENT}" --ci
+
+  backend:
+    name: Test and Deploy Backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: mewi-backend
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN || vars.RAILWAY_TOKEN }}
+      RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT || 'production' }}
+      RAILWAY_BACKEND_SERVICE: ${{ vars.RAILWAY_BACKEND_SERVICE || 'mewi-backend' }}
+      BACKEND_PORT: ${{ vars.BACKEND_PORT || '8000' }}
+
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION || 'ap-southeast-1' }}
+      AGENT_PERSONA: ${{ vars.AGENT_PERSONA }}
+      AGENT_PERSONAS: ${{ vars.AGENT_PERSONAS }}
+      BUFFER_FLUSH_THRESHOLD: ${{ vars.BUFFER_FLUSH_THRESHOLD || '10' }}
+      EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL || 'text-embedding-3-small' }}
+      ENABLE_MEMORY_PIPELINE: ${{ vars.ENABLE_MEMORY_PIPELINE || 'false' }}
+      ENABLE_REFLECTION_CYCLE: ${{ vars.ENABLE_REFLECTION_CYCLE || 'false' }}
+      LANGSMITH_ENDPOINT: ${{ secrets.LANGSMITH_ENDPOINT || vars.LANGSMITH_ENDPOINT || 'https://api.smith.langchain.com' }}
+      LANGSMITH_PROJECT: ${{ vars.LANGSMITH_PROJECT || 'mewi-runtime' }}
+      LANGSMITH_TRACING: ${{ vars.LANGSMITH_TRACING || 'false' }}
+      LLM_OPENAI_MODEL: ${{ vars.LLM_OPENAI_MODEL || 'gpt-4o-mini' }}
+      LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'openai' }}
+      MEWI_REPORT_PROCESSING_MODE: ${{ secrets.MEWI_REPORT_PROCESSING_MODE || vars.MEWI_REPORT_PROCESSING_MODE || 'noop' }}
+      REDIS_HOST: ${{ vars.REDIS_HOST }}
+      REDIS_PORT: ${{ vars.REDIS_PORT }}
+
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      API_SECRET_TOKEN: ${{ secrets.API_SECRET_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+      MEWI_REPORT_RAW_BUCKET: ${{ secrets.MEWI_REPORT_RAW_BUCKET }}
+      MEWI_REPORT_RESULTS_BUCKET: ${{ secrets.MEWI_REPORT_RESULTS_BUCKET }}
+      MEWI_REPORT_READ_JWT_SECRET: ${{ secrets.MEWI_REPORT_READ_JWT_SECRET }}
+      MEWI_REPORT_SQS_QUEUE_URL: ${{ secrets.MEWI_REPORT_SQS_QUEUE_URL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --frozen --extra report-agent --extra graph-memory --group dev
+
+      - name: Run backend tests
+        run: >
+          uv run python -m pytest -q
+          tests/unit/agent/test_behavior_graph_social.py
+          tests/unit/agent/test_intent_arbitrator.py
+          tests/unit/api/test_report_read_routes.py
+          -m "not paid and not live"
+
+      - name: Set up Node for Railway CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Sync backend variables to Railway
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          require_env() {
+            local missing=()
+            for name in "$@"; do
+              if [ -z "${!name:-}" ]; then
+                missing+=("$name")
+              fi
+            done
+            if [ "${#missing[@]}" -gt 0 ]; then
+              printf 'Missing required GitHub environment values: %s\n' "${missing[*]}" >&2
+              exit 1
+            fi
+          }
+
+          require_env \
+            RAILWAY_TOKEN \
+            RAILWAY_ENVIRONMENT \
+            RAILWAY_BACKEND_SERVICE \
+            SUPABASE_URL \
+            SUPABASE_PUBLISHABLE_KEY \
+            SUPABASE_SECRET_KEY \
+            API_SECRET_TOKEN \
+            MEWI_REPORT_READ_JWT_SECRET \
+            MEWI_REPORT_RESULTS_BUCKET \
+            AWS_ACCESS_KEY_ID \
+            AWS_SECRET_ACCESS_KEY \
+            OPENAI_API_KEY
+
+          if [ "${MEWI_REPORT_PROCESSING_MODE}" = "sqs" ]; then
+            require_env MEWI_REPORT_RAW_BUCKET MEWI_REPORT_SQS_QUEUE_URL
+          fi
+
+          railway variable set \
+            ENV=production \
+            DEBUG=false \
+            PORT="${BACKEND_PORT}" \
+            AWS_REGION="${AWS_REGION}" \
+            AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION}" \
+            SUPABASE_URL="${SUPABASE_URL}" \
+            SUPABASE_PUBLISHABLE_KEY="${SUPABASE_PUBLISHABLE_KEY}" \
+            SUPABASE_SECRET_KEY="${SUPABASE_SECRET_KEY}" \
+            API_SECRET_TOKEN="${API_SECRET_TOKEN}" \
+            MEWI_REPORT_READ_JWT_SECRET="${MEWI_REPORT_READ_JWT_SECRET}" \
+            MEWI_REPORT_RESULTS_BUCKET="${MEWI_REPORT_RESULTS_BUCKET}" \
+            MEWI_REPORT_PROCESSING_MODE="${MEWI_REPORT_PROCESSING_MODE}" \
+            MEWI_REPORT_RAW_BUCKET="${MEWI_REPORT_RAW_BUCKET}" \
+            MEWI_REPORT_SQS_QUEUE_URL="${MEWI_REPORT_SQS_QUEUE_URL}" \
+            AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
+            AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
+            OPENAI_API_KEY="${OPENAI_API_KEY}" \
+            LLM_PROVIDER="${LLM_PROVIDER}" \
+            LLM_OPENAI_MODEL="${LLM_OPENAI_MODEL}" \
+            LLM_OPENAI_API_KEY="${OPENAI_API_KEY}" \
+            EMBEDDING_MODEL="${EMBEDDING_MODEL}" \
+            LANGSMITH_TRACING="${LANGSMITH_TRACING}" \
+            LANGSMITH_API_KEY="${LANGSMITH_API_KEY}" \
+            LANGSMITH_PROJECT="${LANGSMITH_PROJECT}" \
+            LANGSMITH_ENDPOINT="${LANGSMITH_ENDPOINT}" \
+            ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
+            AGENT_PERSONA="${AGENT_PERSONA}" \
+            AGENT_PERSONAS="${AGENT_PERSONAS}" \
+            ENABLE_MEMORY_PIPELINE="${ENABLE_MEMORY_PIPELINE}" \
+            ENABLE_REFLECTION_CYCLE="${ENABLE_REFLECTION_CYCLE}" \
+            BUFFER_FLUSH_THRESHOLD="${BUFFER_FLUSH_THRESHOLD}" \
+            REDIS_HOST="${REDIS_HOST}" \
+            REDIS_PORT="${REDIS_PORT}" \
+            --service "${RAILWAY_BACKEND_SERVICE}" \
+            --environment "${RAILWAY_ENVIRONMENT}" \
+            --skip-deploys
+
+      - name: Deploy backend to Railway
+        run: railway up --service "${RAILWAY_BACKEND_SERVICE}" --environment "${RAILWAY_ENVIRONMENT}" --ci

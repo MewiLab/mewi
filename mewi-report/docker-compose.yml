@@ -1,0 +1,17 @@
+name: mewi-report
+
+services:
+  report_viewer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: mewi_report_viewer
+    restart: unless-stopped
+    ports:
+      - "4321:4321"
+    environment:
+      ASTRO_TELEMETRY_DISABLED: "1"
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./pipeline/processed_data:/app/src/data:ro

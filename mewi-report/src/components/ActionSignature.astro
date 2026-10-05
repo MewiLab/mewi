@@ -1,0 +1,310 @@
+---
+// src/components/ActionSignature.astro
+export interface Props {
+  signatureJson: string;
+  chainsJson?: string;
+}
+
+const { signatureJson, chainsJson = '[]' } = Astro.props;
+
+type Signature = {
+  action_counts?: Record<string, number>;
+  action_family_pct?: Record<string, number>;
+  ignored_actions?: string[];
+};
+
+type Chain = {
+  player_action?: string;
+  action_family?: string;
+  target_id?: string;
+  delivered?: boolean;
+  cat_reaction?: string;
+  reaction_latency_s?: number | null;
+  trust_delta?: number | null;
+  phase?: string;
+};
+
+function parseJson<T>(raw: string, fallback: T): T {
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+const signature = parseJson<Signature>(signatureJson, {});
+const chains = parseJson<Chain[]>(chainsJson, []);
+
+const familyOrder = [
+  'affiliative_bid',
+  'calm_presence',
+  'cautious_investigation',
+  'exploration_resource',
+  'boundary_refusal',
+  'intrusion_threat',
+  'fear_startle_shutdown',
+  'unknown',
+];
+
+const familyLabels: Record<string, string> = {
+  affiliative_bid: 'Affiliative bid',
+  calm_presence: 'Calm presence',
+  cautious_investigation: 'Cautious investigation',
+  exploration_resource: 'Exploration / resource',
+  boundary_refusal: 'Boundary / refusal',
+  intrusion_threat: 'Intrusion / threat',
+  fear_startle_shutdown: 'Fear / shutdown',
+  unknown: 'Unknown',
+};
+
+const actionLabels: Record<string, string> = {
+  player_play_invite: 'Play invite',
+  player_meow: 'Meow',
+  player_nod_yes: 'Nod yes',
+  player_shake_no: 'Shake no',
+  player_sit_near: 'Sit near',
+  player_groom: 'Groom',
+  player_poop: 'Poop',
+  player_pee: 'Pee',
+  player_scratch: 'Scratch',
+  player_lie: 'Lie',
+  player_sleep: 'Sleep',
+  player_smell: 'Smell target',
+  player_look_around: 'Look around',
+  player_alert: 'Alert watch',
+  player_push: 'Push',
+  player_shake: 'Shake body',
+  player_dig: 'Dig',
+  player_crawl: 'Crawl',
+  player_drink: 'Drink',
+  player_flinch: 'Flinch',
+  player_startle: 'Startle',
+  player_stun: 'Stun',
+  player_open_chest: 'Open chest',
+  player_eat: 'Eat target',
+  player_attack: 'Attack',
+};
+
+const familyPct = signature.action_family_pct ?? {};
+const familyRows = familyOrder
+  .map(key => ({ key, label: familyLabels[key] ?? key, value: Number(familyPct[key] ?? 0) }))
+  .filter(row => row.value > 0 || row.key !== 'unknown');
+
+const actionRows = Object.entries(signature.action_counts ?? {})
+  .map(([action, count]) => ({
+    action,
+    label: actionLabels[action] ?? action.replace(/^player_/, '').replaceAll('_', ' '),
+    count: Number(count ?? 0),
+  }))
+  .filter(row => row.count > 0)
+  .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+
+const chainRows = chains
+  .filter(chain => chain && chain.player_action)
+  .slice(0, 8)
+  .map(chain => ({
+    action: actionLabels[chain.player_action ?? ''] ?? String(chain.player_action ?? '').replace(/^player_/, '').replaceAll('_', ' '),
+    family: familyLabels[chain.action_family ?? ''] ?? String(chain.action_family ?? '').replaceAll('_', ' '),
+    target: chain.target_id || 'any cat',
+    outcome: chain.cat_reaction
+      ? String(chain.cat_reaction).replaceAll('_', ' ')
+      : chain.delivered
+        ? 'delivered'
+        : 'no delivery',
+    latency: typeof chain.reaction_latency_s === 'number' ? `${chain.reaction_latency_s}s` : '-',
+    trust: typeof chain.trust_delta === 'number' ? (chain.trust_delta > 0 ? `+${chain.trust_delta}` : `${chain.trust_delta}`) : '-',
+  }));
+
+const totalActions = actionRows.reduce((sum, row) => sum + row.count, 0);
+---
+
+<div class="action-signature">
+  <div class="signature-grid">
+    <div class="signature-bars" aria-label="Player-cat action families">
+      {familyRows.map(row => (
+        <div class="family-row">
+          <div class="family-head">
+            <span>{row.label}</span>
+            <b>{row.value}%</b>
+          </div>
+          <div class="family-track">
+            <span class="family-fill" style={`width:${Math.max(0, Math.min(100, row.value))}%`}></span>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div class="action-counts" aria-label="Player-cat action counts">
+      <div class="count-head">
+        <span class="label">Actions</span>
+        <b>{totalActions}</b>
+      </div>
+      {actionRows.length > 0 ? (
+        <div class="count-list">
+          {actionRows.map(row => (
+            <span>
+              {row.label}
+              <b>{row.count}</b>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p class="empty-state">No player-cat actions recorded.</p>
+      )}
+    </div>
+  </div>
+
+  {chainRows.length > 0 && (
+    <div class="chain-wrap">
+      <table class="chain-table">
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Family</th>
+            <th>Target</th>
+            <th>Cat response</th>
+            <th>Latency</th>
+            <th>Trust</th>
+          </tr>
+        </thead>
+        <tbody>
+          {chainRows.map(row => (
+            <tr>
+              <td>{row.action}</td>
+              <td>{row.family}</td>
+              <td>{row.target}</td>
+              <td>{row.outcome}</td>
+              <td>{row.latency}</td>
+              <td>{row.trust}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
+
+<style>
+.action-signature {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.signature-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(180px, .8fr);
+  gap: 1rem;
+  align-items: start;
+}
+.signature-bars {
+  display: flex;
+  flex-direction: column;
+  gap: .65rem;
+}
+.family-row {
+  display: grid;
+  gap: .3rem;
+}
+.family-head {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  color: var(--ink2);
+  font-size: 12px;
+}
+.family-head b {
+  color: var(--ink3);
+  font-weight: 400;
+}
+.family-track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--border);
+}
+.family-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ink3);
+}
+.action-counts {
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  padding: .85rem;
+  background: var(--bg);
+}
+.count-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: .65rem;
+}
+.count-head b {
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+.count-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.count-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  padding: .3rem .45rem;
+  color: var(--ink2);
+  font-size: 11px;
+  line-height: 1.2;
+}
+.count-list b {
+  color: var(--ink3);
+  font-weight: 400;
+}
+.empty-state {
+  color: var(--ink3);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.chain-wrap {
+  overflow-x: auto;
+}
+.chain-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+}
+.chain-table th {
+  padding: .42rem .55rem;
+  border-bottom: .5px solid var(--border);
+  color: var(--ink3);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: .1em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.chain-table td {
+  padding: .5rem .55rem;
+  border-bottom: .5px solid var(--border);
+  color: var(--ink2);
+  overflow-wrap: anywhere;
+}
+.chain-table tr:last-child td {
+  border-bottom: 0;
+}
+@media (max-width: 760px) {
+  .signature-grid {
+    grid-template-columns: 1fr;
+  }
+  .chain-table {
+    min-width: 620px;
+  }
+}
+</style>

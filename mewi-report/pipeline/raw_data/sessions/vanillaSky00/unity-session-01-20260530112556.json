@@ -1,0 +1,3969 @@
+{
+  "schema_version": "mewi.report.raw.v1",
+  "user_id": "vanillaSky00",
+  "source": {
+    "app": "mewi-unity",
+    "build": "0.1.0",
+    "platform": "OSXEditor",
+    "scene": "Fishing_Village"
+  },
+  "session": {
+    "session_id": "unity-session-01-20260530112556",
+    "session_index": 1,
+    "timestamp_start": "2026-05-30T11:25:56Z",
+    "duration_seconds": 194.84243774414062,
+    "events": [
+      {
+        "t": 0.0,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "vanillasky00",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.1326131671667099,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 0.0,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 0.0,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 1.7990148067474365,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 0.0,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 23.595993041992188,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 0.0,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 18.563369750976562,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 3.1162426471710205,
+        "actor": "human",
+        "action": "retreat",
+        "cat_id": "",
+        "trust_before": 0,
+        "trust_after": 0,
+        "trigger": "",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "vanillaSky00",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "derived_proximity",
+          "distance_to_player_m": -1.0,
+          "distance_to_nearest_cat_m": 1.3070094585418701,
+          "speed_mps": 0.9116377234458923
+        },
+        "meta": {
+          "source_system": "proximity_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "distance increased by >= 0.35m",
+          "note": ""
+        }
+      },
+      {
+        "t": 3.1162426471710205,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 1.6752957105636597,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 3.1162426471710205,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 23.644832611083984,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 5.756108283996582,
+        "actor": "human",
+        "action": "wait",
+        "cat_id": "",
+        "trust_before": 0,
+        "trust_after": 0,
+        "trigger": "",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "vanillaSky00",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "derived_proximity",
+          "distance_to_player_m": -1.0,
+          "distance_to_nearest_cat_m": 1.357142448425293,
+          "speed_mps": 0.0
+        },
+        "meta": {
+          "source_system": "proximity_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "distance stable for >= 2.0s",
+          "note": ""
+        }
+      },
+      {
+        "t": 6.301764488220215,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 18.58734130859375,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 7.343956470489502,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 1.6752917766571045,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 7.880936145782471,
+        "actor": "human",
+        "action": "retreat",
+        "cat_id": "",
+        "trust_before": 0,
+        "trust_after": 0,
+        "trigger": "",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "vanillaSky00",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "derived_proximity",
+          "distance_to_player_m": -1.0,
+          "distance_to_nearest_cat_m": 2.5838871002197266,
+          "speed_mps": 1.0721694231033325
+        },
+        "meta": {
+          "source_system": "proximity_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "distance increased by >= 0.35m",
+          "note": ""
+        }
+      },
+      {
+        "t": 9.434633255004883,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 9.434633255004883,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 1.676127314567566,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 10.471478462219238,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 18.618417739868164,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 11.49535846710205,
+        "actor": "human",
+        "action": "wait",
+        "cat_id": "",
+        "trust_before": 0,
+        "trust_after": 0,
+        "trigger": "",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "vanillaSky00",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "derived_proximity",
+          "distance_to_player_m": -1.0,
+          "distance_to_nearest_cat_m": 3.2156689167022705,
+          "speed_mps": 0.0
+        },
+        "meta": {
+          "source_system": "proximity_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "distance stable for >= 2.0s",
+          "note": ""
+        }
+      },
+      {
+        "t": 11.49535846710205,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 23.598005294799805,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 12.564335823059082,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 18.66855812072754,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 13.070436477661133,
+        "actor": "human",
+        "action": "wait",
+        "cat_id": "",
+        "trust_before": 0,
+        "trust_after": 0,
+        "trigger": "",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "vanillaSky00",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "derived_proximity",
+          "distance_to_player_m": -1.0,
+          "distance_to_nearest_cat_m": 3.2156612873077393,
+          "speed_mps": 0.0
+        },
+        "meta": {
+          "source_system": "proximity_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "distance stable for >= 2.0s",
+          "note": ""
+        }
+      },
+      {
+        "t": 13.60036563873291,
+        "actor": "human",
+        "action": "retreat",
+        "cat_id": "",
+        "trust_before": 0,
+        "trust_after": 0,
+        "trigger": "",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "vanillaSky00",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "derived_proximity",
+          "distance_to_player_m": -1.0,
+          "distance_to_nearest_cat_m": 4.521713733673096,
+          "speed_mps": 2.4645793437957764
+        },
+        "meta": {
+          "source_system": "proximity_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "distance increased by >= 0.35m",
+          "note": ""
+        }
+      },
+      {
+        "t": 13.60036563873291,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 15.678746223449707,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 16.20931625366211,
+        "actor": "human",
+        "action": "wait",
+        "cat_id": "",
+        "trust_before": 0,
+        "trust_after": 0,
+        "trigger": "",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "vanillaSky00",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "derived_proximity",
+          "distance_to_player_m": -1.0,
+          "distance_to_nearest_cat_m": 4.513646125793457,
+          "speed_mps": 0.0
+        },
+        "meta": {
+          "source_system": "proximity_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "distance stable for >= 2.0s",
+          "note": ""
+        }
+      },
+      {
+        "t": 17.83242416381836,
+        "actor": "human",
+        "action": "retreat",
+        "cat_id": "",
+        "trust_before": 0,
+        "trust_after": 0,
+        "trigger": "",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "vanillaSky00",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "derived_proximity",
+          "distance_to_player_m": -1.0,
+          "distance_to_nearest_cat_m": 5.0082478523254395,
+          "speed_mps": 0.7913916707038879
+        },
+        "meta": {
+          "source_system": "proximity_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "distance increased by >= 0.35m",
+          "note": ""
+        }
+      },
+      {
+        "t": 17.83242416381836,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 3.4854953289031982,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 18.381778717041016,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 22.767229080200195,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 19.433765411376953,
+        "actor": "human",
+        "action": "retreat",
+        "cat_id": "",
+        "trust_before": 0,
+        "trust_after": 0,
+        "trigger": "",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "vanillaSky00",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "derived_proximity",
+          "distance_to_player_m": -1.0,
+          "distance_to_nearest_cat_m": 6.827605247497559,
+          "speed_mps": 1.2679539918899536
+        },
+        "meta": {
+          "source_system": "proximity_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "distance increased by >= 0.35m",
+          "note": ""
+        }
+      },
+      {
+        "t": 20.982967376708984,
+        "actor": "human",
+        "action": "retreat",
+        "cat_id": "",
+        "trust_before": 0,
+        "trust_after": 0,
+        "trigger": "",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "vanillaSky00",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "derived_proximity",
+          "distance_to_player_m": -1.0,
+          "distance_to_nearest_cat_m": 8.461986541748047,
+          "speed_mps": 0.9970711469650269
+        },
+        "meta": {
+          "source_system": "proximity_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "distance increased by >= 0.35m",
+          "note": ""
+        }
+      },
+      {
+        "t": 20.982967376708984,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 18.110488891601562,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 24.062950134277344,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 24.57925033569336,
+        "actor": "cat",
+        "action": "look_around",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 27.144573211669922,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 22.716392517089844,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 28.18035888671875,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 30.258525848388672,
+        "actor": "cat",
+        "action": "lie",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 4.913787364959717,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 30.800703048706055,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 4.930325031280518,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 32.33702087402344,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 33.43806838989258,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.45069122314453,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 33.944705963134766,
+        "actor": "cat",
+        "action": "look_around",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 33.944705963134766,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.22007942199707,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 42.38092041015625,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 42.38092041015625,
+        "actor": "cat",
+        "action": "stop_moving",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "House_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 24.775957107543945,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 42.90262222290039,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "House_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 24.448068618774414,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 48.72502517700195,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 48.72502517700195,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 16.78000259399414,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 49.23814010620117,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 16.61200523376465,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 52.926578521728516,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 54.465492248535156,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Harbor",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 15.638340950012207,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 55.17597198486328,
+        "actor": "cat",
+        "action": "look_around",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.634031295776367,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 55.68348693847656,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 29.896791458129883,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 58.75031280517578,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "House_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 23.065773010253906,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 61.29612731933594,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 61.80915069580078,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 64.45962524414062,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 64.45962524414062,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 29.735015869140625,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 65.58509063720703,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 67.15412139892578,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "House_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 23.046245574951172,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 67.6615219116211,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.166173934936523,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 69.18907165527344,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.238784790039062,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 69.7260971069336,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 72.8313980102539,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.18004608154297,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 73.8568115234375,
+        "actor": "cat",
+        "action": "eat",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 75.4151611328125,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 79.49976348876953,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 80.01760864257812,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 32.02324295043945,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 80.01760864257812,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.23207664489746,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 81.55059814453125,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 32.02350997924805,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 82.81777954101562,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.17527198791504,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 83.8505859375,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.902751922607422,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 85.38595581054688,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 32.0722541809082,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 85.38595581054688,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.896879196166992,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 85.89883422851562,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.171192169189453,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 87.44010162353516,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.167545318603516,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 88.48169708251953,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.417112350463867,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 91.17216491699219,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 91.17216491699219,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.361774444580078,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 91.7367935180664,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 93.79545593261719,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.950422286987305,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 95.99505615234375,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 95.99505615234375,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.071260452270508,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 97.01425170898438,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.897323608398438,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 98.55933380126953,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.91653823852539,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 99.61309051513672,
+        "actor": "cat",
+        "action": "eat",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 101.17655944824219,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 103.2686538696289,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.072179794311523,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 105.36494445800781,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 106.37618255615234,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.04131507873535,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 107.43683624267578,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.91685676574707,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 110.5546646118164,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 29.990598678588867,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 111.62947082519531,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.022682189941406,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 112.14574432373047,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 29.98244285583496,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 112.65430450439453,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.032384872436523,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 115.24959564208984,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 115.24959564208984,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.865394592285156,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 115.77192687988281,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 115.77192687988281,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.8584041595459,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 115.77192687988281,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.836212158203125,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 118.38062286376953,
+        "actor": "cat",
+        "action": "look_around",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.85776138305664,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 119.39432525634766,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 119.39432525634766,
+        "actor": "cat",
+        "action": "stop_moving",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 29.628536224365234,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 119.9460220336914,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 29.70429039001465,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 119.9460220336914,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.139305114746094,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 120.99983978271484,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 29.683048248291016,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 121.54827880859375,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.116849899291992,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 125.72710418701172,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.07796287536621,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 127.79585266113281,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 127.79585266113281,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 29.48431396484375,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 129.3789520263672,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 29.623933792114258,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 130.39193725585938,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 131.4307403564453,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 29.4842529296875,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 133.49513244628906,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.151769638061523,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 133.49513244628906,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.993886947631836,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 134.50701904296875,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 136.2092742919922,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.874353408813477,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 137.76437377929688,
+        "actor": "cat",
+        "action": "lie",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.882354736328125,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 137.76437377929688,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.7099609375,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 138.80743408203125,
+        "actor": "cat",
+        "action": "eat",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 139.3190155029297,
+        "actor": "cat",
+        "action": "face_sun",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.1555118560791,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 139.3190155029297,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.65213966369629,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 140.3491973876953,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 143.95220947265625,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 146.03033447265625,
+        "actor": "cat",
+        "action": "face_sun",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.891429901123047,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 148.0834503173828,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.216867446899414,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 148.0834503173828,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.712261199951172,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 148.67416381835938,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.216835021972656,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 149.20791625976562,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.7668399810791,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 150.2433319091797,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 30.21683120727539,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 154.96693420410156,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.92125129699707,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 155.7296142578125,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.991025924682617,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 156.77096557617188,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.766212463378906,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 157.81809997558594,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.76588249206543,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 157.81809997558594,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.832809448242188,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 158.4213409423828,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.767005920410156,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 158.9376678466797,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 159.44090270996094,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.816547393798828,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 162.10891723632812,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.901094436645508,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 163.69590759277344,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.91014289855957,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 166.29872131347656,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 32.02642059326172,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 166.94039916992188,
+        "actor": "cat",
+        "action": "look_around",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Boat_2",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 166.94039916992188,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 31.8336181640625,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 166.94039916992188,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 32.0596923828125,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 167.46937561035156,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 171.5424041748047,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 172.59524536132812,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 34.42449188232422,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 173.10684204101562,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 175.1787567138672,
+        "actor": "cat",
+        "action": "look_around",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 34.48994064331055,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 176.2453155517578,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 34.4437255859375,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 178.83843994140625,
+        "actor": "cat",
+        "action": "stop_moving",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 34.06197738647461,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 178.83843994140625,
+        "actor": "cat",
+        "action": "go_to",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 34.09613800048828,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 179.84300231933594,
+        "actor": "cat",
+        "action": "vocalize",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 33.89740753173828,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 179.84300231933594,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 34.44364929199219,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 181.8937530517578,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 181.8937530517578,
+        "actor": "cat",
+        "action": "groom",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 34.42374038696289,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 182.95608520507812,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 34.30360412597656,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 183.99005126953125,
+        "actor": "cat",
+        "action": "sit",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 33.94953536987305,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 185.5146026611328,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "miso",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 33.94369125366211,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 187.58425903320312,
+        "actor": "cat",
+        "action": "smell",
+        "cat_id": "haru",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 34.79926300048828,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 190.23666381835938,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "mewi",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "Bamboo_Boardwalk_1",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 0.0,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      },
+      {
+        "t": 190.23666381835938,
+        "actor": "cat",
+        "action": "idle",
+        "cat_id": "yuzu",
+        "trust_before": 30,
+        "trust_after": 30,
+        "trigger": "action_changed",
+        "params": {
+          "zone_id": "",
+          "target_id": "",
+          "item_id": "",
+          "subtype": "",
+          "initiated_by": "",
+          "distance_to_player_m": 34.458065032958984,
+          "distance_to_nearest_cat_m": -1.0,
+          "speed_mps": -1.0
+        },
+        "meta": {
+          "source_system": "cat_state_sampler",
+          "recorder": "ReportSessionLogger",
+          "derivation": "action_changed",
+          "note": ""
+        }
+      }
+    ],
+    "multi_cat_encounters": []
+  }
+}

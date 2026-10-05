@@ -1,0 +1,1358 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &72578003317227398
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5011502305066210556}
+  - component: {fileID: 5999275751779251875}
+  - component: {fileID: 1744702385565366365}
+  m_Layer: 0
+  m_Name: WanderRegion
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5011502305066210556
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 72578003317227398}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 5.142004, y: -20.786953, z: 20.726704}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 8363464038154093684}
+  - {fileID: 481558412154253262}
+  - {fileID: 7517693116343203236}
+  - {fileID: 963679615881051746}
+  - {fileID: 5354498940102189115}
+  - {fileID: 969369670259322736}
+  - {fileID: 2347813792446734989}
+  - {fileID: 1757624118069551029}
+  - {fileID: 7341563660229655944}
+  - {fileID: 5503415987653003016}
+  - {fileID: 1402961519155221060}
+  - {fileID: 6927004605460678330}
+  - {fileID: 3794813662341718704}
+  - {fileID: 1050353128160270191}
+  - {fileID: 3466202082108364277}
+  - {fileID: 597830022166566782}
+  - {fileID: 7788460547843612626}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5999275751779251875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 72578003317227398}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.7
+  m_WaitTime:
+    minValue: 2
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 5999275751779251875}
+  ChildWanderAreas:
+  - {fileID: 5999275751779251875}
+  - {fileID: 3480280248676618392}
+  - {fileID: 7171018496227895688}
+  - {fileID: 6528836437757244074}
+  - {fileID: 2997507246711071217}
+  - {fileID: 2759185251729807349}
+  - {fileID: 5706319901117129345}
+  - {fileID: 1877130858254285337}
+  - {fileID: 8521150568766529459}
+  - {fileID: 6865804006131932320}
+  - {fileID: 8163841681323036111}
+  - {fileID: 6098409798868906411}
+  - {fileID: 8658759257928206948}
+  - {fileID: 4658956481869177828}
+  - {fileID: 6722427720047838104}
+  - {fileID: 748164144998674467}
+  - {fileID: 4069595262532477672}
+  - {fileID: 1407270064443046756}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!65 &1744702385565366365
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 72578003317227398}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &1391052910777408161
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 597830022166566782}
+  - component: {fileID: 4069595262532477672}
+  m_Layer: 0
+  m_Name: WZ_16
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &597830022166566782
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391052910777408161}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -8.660002, y: 0, z: 2.0900002}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4069595262532477672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391052910777408161}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 4069595262532477672}
+  ChildWanderAreas:
+  - {fileID: 4069595262532477672}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &1520215731412306571
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1402961519155221060}
+  - component: {fileID: 6098409798868906411}
+  m_Layer: 0
+  m_Name: WZ_11
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1402961519155221060
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1520215731412306571}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -10.460001, y: 0, z: -2.040001}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6098409798868906411
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1520215731412306571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 6098409798868906411}
+  ChildWanderAreas:
+  - {fileID: 6098409798868906411}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &1603100188949537783
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 481558412154253262}
+  - component: {fileID: 7171018496227895688}
+  m_Layer: 0
+  m_Name: WZ_02
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &481558412154253262
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1603100188949537783}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -1.94, y: 0, z: -2.04}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7171018496227895688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1603100188949537783}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 7171018496227895688}
+  ChildWanderAreas:
+  - {fileID: 7171018496227895688}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &1627464192418816655
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1050353128160270191}
+  - component: {fileID: 6722427720047838104}
+  m_Layer: 0
+  m_Name: WZ_14
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1050353128160270191
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1627464192418816655}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -5.1200004, y: 0, z: -0.02999878}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6722427720047838104
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1627464192418816655}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 6722427720047838104}
+  ChildWanderAreas:
+  - {fileID: 6722427720047838104}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &2450595615985822776
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7341563660229655944}
+  - component: {fileID: 6865804006131932320}
+  - component: {fileID: 336876927404291367}
+  m_Layer: 0
+  m_Name: WZ_09
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7341563660229655944
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2450595615985822776}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -8.52, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6865804006131932320
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2450595615985822776}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.7
+  m_WaitTime:
+    minValue: 2
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 6865804006131932320}
+  ChildWanderAreas:
+  - {fileID: 6865804006131932320}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!65 &336876927404291367
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2450595615985822776}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &3020971267233032589
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3794813662341718704}
+  - component: {fileID: 4658956481869177828}
+  m_Layer: 0
+  m_Name: WZ_13
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3794813662341718704
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3020971267233032589}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -6.650001, y: 0, z: -1.9199982}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4658956481869177828
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3020971267233032589}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 4658956481869177828}
+  ChildWanderAreas:
+  - {fileID: 4658956481869177828}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &3180676123109956435
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 969369670259322736}
+  - component: {fileID: 5706319901117129345}
+  m_Layer: 0
+  m_Name: WZ_06
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &969369670259322736
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3180676123109956435}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.63, y: 0, z: 2.14}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5706319901117129345
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3180676123109956435}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 5706319901117129345}
+  ChildWanderAreas:
+  - {fileID: 5706319901117129345}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &3807016365905234593
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8363464038154093684}
+  - component: {fileID: 3480280248676618392}
+  m_Layer: 0
+  m_Name: WZ_01
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8363464038154093684
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3807016365905234593}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -1.92, y: 2.71, z: -3.04}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3480280248676618392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3807016365905234593}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 3480280248676618392}
+  ChildWanderAreas:
+  - {fileID: 3480280248676618392}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &3862249566495449326
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7788460547843612626}
+  - component: {fileID: 1407270064443046756}
+  m_Layer: 0
+  m_Name: WZ_17
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7788460547843612626
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3862249566495449326}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -10.5, y: 0, z: 1.7900009}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1407270064443046756
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3862249566495449326}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 1407270064443046756}
+  ChildWanderAreas:
+  - {fileID: 1407270064443046756}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &5242560983497495380
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5503415987653003016}
+  - component: {fileID: 8163841681323036111}
+  m_Layer: 0
+  m_Name: WZ_10
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5503415987653003016
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5242560983497495380}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -10.440001, y: 2.71, z: -3.040001}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8163841681323036111
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5242560983497495380}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 8163841681323036111}
+  ChildWanderAreas:
+  - {fileID: 8163841681323036111}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &5837574654495891081
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7517693116343203236}
+  - component: {fileID: 6528836437757244074}
+  m_Layer: 0
+  m_Name: WZ_03
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7517693116343203236
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5837574654495891081}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.18, y: 0, z: -3}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6528836437757244074
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5837574654495891081}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 6528836437757244074}
+  ChildWanderAreas:
+  - {fileID: 6528836437757244074}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &6055119727531372671
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 963679615881051746}
+  - component: {fileID: 2997507246711071217}
+  m_Layer: 0
+  m_Name: WZ_04
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &963679615881051746
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6055119727531372671}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.87, y: 0, z: -1.92}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2997507246711071217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6055119727531372671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 2997507246711071217}
+  ChildWanderAreas:
+  - {fileID: 2997507246711071217}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &7678987335390740422
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2347813792446734989}
+  - component: {fileID: 1877130858254285337}
+  m_Layer: 0
+  m_Name: WZ_07
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2347813792446734989
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7678987335390740422}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.14, y: 0, z: 2.09}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1877130858254285337
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7678987335390740422}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 1877130858254285337}
+  ChildWanderAreas:
+  - {fileID: 1877130858254285337}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &7718295300232850241
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5354498940102189115}
+  - component: {fileID: 2759185251729807349}
+  m_Layer: 0
+  m_Name: WZ_05
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5354498940102189115
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7718295300232850241}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 3.4, y: 0, z: -0.03}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2759185251729807349
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7718295300232850241}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 2759185251729807349}
+  ChildWanderAreas:
+  - {fileID: 2759185251729807349}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &7738821874795691666
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3466202082108364277}
+  - component: {fileID: 748164144998674467}
+  m_Layer: 0
+  m_Name: WZ_15
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3466202082108364277
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7738821874795691666}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -6.890001, y: 0, z: 2.1399994}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &748164144998674467
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7738821874795691666}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 748164144998674467}
+  ChildWanderAreas:
+  - {fileID: 748164144998674467}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &7921432528330744609
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6927004605460678330}
+  - component: {fileID: 8658759257928206948}
+  m_Layer: 0
+  m_Name: WZ_12
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6927004605460678330
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7921432528330744609}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -8.700001, y: 0, z: -3}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8658759257928206948
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7921432528330744609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 8658759257928206948}
+  ChildWanderAreas:
+  - {fileID: 8658759257928206948}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []
+--- !u!1 &8887692188722487705
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1757624118069551029}
+  - component: {fileID: 8521150568766529459}
+  m_Layer: 0
+  m_Name: WZ_08
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1757624118069551029
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8887692188722487705}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -1.98, y: 0, z: 1.79}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5011502305066210556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8521150568766529459
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8887692188722487705}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74566a3889652fa469dba5dca64153b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MalbersAnimations::MalbersAnimations.AIWanderArea
+  pointType: 0
+  stoppingDistance: 1
+  slowingDistance: 0
+  m_arriveLookAt: 0
+  m_height: 0.5
+  m_WaitTime:
+    minValue: 1
+    maxValue: 5
+  DebugColor: {r: 1, g: 0, b: 0, a: 0.2}
+  nextWayPoints: []
+  OnTargetArrived:
+    m_PersistentCalls:
+      m_Calls: []
+  TargetArrivedReaction:
+    reactions: []
+  debugPersistentGizmos: 0
+  m_AreaType: 0
+  radius: 2
+  BoxArea: {x: 10, y: 1, z: 10}
+  WanderWeight: 1
+  MainArea: {fileID: 8521150568766529459}
+  ChildWanderAreas:
+  - {fileID: 8521150568766529459}
+  ShowRadius: 0
+  references:
+    version: 2
+    RefIds: []

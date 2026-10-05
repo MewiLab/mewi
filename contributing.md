@@ -251,34 +251,16 @@ Open it when investigation is needed before design or implementation.
 Below are common scenarios you may encounter. More cases can be added later if needed.
 
 ## 🧠 Scenario A: A teammate has an idea, but no solution yet
-<p align="center">
-<img src="assets/images/contributing/workflow_sA.png" alt="Scenario A workflow" width="50%">
-</p>
 
 ## 💭 Scenario B: A teammate already has a proposed solution
-<p align="center">
-<img src="assets/images/contributing/workflow_sB.png" alt="Scenario B workflow" width="20%">
-</p>
 
 ## 🐞 Scenario C: A teammate found broken behavior
-<p align="center">
-<img src="assets/images/contributing/workflow_sC.png" alt="Scenario C workflow" width="20%">
-</p>
 
 ## 🔍 Scenario D: A teammate needs to investigate before building
-<p align="center">
-<img src="assets/images/contributing/workflow_sD.png" alt="Scenario D workflow" width="30%">
-</p>
 
 ## 🚀 Scenario E: A teammate is ready to implement
-<p align="center">
-<img src="assets/images/contributing/workflow_sE.png" alt="Scenario E workflow" width="20%">
-</p>
 
 ## 🏛️ Scenario F: A major architectural decision is involved
-<p align="center">
-<img src="assets/images/contributing/workflow_sF.png" alt="Scenario F workflow" width="20%">
-</p>
 
 <br>
 <br>
@@ -421,10 +403,6 @@ The intended traceability is:
 - A Feature Request must satisfy a User Story.
 - A Major Architecture Change must be documented in an ADR.
 
-<p align="center">
-<img src="assets/images/contributing/traceability.png" alt="traceability" width="30%">
-</p>
-
 This helps future contributors understand:
 
 * why the work exists
@@ -459,4 +437,3 @@ The three most important fixes are:
 3. strengthen the **User Story vs Feature Request** boundary
 
 If you want, I can next turn this into a **fully polished final CONTRIBUTING.md with shorter wording and more industry-style tone**.
-

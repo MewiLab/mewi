@@ -475,18 +475,19 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,windows,python,reactnative,linux
 
-# Output of evaluations
-evals/backend/out/
-
-
-# Terraform
-.terraform/
-*.tfstate
-*.tfstate.backup
-*.tfplan
-.terraform.lock.hcl
 # eval outputs
 backend/evals/backend/out/
 backend/evals/**/out/
 *.jsonl
-.terraform.lock.hcl
+
+
+frontend/app/[Aa]ssets/Malbers Animations/
+frontend/app/[Aa]ssets/Malbers Animations.meta
+frontend/app/[Ll]ibrary/
+frontend/app/[Tt]emp/
+frontend/app/[Ll]ogs/
+frontend/app/[Uu]ser[Ss]ettings/
+*.csproj
+*.sln
+*.slnx
+.developing-note

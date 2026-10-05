@@ -1,0 +1,501 @@
+---
+// src/pages/user/report/[userId].astro
+// Generates one static page per processed data file.
+// Add new users by dropping report_{userId}.json into src/data/ (via pipeline).
+
+import Base          from '../../../layouts/Base.astro';
+import SectionLabel  from '../../../components/SectionLabel.astro';
+import MetricCard    from '../../../components/MetricCard.astro';
+import BarRow        from '../../../components/BarRow.astro';
+import SequenceLog   from '../../../components/SequenceLog.astro';
+import Timeline      from '../../../components/Timeline.astro';
+import CatSwitcher   from '../../../components/CatSwitcher.astro';
+import TrustChart    from '../../../components/TrustChart.astro';
+import RadarChart    from '../../../components/RadarChart.astro';
+
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { loadReportRoutes } from '../../../utils/reportRoutes';
+
+// ── static path generation ────────────────────────────────────────────────────
+export async function getStaticPaths() {
+  const routes = await loadReportRoutes();
+  return routes.map(route => ({
+    params: { userId: route.routeId },
+    props: {
+      dataFileId: route.dataFileId,
+      displayName: route.displayName,
+    },
+  }));
+}
+
+// ── data loading ──────────────────────────────────────────────────────────────
+const { userId } = Astro.params;
+const dataFileId = Astro.props.dataFileId ?? userId;
+const routeDisplayName = Astro.props.displayName as string | undefined;
+const dataPath = path.join(process.cwd(), 'src', 'data', `report_${dataFileId}.json`);
+let report: Record<string, any> = {};
+
+try {
+  const raw = await readFile(dataPath, 'utf-8');
+  report = JSON.parse(raw);
+} catch {
+  return Astro.redirect('/404');
+}
+
+// ── derived values ────────────────────────────────────────────────────────────
+const { meta, summary, cats, radar, attention_pct, multi_cat_encounters, attachment_profile, timeline } = report;
+const user = report.user ?? {};
+const displayUserName = routeDisplayName ?? user.display_name ?? user.handle ?? userId;
+const sessionCount: number = meta.sessions;
+const catMap = cats as Record<string, any>;
+
+// primary cat for sequence log (cat with most events in sequence log)
+const primaryCat = Object.entries(catMap).reduce((a, [k, v]) =>
+  (v.sequence_log?.length ?? 0) > (catMap[a]?.sequence_log?.length ?? 0) ? k : a
+, 'mewi');
+
+const primaryCatData = catMap[primaryCat];
+const attentionRows = Object.entries(attention_pct as Record<string, number>).map(([catId, pct]) => ({
+  label: catMap[catId]?.name ?? catId,
+  value: pct,
+  color: catMap[catId]?.accent ?? 'var(--ink3)',
+}));
+const encounterRows = multi_cat_encounters as any[];
+const attachmentRows = attachment_profile as any[];
+const attachmentAnalysis = report.attachment_analysis ?? {};
+const attachmentEvidence = attachmentAnalysis.evidence ?? [];
+const attachmentScores = attachmentAnalysis.scores ?? {};
+
+// serialise for client-side components
+const catsJson = JSON.stringify(cats);
+const radarJson = JSON.stringify(radar);
+
+// nav links for this report
+const navLinks = [
+  { href: '#trust',      label: 'Trust' },
+  { href: '#patterns',   label: 'Patterns' },
+  { href: '#encounters', label: 'Encounters' },
+  { href: '#profile',    label: 'Profile' },
+];
+---
+
+<Base title={`Mewi · ${displayUserName}`}>
+
+  <Fragment slot="nav-links">
+    {navLinks.map(l => (
+      <a class="nav-link" href={l.href}>{l.label}</a>
+    ))}
+  </Fragment>
+
+  <!-- ── report header ──────────────────────────────────────────────────── -->
+  <header class="rpt-header">
+    <div class="label rpt-label">Mewi · behavioral trace report</div>
+    <h1 class="rpt-title serif">
+      What the cats<br/>remember about you
+    </h1>
+    <p class="rpt-sub">
+      {sessionCount} sessions, four cats, {Math.round(meta.total_events / 6)} minutes.
+      Each cat holds a separate memory of how you moved, waited, and left.
+    </p>
+    <div class="rpt-meta">
+      <span>User <b>{displayUserName}</b></span>
+      <span>Sessions <b>{sessionCount}</b></span>
+      <span>Events <b>{meta.total_events}</b></span>
+      <span>Last seen <b>{meta.last_seen}</b></span>
+    </div>
+  </header>
+
+  <!-- ── summary metrics ───────────────────────────────────────────────── -->
+  <section class="report-widget">
+    <SectionLabel text="Session summary" />
+    <div class="g4">
+      <MetricCard
+        value={`+${summary.avg_trust_gained}`}
+        label="Avg trust gained"
+        sub="Net across all four cats — Yuzu pulled it down"
+      />
+      <MetricCard
+        value={cats[summary.primary_bond]?.name ?? summary.primary_bond}
+        label="Primary bond"
+        sub={`Most time shared · ended at ${cats[summary.primary_bond]?.trust_arc?.at(-1) ?? '—'}`}
+      />
+      <MetricCard
+        value={`${summary.avg_reaction_latency_s}s`}
+        label="Reaction latency"
+        sub="Avg time before a cat first responded to you"
+      />
+      <MetricCard
+        value={`${summary.patience_pct}%`}
+        label="Patience score"
+        sub="Top 18% of all users"
+      />
+    </div>
+  </section>
+
+  <!-- ── per-cat switcher ───────────────────────────────────────────────── -->
+  <section class="report-widget">
+    <SectionLabel text="Per-cat relationship" />
+    <CatSwitcher catsJson={catsJson} sessionCount={sessionCount} />
+  </section>
+
+  <!-- ── trust overlay chart ───────────────────────────────────────────── -->
+  <section class="report-widget" id="trust">
+    <SectionLabel text="Trust across all cats — session by session" />
+    <TrustChart catsJson={catsJson} sessionCount={sessionCount} />
+  </section>
+
+  <!-- ── human action radar ────────────────────────────────────────────── -->
+  <section class="report-widget" id="patterns">
+    <SectionLabel text="Human action distribution" />
+    <RadarChart radarJson={radarJson} />
+  </section>
+
+  <!-- ── behavioral sequence log ───────────────────────────────────────── -->
+  <section class="report-widget">
+    <SectionLabel text={`Behavioral sequence log · ${primaryCatData.name} · peak session`} />
+    <SequenceLog
+      events={primaryCatData.sequence_log ?? []}
+      catName={primaryCatData.name}
+      catAccent={primaryCatData.accent}
+    />
+  </section>
+
+  <!-- ── attention distribution ────────────────────────────────────────── -->
+  <section class="report-widget">
+    <SectionLabel text="Attention distribution across cats" />
+    <div class="att-bars">
+      {attentionRows.map(row => (
+        <BarRow
+          label={row.label}
+          value={row.value}
+          color={row.color}
+        />
+      ))}
+    </div>
+  </section>
+
+  <!-- ── multi-cat encounters ───────────────────────────────────────────── -->
+  <section class="report-widget" id="encounters">
+    <SectionLabel text="Multi-cat encounter log" />
+    <div class="raised table-wrap">
+      <table class="enc-table">
+        <thead>
+          <tr>
+            <th>Situation</th>
+            <th>Your choice</th>
+            <th>Freq.</th>
+            <th>Outcome</th>
+          </tr>
+        </thead>
+        <tbody>
+          {encounterRows.map(enc => (
+            <tr>
+              <td>{enc.situation}</td>
+              <td>{enc.choice}</td>
+              <td class="freq">{enc.freq}</td>
+              <td>{enc.outcome}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── attachment profile ─────────────────────────────────────────────── -->
+  <section class="report-widget" id="profile">
+    <SectionLabel text="Attachment profile" />
+    <div class="att-bars">
+      {attachmentRows.map(d => (
+        <BarRow label={d.label} value={d.value} color={d.color} />
+      ))}
+    </div>
+
+    <div class="arch-box raised profile-card" data-profile-switcher>
+      <div class="profile-tabs" role="tablist" aria-label="Attachment interpretation">
+        <button type="button" class="profile-tab is-active" data-profile-tab="attachment" aria-selected="true">
+          Attachment theory
+        </button>
+        <button type="button" class="profile-tab" data-profile-tab="archetype" aria-selected="false">
+          Narrative archetype
+        </button>
+      </div>
+
+      <div class="profile-panel is-active" data-profile-panel="attachment">
+        <div class="arch-head">
+          <span class="arch-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3.5 19 6v5.2c0 4.4-2.9 8.3-7 9.3-4.1-1-7-4.9-7-9.3V6l7-2.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+              <path d="M8.4 11.6c0-1.1.8-1.9 1.8-1.9.8 0 1.4.4 1.8 1 .4-.6 1-1 1.8-1 1 0 1.8.8 1.8 1.9 0 1.9-2.4 3.4-3.6 4.2-1.2-.8-3.6-2.3-3.6-4.2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <div>
+            <div class="label arch-tag">Attachment theory type</div>
+            <div class="arch-name serif">{attachmentAnalysis.type ?? 'Secure-leaning attachment'}</div>
+            <div class="arch-modifier">{attachmentAnalysis.modifier ?? 'patient, selective attunement'}</div>
+          </div>
+        </div>
+
+        <p class="arch-desc">{attachmentAnalysis.summary}</p>
+
+        <div class="attachment-evidence">
+          {attachmentEvidence.map((item: any) => (
+            <div class="evidence-item">
+              <div class="label evidence-label">{item.label}</div>
+              <p>{item.detail}</p>
+            </div>
+          ))}
+        </div>
+
+        <div class="score-strip" aria-label="Attachment style score comparison">
+          <span>Secure <b>{attachmentScores.secure ?? '—'}</b></span>
+          <span>Anxious <b>{attachmentScores.anxious ?? '—'}</b></span>
+          <span>Avoidant <b>{attachmentScores.avoidant ?? '—'}</b></span>
+          <span>Fearful <b>{attachmentScores.fearful_avoidant ?? '—'}</b></span>
+        </div>
+
+        <p class="arch-note">{attachmentAnalysis.caveat}</p>
+      </div>
+
+      <div class="profile-panel" data-profile-panel="archetype" hidden>
+        <div class="label arch-tag">Derived archetype</div>
+        <div class="arch-name serif">The Patient Witness</div>
+        <p class="arch-desc">
+          You tend to wait. When Mewi froze at the threshold — one paw lifted, reading the air —
+          you stopped too, rather than advancing. When Miso moved away from food she had already
+          smelled, you left it on the ground and stepped back. You did not perform patience;
+          you simply had it.
+        </p>
+        <p class="arch-desc">
+          Mewi's alert duration shrank by 4 seconds in your presence by session 3.
+          Haru, who offers presence only to those she has read and trusted, sat within a metre
+          of you in session 4 — something she has done for fewer than one in five users.
+          Yuzu swatted at your hand twice and then settled nearby, which for Yuzu is a form of compliment.
+        </p>
+        <p class="arch-desc">
+          The cats do not remember your intentions. They remember your stillness, your rhythm,
+          and the fact that you left when they needed you to.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── session timeline ───────────────────────────────────────────────── -->
+  <section class="report-widget">
+    <SectionLabel text="Key moments across sessions" />
+    <Timeline items={timeline} />
+  </section>
+
+</Base>
+
+<script>
+document.querySelectorAll('[data-profile-switcher]').forEach(root => {
+  const tabs = root.querySelectorAll('[data-profile-tab]');
+  const panels = root.querySelectorAll('[data-profile-panel]');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-profile-tab');
+
+      tabs.forEach(item => {
+        const isActive = item === tab;
+        item.classList.toggle('is-active', isActive);
+        item.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+
+      panels.forEach(panel => {
+        const isActive = panel.getAttribute('data-profile-panel') === target;
+        panel.classList.toggle('is-active', isActive);
+        panel.toggleAttribute('hidden', !isActive);
+      });
+    });
+  });
+});
+</script>
+
+<style>
+/* report header */
+.rpt-header { padding: 2rem 0 1.5rem; border-bottom: 0.5px solid var(--border); margin-bottom: 0; }
+.rpt-label  { margin-bottom: .5rem; }
+.rpt-title  {
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  font-weight: 400; line-height: 1.15;
+  color: var(--ink); margin-bottom: .35rem;
+}
+.rpt-sub {
+  font-size: 13px; color: var(--ink2);
+  line-height: 1.7; max-width: 460px; margin-bottom: 1rem;
+}
+.rpt-meta {
+  display: flex; gap: 1.5rem; flex-wrap: wrap;
+  font-size: 11px; color: var(--ink3);
+}
+.rpt-meta b { color: var(--ink2); font-weight: 400; }
+
+/* nav links */
+.nav-link {
+  font-size: 11px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink3);
+  transition: color var(--transition);
+}
+.nav-link:hover { color: var(--ink); }
+
+/* grids */
+.g4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+/* analytic widgets */
+.report-widget {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.1rem 1.15rem;
+  margin-top: 1rem;
+  box-shadow: 0 10px 30px rgba(26, 23, 20, .035);
+}
+:global(.report-widget .section-label) {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+/* attention bars */
+.att-bars { display: flex; flex-direction: column; gap: 2px; }
+
+/* raised card */
+.raised {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+/* encounter table */
+.table-wrap { overflow-x: auto; }
+.enc-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12px; table-layout: fixed;
+}
+.enc-table th {
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink3); font-weight: 400;
+  padding: .45rem .7rem;
+  border-bottom: 0.5px solid var(--border);
+  text-align: left;
+}
+.enc-table td {
+  padding: .45rem .7rem;
+  border-bottom: 0.5px solid var(--border);
+  color: var(--ink2); font-size: 12px;
+}
+.enc-table tr:last-child td { border-bottom: none; }
+.enc-table tr:hover td { background: var(--bg2); }
+.freq { color: var(--ink3); }
+
+/* attachment interpretation */
+.arch-box { margin-top: 1.2rem; }
+.profile-tabs {
+  display: inline-flex;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.profile-tab {
+  background: transparent;
+  border: 0;
+  border-right: 0.5px solid var(--border);
+  color: var(--ink3);
+  font-size: 11px;
+  padding: .42rem .7rem;
+  transition: background var(--transition), color var(--transition);
+}
+.profile-tab:last-child { border-right: 0; }
+.profile-tab:hover,
+.profile-tab.is-active {
+  background: var(--bg2);
+  color: var(--ink);
+}
+.profile-panel[hidden] { display: none; }
+.arch-head {
+  display: flex;
+  gap: .8rem;
+  align-items: flex-start;
+  margin-bottom: .8rem;
+}
+.arch-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--accent-miso);
+  background: var(--bg2);
+  flex: 0 0 auto;
+}
+.arch-tag { margin-bottom: .35rem; }
+.arch-name {
+  font-size: 1.5rem; font-weight: 400;
+  color: var(--ink); margin-bottom: .2rem;
+}
+.arch-modifier {
+  font-size: 11px;
+  color: var(--ink3);
+  line-height: 1.5;
+}
+.arch-desc {
+  font-size: 12px; color: var(--ink2);
+  line-height: 1.9; margin-bottom: .75rem;
+}
+.arch-desc:last-child { margin-bottom: 0; }
+.attachment-evidence {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 1rem 0;
+}
+.evidence-item {
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: .75rem;
+  background: var(--bg);
+}
+.evidence-label { margin-bottom: .35rem; }
+.evidence-item p {
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--ink2);
+}
+.score-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: .85rem;
+}
+.score-strip span {
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: .35rem .5rem;
+  color: var(--ink3);
+  font-size: 11px;
+}
+.score-strip b {
+  color: var(--ink2);
+  font-weight: 400;
+}
+.arch-note {
+  margin-top: .85rem;
+  color: var(--ink3);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .attachment-evidence { grid-template-columns: 1fr; }
+}
+</style>

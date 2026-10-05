@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.astro/
+.venv/
+
+# Runtime/report data is mounted by docker-compose so new backend output
+# can be viewed without rebuilding the image.
+src/data/
+pipeline/processed_data/
+pipeline/charts/output/
+pipeline/raw_data/
+
+.DS_Store
+.env
+.env.*

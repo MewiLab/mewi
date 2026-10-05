@@ -1,0 +1,90 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Mewi · Intro">
+  <header class="intro-head">
+    <div class="label">Intro</div>
+    <h1 class="serif">A small system for watching digital cats become specific.</h1>
+    <p>
+      Mewi separates the cat's inner life from the player's report. The backend
+      chooses intent, action, memory, and social response; Unity confirms what
+      actually completed; the report site turns those traces into quiet pages.
+    </p>
+  </header>
+
+  <section class="intro-grid">
+    <article>
+      <div class="label">1 · Cat mind</div>
+      <p>
+        Each persona is a narrow behavioral lens. The same world snapshot can
+        become caution, appetite, curiosity, warmth, or mischief depending on
+        which cat receives it.
+      </p>
+    </article>
+    <article>
+      <div class="label">2 · Living journal</div>
+      <p>
+        Raw graph logs become per-cat records: main wants, signature actions,
+        places, social rooms, relationships, and memorable turns.
+      </p>
+    </article>
+    <article>
+      <div class="label">3 · Human report</div>
+      <p>
+        The report page remains about the player's behavioral trace: how they
+        waited, approached, repaired, and divided attention across cats.
+      </p>
+    </article>
+  </section>
+</Base>
+
+<style>
+.intro-head {
+  min-height: 48vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-bottom: 0.5px solid var(--border);
+  padding-bottom: 2rem;
+}
+.intro-head h1 {
+  color: var(--ink);
+  font-size: clamp(2.1rem, 6vw, 4.7rem);
+  line-height: 1;
+  font-weight: 400;
+  margin: .8rem 0 1rem;
+}
+.intro-head p {
+  max-width: 560px;
+  color: var(--ink2);
+  font-size: 13px;
+  line-height: 1.9;
+}
+.intro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 1rem;
+}
+.intro-grid article {
+  min-height: 190px;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 1rem;
+}
+.intro-grid .label {
+  margin-bottom: .9rem;
+}
+.intro-grid p {
+  color: var(--ink2);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+@media (max-width: 740px) {
+  .intro-head { min-height: 34vh; }
+  .intro-grid { grid-template-columns: 1fr; }
+}
+</style>
