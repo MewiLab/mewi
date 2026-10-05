@@ -10,11 +10,11 @@
 
 ## Demo
 
-<p align="center">
-  <a href="docs/assets/mewi-demo.mp4?raw=1"><img src="docs/assets/mewi-video-thumbnail.png" width="720" alt="Play the Mewi demo"></a>
-  <br>
-  <sub>▶ Click to play the demo</sub>
-</p>
+
+
+https://github.com/user-attachments/assets/1ddffc32-9ab8-42e0-ab41-690801003e30
+
+
 
 ## Why
 
